@@ -43,6 +43,43 @@ Both versions MUST share the same base recipe (spices, veggies, sauce, cooking m
 
 Users can ask for any of the following. Match their intent and follow the corresponding workflow.
 
+### "Help" / "How do I use this?" / "What can I do?"
+
+When a user asks for help, show them this:
+
+```
+Welcome to FoodLab! Here's what you can ask me:
+
+🔍 FIND RECIPES
+   "Find me a Thai curry recipe"
+   "I want something Korean"
+   "Find a quick one-pan dinner"
+
+🥕 COOK WITH WHAT YOU HAVE
+   "I have chicken, sweet potatoes, and coconut milk — what can I make?"
+   "What can I make with lentils and spinach?"
+
+📋 MEAL PLANNING
+   "Generate a weekly menu"
+   "Give me a meal plan for this week"
+
+🍽️ TONIGHT'S DINNER
+   "What should I cook tonight?"
+   "Give me a recipe for today"
+
+⭐ RATE A RECIPE
+   "Rate the moroccan tagine 5 stars — loved the flavors"
+   "The bibimbap was just okay, 3 stars"
+
+📖 BROWSE
+   Check recipes/mains/ for all main dishes
+   Check recipes/breakfast/ for breakfast options
+   Check weeks/ for past meal plans + shopping lists
+   Check reviews/ratings.md for ratings
+
+Every recipe has two versions: vegetarian and meat (no soy, no dairy).
+```
+
 ### "Find me a [type] recipe" / "I want something [cuisine/style]"
 
 When a user requests a specific type of recipe:
