@@ -1,33 +1,37 @@
 # FoodLab
 
-A living recipe repository for weekly meal prep. Two versions of every dish:
-- **Vegetarian** — tofu, legumes, dairy OK
-- **Meat** — chicken, pork, beef; **no soy, no dairy**
+Weekly meal prep recipes with two versions of every dish: **vegetarian** and **meat** (no soy, no dairy).
 
-## How it works
-- Every ~2 weeks, a new menu is generated: 4 mains + 1 breakfast
-- Recipes are high protein, freezer-friendly, and veggie-loaded
-- Each dish shares a common base — only the protein swaps between versions
-- Menus mix new recipes with returning favorites
+## Quick Start
 
-## Structure
-```
-recipes/
-  mains/       # Individual recipe files
-  breakfast/   # Breakfast recipes
-weeks/         # Weekly menu plans
-shopping-lists/ # Consolidated shopping lists per week
-```
+1. **Browse recipes** in [`recipes/mains/`](recipes/mains/) and [`recipes/breakfast/`](recipes/breakfast/)
+2. **Grab a weekly menu** from [`weeks/`](weeks/) — includes simplified recipes + a consolidated shopping list
+3. **Cook** — each dish has a shared base, you just swap the protein between veg and meat
 
-## Agent Instructions
+## How It Works
 
-See [AGENTS.md](AGENTS.md) for full instructions on how the automated recipe hunter works, dietary rules, and recipe file format. (`CLAUDE.md` is a symlink to the same file.)
+- A recipe-hunting agent runs every other day, searching the web for new recipes and adding them here
+- Every ~2 weeks, a new weekly menu is generated: **4 mains + 1 breakfast**
+- All recipes are high protein, freezer-friendly, and veggie-loaded
+- New menus mix returning favorites with new discoveries
 
 ## Dietary Rules
+
 | | Vegetarian | Meat |
 |---|---|---|
-| Soy | OK | **NO** |
-| Dairy | OK | **NO** |
-| Soy sauce sub | — | Coconut aminos |
-| Butter sub | — | Olive oil / coconut oil |
-| Yogurt sub | — | Lemon + olive oil + herbs |
+| Soy / tofu | OK | **NO** — use coconut aminos |
+| Dairy | OK | **NO** — use olive oil / coconut oil |
+| Meats | — | Chicken, pork, or beef |
+
+## Repo Structure
+
+```
+recipes/mains/       Full recipes (both versions)
+recipes/breakfast/   Breakfast recipes
+weeks/               Weekly menus + shopping lists
+AGENTS.md            Agent instructions (CLAUDE.md symlinks here)
+```
+
+## Want a New Week?
+
+Ask Claude: *"Generate a new weekly menu from the recipe collection"* — it'll pick 4 mains + 1 breakfast, write a simplified prep guide, and create a shopping list.
