@@ -19,6 +19,10 @@ weeks/         # Weekly menu plans
 shopping-lists/ # Consolidated shopping lists per week
 ```
 
+## Agent Instructions
+
+See [AGENTS.md](AGENTS.md) for full instructions on how the automated recipe hunter works, dietary rules, and recipe file format. (`CLAUDE.md` is a symlink to the same file.)
+
 ## Dietary Rules
 | | Vegetarian | Meat |
 |---|---|---|
