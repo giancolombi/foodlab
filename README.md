@@ -32,6 +32,55 @@ weeks/               Weekly menus + shopping lists
 AGENTS.md            Agent instructions (CLAUDE.md symlinks here)
 ```
 
+## Running the Agents
+
+Clone the repo and use any AI coding tool to automate recipe hunting and meal planning. The instructions live in `AGENTS.md` (also symlinked as `CLAUDE.md`).
+
+### Claude Code
+
+```bash
+git clone https://github.com/giancolombi/foodlab.git
+cd foodlab
+claude
+# Claude reads CLAUDE.md automatically on startup
+# Ask: "Search for new recipes and add them to the repo"
+# Ask: "Generate a new weekly menu + shopping list"
+```
+
+### Codex (OpenAI)
+
+```bash
+git clone https://github.com/giancolombi/foodlab.git
+cd foodlab
+codex
+# Point it at AGENTS.md for instructions:
+# Ask: "Read AGENTS.md, then search for new recipes and add them following those instructions"
+```
+
+### Gemini CLI (Google)
+
+```bash
+git clone https://github.com/giancolombi/foodlab.git
+cd foodlab
+gemini
+# Gemini reads AGENTS.md when present
+# Ask: "Search for new recipes and add them to the repo"
+# Ask: "Generate a new weekly menu + shopping list"
+```
+
+### OpenClaw
+
+```bash
+git clone https://github.com/giancolombi/foodlab.git
+cd foodlab
+openclaw
+# Ask: "Read AGENTS.md for instructions, then search for new recipes and add them to the repo"
+```
+
+### Manual Use
+
+No AI tools needed — just browse `recipes/` for dishes and `weeks/` for ready-made meal plans with shopping lists.
+
 ## Want a New Week?
 
-Ask Claude: *"Generate a new weekly menu from the recipe collection"* — it'll pick 4 mains + 1 breakfast, write a simplified prep guide, and create a shopping list.
+Ask your AI coding tool: *"Generate a new weekly menu from the recipe collection"* — it'll read `AGENTS.md`, pick 4 mains + 1 breakfast, write a simplified prep guide, and create a consolidated shopping list.
