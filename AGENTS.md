@@ -1,7 +1,7 @@
-# FoodLab — Claude Instructions
+# FoodLab — Agent Instructions
 
 ## What This Repo Is
-A living recipe repository for weekly meal prep. An automated agent searches the web for new recipes every other day and commits them here.
+A living recipe repository for weekly meal prep. Agents search the web for new recipes, generate meal plans, and respond to user requests. Anyone can clone it and run their own agent.
 
 ## Dietary Rules (MUST follow for every recipe)
 
@@ -28,7 +28,77 @@ Both versions MUST share the same base recipe (spices, veggies, sauce, cooking m
 - Diverse global cuisines — avoid duplicating cuisines already in the repo
 - Seasonal ingredients when possible
 
+---
+
+## User Commands
+
+Users can ask for any of the following. Match their intent and follow the corresponding workflow.
+
+### "Find me a [type] recipe" / "I want something [cuisine/style]"
+
+When a user requests a specific type of recipe:
+
+1. Search the web for recipes matching their request (cuisine, style, ingredient focus, etc.)
+2. Check `recipes/mains/` and `recipes/breakfast/` to avoid duplicates
+3. Write the recipe file following the Recipe File Format below
+4. Commit and push
+5. Show the user the recipe summary — dish name, both versions, key ingredients
+
+### "What can I make with [ingredients]?"
+
+When a user tells you what ingredients they have:
+
+1. Read all recipes in `recipes/mains/` and `recipes/breakfast/`
+2. Find recipes where the user's ingredients cover most of the base (ignore pantry staples like oil, salt, garlic, onion, common spices)
+3. Rank matches: best match = fewest missing ingredients
+4. Show the user their top 3 matches with:
+   - Recipe name and cuisine
+   - Which of their ingredients it uses
+   - What they're missing (if anything)
+   - Quick summary of the method
+5. If no good matches exist, search the web for a recipe that uses their ingredients, write it to the repo, and present it
+
+### "Give me a weekly menu" / "Generate a meal plan"
+
+When a user asks for a weekly meal plan:
+
+1. Read all recipes in `recipes/mains/` and `recipes/breakfast/`
+2. Read `reviews/ratings.md` for feedback
+3. Read the most recent file in `weeks/` to avoid repeating the same lineup
+4. Pick 4 mains + 1 breakfast:
+   - Prioritize 4–5 star rated recipes as returning favorites
+   - Avoid 1–2 star recipes unless modified
+   - Include 1–2 unrated/new recipes for variety
+   - Ensure variety in cuisines and cooking methods
+5. Read each selected recipe file for exact ingredients
+6. Generate `weeks/week-NN.md` in the Weekly Meal Plan Format below
+7. Commit and push
+
+### "Give me a recipe for today" / "What should I cook tonight?"
+
+When a user asks for a single meal:
+
+1. Read all recipes in `recipes/mains/`
+2. Read `reviews/ratings.md` for feedback
+3. Pick 1 recipe — favor highly rated ones, vary from recent suggestions
+4. Present it in a condensed format:
+   - Dish name and cuisine
+   - **Ingredients** — full list with quantities (veg version + meat version diffs)
+   - **Method** — condensed step-by-step
+   - Prep and cook time
+
+### "Rate [recipe]" / feedback on a dish
+
+When a user gives feedback on a recipe:
+
+1. Read `reviews/ratings.md`
+2. Add their rating as a new row in the table: dish name (kebab-case filename without `.md`), star rating (★ characters), version (veg/meat), notes, and today's date
+3. Commit and push
+
+---
+
 ## Recipe File Format
+
 - Location: `recipes/mains/` or `recipes/breakfast/`
 - Filename: kebab-case (e.g., `west-african-peanut-stew.md`)
 - Structure:
@@ -43,9 +113,11 @@ Both versions MUST share the same base recipe (spices, veggies, sauce, cooking m
   9. `---` separator
   10. Source URLs at the bottom
 
+---
+
 ## Weekly Meal Plan + Shopping List Format
 
-Every ~2 weeks, generate a combined meal plan and shopping list as a single file in `weeks/week-NN.md`. The format is a **simplified, cook-friendly document** — not the full recipe files (those live in `recipes/`). Pick 4 mains + 1 breakfast from the recipe collection, mixing returning favorites with new additions.
+Generate as a single file in `weeks/week-NN.md`. This is a **simplified, cook-friendly document** — not the full recipe files.
 
 ### Structure:
 
@@ -93,23 +165,16 @@ Every ~2 weeks, generate a combined meal plan and shopping list as a single file
 
 ---
 
-## 2. ...
-
----
-
 # Consolidated Shopping List
 
 ## Proteins
 - Chicken thighs, bone-in (6) — Dish 1 (meat)
-- ...
 
 ## Canned beans
 - Chickpeas (1 can)
-- ...
 
 ## Produce
 - Yellow onions (3)
-- ...
 
 (continue all sections)
 
@@ -125,9 +190,40 @@ Every ~2 weeks, generate a combined meal plan and shopping list as a single file
 - Note which dish each protein/specialty item is for
 - Feta and other dairy items are veg-only — call this out in the shopping list
 
-## Automated Recipe Hunter
-A local cron job runs every other day to:
+---
+
+## Reviews & Ratings
+
+User feedback lives in `reviews/ratings.md`. Anyone can add a row to rate a recipe 1–5 stars.
+
+| Stars | Meaning |
+|-------|---------|
+| ★★★★★ | Amazing — make again soon |
+| ★★★★☆ | Really good — keep in rotation |
+| ★★★☆☆ | Fine — not a priority |
+| ★★☆☆☆ | Meh — needs changes or skip |
+| ★☆☆☆☆ | Bad — don't make again |
+
+### How agents should use ratings:
+- **When generating weekly menus:** Prioritize 4–5 star recipes as returning favorites. Avoid 1–2 star recipes unless modified. Unrated recipes are fair game.
+- **When suggesting daily recipes:** Favor highly rated dishes.
+- **When searching for new recipes:** If a dish was rated poorly with notes, look for alternatives that address the feedback.
+
+---
+
+## Automated Jobs
+
+These run in the background when the agent session is active:
+
+### Recipe Hunter (every other day)
 1. Check existing recipes to avoid duplicates
 2. Search the web for trending/seasonal recipes
 3. Write 1-2 new recipes in the format above
 4. Commit and push to main
+
+### Meal Planner (1st and 15th of each month)
+1. Read all available recipes and existing week plans
+2. Read `reviews/ratings.md` to prioritize favorites and avoid poorly rated dishes
+3. Pick 4 mains + 1 breakfast, mixing highly rated returning favorites with new/unrated recipes
+4. Generate a weekly menu + consolidated shopping list in the format above
+5. Commit and push to main
