@@ -22,11 +22,20 @@ A living recipe repository for weekly meal prep. Agents search the web for new r
 Both versions MUST share the same base recipe (spices, veggies, sauce, cooking method). Only the protein swaps.
 
 ## Recipe Requirements
+- **Simple recipes, simple ingredients** — if a home cook can't find it at a regular grocery store, don't use it. Avoid obscure or specialty ingredients unless they're central to the dish (e.g., gochujang for Korean, berbere for Ethiopian). When in doubt, suggest a common substitute.
+- **Fewer steps, fewer pans** — one-pot, one-pan, and sheet-pan methods are preferred. If it can be done in one pot, don't use two.
 - High protein
 - Freezer-friendly
 - Veggie-loaded (hide veggies in sauces and bases)
 - Diverse global cuisines — avoid duplicating cuisines already in the repo
 - Seasonal ingredients when possible
+
+## Shopping List Rules
+- **Consolidate ingredients across dishes** — if 3 dishes use onions, list "Yellow onions (5)" once, not 3 separate lines. Same for garlic, bell peppers, olive oil, canned tomatoes, broth, etc.
+- **Group by grocery store section** so the user can shop aisle by aisle
+- **Skip pantry staples** the user likely already has: salt, black pepper, olive oil. Still list spice blends and less common spices.
+- **Use specific quantities** — "3 cans" not "some cans", "2 lbs" not "enough chicken"
+- **Note which dish each specialty item is for** — but don't annotate common ingredients that appear in multiple dishes
 
 ---
 
