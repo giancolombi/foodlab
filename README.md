@@ -9,12 +9,13 @@ git clone https://github.com/giancolombi/foodlab.git
 cd foodlab
 ```
 
-Then open your AI coding tool of choice (see [Setup](#setup) below) and start asking:
+Then open your AI coding tool of choice (see [Setup](#setup) below) and type **"help"** to see everything you can do.
 
 ## What You Can Ask
 
 | Ask this | What happens |
 |----------|-------------|
+| *"Help"* | Shows all available commands and examples |
 | *"Find me a Thai curry recipe"* | Searches the web, writes a new recipe with both versions, commits it |
 | *"I have chicken, sweet potatoes, and coconut milk — what can I make?"* | Searches existing recipes for matches, suggests top 3 options |
 | *"Generate a weekly menu"* | Picks 4 mains + 1 breakfast, creates a prep guide + shopping list |
