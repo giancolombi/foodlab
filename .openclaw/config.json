@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "auto_approve": [
+      "read_file",
+      "write_file",
+      "edit_file",
+      "search_files",
+      "search_content",
+      "web_search",
+      "web_fetch",
+      "shell:git add*",
+      "shell:git commit*",
+      "shell:git push*",
+      "shell:git status*",
+      "shell:git diff*",
+      "shell:git log*",
+      "shell:ls *",
+      "shell:mkdir *"
+    ]
+  }
+}
