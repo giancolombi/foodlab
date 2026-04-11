@@ -1,25 +1,35 @@
 # FoodLab — Agent Instructions
 
 ## What This Repo Is
-A living recipe repository for weekly meal prep. Agents search the web for new recipes, generate meal plans, and respond to user requests. Anyone can clone it and run their own agent.
+A living recipe repository for weekly meal prep. Agents search the web for new recipes, generate meal plans, and respond to user requests. Anyone can clone it, set up their dietary profiles, and run their own agent.
 
-## Dietary Rules (MUST follow for every recipe)
+## Dietary Profiles
 
-**Two versions of every dish:**
+**Before generating any recipe or meal plan, ALWAYS read all files in `profiles/`.**
 
-| | Vegetarian | Meat |
-|---|---|---|
-| Soy | OK | **NO** |
-| Dairy | OK | **NO** |
-| Tofu | OK | **NO** |
-| Soy sauce | OK | Use **coconut aminos** |
-| Butter | OK | Use **olive oil** or **coconut oil** |
-| Yogurt/cream | OK | Use **lemon + olive oil + herbs** |
-| Cheese | OK | **Skip entirely** |
+Each person who eats these meals has their own profile in `profiles/<name>.md` defining their restrictions, preferences, allergies, and substitution notes. See `profiles/README.md` for the format.
 
-**Meat options:** chicken, pork, or beef only.
+### How to use profiles:
 
-Both versions MUST share the same base recipe (spices, veggies, sauce, cooking method). Only the protein swaps.
+1. **Read all profiles** at the start of every task
+2. **Group people by dietary compatibility** — if two people share the same restrictions, they share one recipe version
+3. **Generate one version per unique dietary group** — label each version with the name(s) it's for
+4. **Shared base stays the same** across all versions — only swap proteins and restricted ingredients
+5. **Never include allergens** even as optional ingredients
+6. **Apply substitution rules** from each profile's Notes section (e.g., "coconut aminos instead of soy sauce")
+7. **Favor preferences** when searching for new recipes or picking weekly menus
+
+### If no profiles exist:
+Generate a single version of each recipe with no dietary restrictions. Prompt the user to create profiles: *"Create a file in profiles/ for each person — see profiles/README.md for the format."*
+
+### Setting up / editing profiles:
+
+When a user says "add a profile", "set up dietary restrictions", "I'm vegetarian", "my partner can't eat dairy", etc.:
+
+1. Create or update the appropriate file in `profiles/<name>.md`
+2. Follow the format in `profiles/README.md`
+3. Commit and push
+4. Confirm what was saved
 
 ## Recipe Requirements
 - **Simple recipes, simple ingredients** — if a home cook can't find it at a regular grocery store, don't use it. Avoid obscure or specialty ingredients unless they're central to the dish (e.g., gochujang for Korean, berbere for Ethiopian). When in doubt, suggest a common substitute.
@@ -31,11 +41,12 @@ Both versions MUST share the same base recipe (spices, veggies, sauce, cooking m
 - Seasonal ingredients when possible
 
 ## Shopping List Rules
-- **Consolidate ingredients across dishes** — if 3 dishes use onions, list "Yellow onions (5)" once, not 3 separate lines. Same for garlic, bell peppers, olive oil, canned tomatoes, broth, etc.
+- **Consolidate ingredients across dishes** — if 3 dishes use onions, list "Yellow onions (5)" once, not 3 separate lines
 - **Group by grocery store section** so the user can shop aisle by aisle
-- **Skip pantry staples** the user likely already has: salt, black pepper, olive oil. Still list spice blends and less common spices.
+- **Skip pantry staples** the user likely already has: salt, black pepper, olive oil
 - **Use specific quantities** — "3 cans" not "some cans", "2 lbs" not "enough chicken"
-- **Note which dish each specialty item is for** — but don't annotate common ingredients that appear in multiple dishes
+- **Note which dish each specialty item is for** — but don't annotate common ingredients
+- **Separate version-specific items** — clearly mark which items are for which dietary group (e.g., "Feta — Version 1 only", "Chicken thighs — Version 2 only")
 
 ---
 
@@ -49,6 +60,11 @@ When a user asks for help, show them this:
 
 ```
 Welcome to FoodLab! Here's what you can ask me:
+
+👤 SET UP PROFILES
+   "Add a profile for me — I'm vegetarian"
+   "My partner can't eat soy or dairy"
+   "Show me the current dietary profiles"
 
 🔍 FIND RECIPES
    "Find me a Thai curry recipe"
@@ -68,77 +84,82 @@ Welcome to FoodLab! Here's what you can ask me:
    "Give me a recipe for today"
 
 ⭐ RATE A RECIPE
-   "Rate the moroccan tagine 5 stars — loved the flavors"
+   "Rate the moroccan tagine 5 stars"
    "The bibimbap was just okay, 3 stars"
 
 📖 BROWSE
-   Check recipes/mains/ for all main dishes
-   Check recipes/breakfast/ for breakfast options
+   Check recipes/mains/ and recipes/breakfast/ for dishes
    Check weeks/ for past meal plans + shopping lists
    Check reviews/ratings.md for ratings
+   Check profiles/ for dietary profiles
 
-Every recipe has two versions: vegetarian and meat (no soy, no dairy).
+Each recipe has a version for every dietary group in your household.
 ```
+
+### "Add a profile" / "I'm vegetarian" / "My partner can't eat X"
+
+When a user wants to set up or modify dietary profiles:
+
+1. Ask for the person's name if not provided
+2. Ask about restrictions, preferences, allergies, and substitution notes
+3. Create or update `profiles/<name>.md` following the format in `profiles/README.md`
+4. Commit and push
+5. Confirm what was saved and how it will affect recipes
 
 ### "Find me a [type] recipe" / "I want something [cuisine/style]"
 
 When a user requests a specific type of recipe:
 
-1. Search the web for recipes matching their request (cuisine, style, ingredient focus, etc.)
-2. Check `recipes/mains/` and `recipes/breakfast/` to avoid duplicates
-3. Write the recipe file following the Recipe File Format below
-4. Commit and push
-5. Show the user the recipe summary — dish name, both versions, key ingredients
+1. **Read all profiles in `profiles/`**
+2. Search the web for recipes matching their request
+3. Check `recipes/mains/` and `recipes/breakfast/` to avoid duplicates
+4. Write the recipe file with one version per dietary group, following the Recipe File Format below
+5. Commit and push
+6. Show the user the recipe summary — dish name, all versions, key ingredients
 
 ### "What can I make with [ingredients]?"
 
 When a user tells you what ingredients they have:
 
 1. Read all recipes in `recipes/mains/` and `recipes/breakfast/`
-2. Find recipes where the user's ingredients cover most of the base (ignore pantry staples like oil, salt, garlic, onion, common spices)
-3. Rank matches: best match = fewest missing ingredients
-4. Show the user their top 3 matches with:
-   - Recipe name and cuisine
-   - Which of their ingredients it uses
-   - What they're missing (if anything)
-   - Quick summary of the method
-5. If no good matches exist, search the web for a recipe that uses their ingredients, write it to the repo, and present it
+2. **Read all profiles in `profiles/`** to filter out recipes with restricted ingredients
+3. Find recipes where the user's ingredients cover most of the base
+4. Rank matches: best match = fewest missing ingredients
+5. Show top 3 matches with: recipe name, cuisine, matched/missing ingredients, quick method
+6. If no good matches, search the web for a recipe using their ingredients
 
 ### "Give me a weekly menu" / "Generate a meal plan"
 
 When a user asks for a weekly meal plan:
 
-1. Read all recipes in `recipes/mains/` and `recipes/breakfast/`
-2. Read `reviews/ratings.md` for feedback
-3. Read the most recent file in `weeks/` to avoid repeating the same lineup
-4. Pick 4 mains + 1 breakfast:
-   - Prioritize 4–5 star rated recipes as returning favorites
+1. **Read all profiles in `profiles/`**
+2. Read all recipes in `recipes/mains/` and `recipes/breakfast/`
+3. Read `reviews/ratings.md` for feedback
+4. Read the most recent file in `weeks/` to avoid repeating
+5. Pick 4 mains + 1 breakfast:
+   - Prioritize 4–5 star rated recipes
    - Avoid 1–2 star recipes unless modified
-   - Include 1–2 unrated/new recipes for variety
+   - Include 1–2 unrated/new recipes
    - Ensure variety in cuisines and cooking methods
-5. Read each selected recipe file for exact ingredients
-6. Generate `weeks/week-NN.md` in the Weekly Meal Plan Format below
+   - Favor preferences listed in profiles
+6. Generate `weeks/week-NN.md` in the Weekly Meal Plan Format below, with columns for each dietary group
 7. Commit and push
 
 ### "Give me a recipe for today" / "What should I cook tonight?"
 
 When a user asks for a single meal:
 
-1. Read all recipes in `recipes/mains/`
-2. Read `reviews/ratings.md` for feedback
-3. Pick 1 recipe — favor highly rated ones, vary from recent suggestions
-4. Present it in a condensed format:
-   - Dish name and cuisine
-   - **Ingredients** — full list with quantities (veg version + meat version diffs)
-   - **Method** — condensed step-by-step
-   - Prep and cook time
+1. **Read all profiles in `profiles/`**
+2. Read recipes and ratings
+3. Pick 1 recipe — favor highly rated, vary from recent
+4. Present with ingredients and method for each dietary group
 
 ### "Rate [recipe]" / feedback on a dish
 
-When a user gives feedback on a recipe:
+When a user gives feedback:
 
 1. Read `reviews/ratings.md`
-2. Add their rating as a new row in the table: dish name (kebab-case filename without `.md`), star rating (★ characters), version (veg/meat), notes, and today's date
+2. Add their rating: dish slug, stars (★), person name, version, notes, date
 3. Commit and push
 
 ---
@@ -150,110 +171,58 @@ When a user gives feedback on a recipe:
 - Structure:
   1. Dish name as H1
   2. Metadata: Cuisine, Freezer-friendly status, Prep time, Cook time
-  3. Shared base ingredients and spice mix
+  3. Shared base ingredients and spice mix (safe for ALL dietary groups)
   4. Serving suggestions
   5. `---` separator
-  6. **Vegetarian Version** — protein + full numbered instructions
-  7. `---` separator
-  8. **Meat Version (No Soy / No Dairy)** — protein + full numbered instructions
-  9. `---` separator
-  10. Source URLs at the bottom
+  6. **For each dietary group:** version header with group name(s), protein, and full numbered instructions, separated by `---`
+  7. Source URLs at the bottom
+
+If there's only one dietary group (or no profiles), write a single version with no group labels.
 
 ---
 
 ## Weekly Meal Plan + Shopping List Format
 
-Generate as a single file in `weeks/week-NN.md`. This is a **simplified, cook-friendly document** — not the full recipe files.
+Generate as a single file in `weeks/week-NN.md`.
 
 ### Structure:
 
-1. **Header** with week number, meal count, and dietary reminder
-2. **Summary table** — all 5 meals with veg + meat protein columns
+1. **Header** with week number, meal count, and list of dietary groups
+2. **Summary table** — all meals with one protein column per dietary group
 3. **Per-dish sections** (numbered, separated by `---`), each containing:
-   - **Base:** All shared ingredients in one line (oil, aromatics, spices, broth, extras). Include specific quantities.
-   - **Veg add:** Vegetarian protein/additions in one line
-   - **Meat add:** Meat protein/additions in one line (no soy, no dairy)
-   - **Method:** Condensed cooking instructions in 2-3 sentences. Include temps and times.
-4. **Consolidated Shopping List** at the bottom, organized by:
-   - Proteins (list each item with quantity and which dish it's for)
-   - Canned beans
-   - Produce
-   - Pantry / Carbs
-   - Canned / jarred
-   - Dried fruit + nuts (if applicable)
-   - Spices (note overlaps across dishes)
-   - Other (wine, broth, cheese for veg only, etc.)
-5. **Freezing note** at the very end
-
-### Example:
-
-```markdown
-# Meal Prep List — Week N (Simplified)
-
-5 meals — 4 mains (veg + meat versions) + 1 breakfast.
-**Meat eater:** No soy, no dairy.
-
-| # | Dish | Vegetarian | Meat |
-|---|------|-----------|------|
-| 1 | Dish Name | Veg protein | Meat protein |
-| 2 | ... | ... | ... |
-
----
-
-## 1. Dish Name
-
-**Base:** olive oil, 1 onion, 3 garlic cloves, spices, 1½ cups broth, etc. Serve over rice.
-
-**Veg add:** 1 can chickpeas, 1 sweet potato (cubed)
-**Meat add:** 6 chicken thighs (sear first)
-
-**Method:** Sear chicken if using. Sauté onion 10 min, add garlic + spices. Add broth + protein. Cover and simmer 30 min.
-
----
-
-# Consolidated Shopping List
-
-## Proteins
-- Chicken thighs, bone-in (6) — Dish 1 (meat)
-
-## Canned beans
-- Chickpeas (1 can)
-
-## Produce
-- Yellow onions (3)
-
-(continue all sections)
-
----
-
-**Freezing:** Cool completely, freeze in portions, label with dates. All dishes keep 2–3 months.
-```
+   - **Base:** shared ingredients in one line with quantities
+   - **[Group name] add:** protein/additions for that group, one line per group
+   - **Method:** condensed instructions, 2-3 sentences
+4. **Consolidated Shopping List** organized by grocery section, with version-specific items clearly labeled
+5. **Freezing note**
 
 ### Key principles:
-- Keep it **concise and actionable** — this is a prep-day reference, not a cookbook
-- All quantities should be specific (not "some" or "to taste" — give actual amounts)
-- Group the shopping list so you can shop section by section
-- Note which dish each protein/specialty item is for
-- Feta and other dairy items are veg-only — call this out in the shopping list
+- Keep it **concise and actionable**
+- Specific quantities everywhere
+- Group shopping list by store section
+- Label version-specific items with the dietary group name
+- Consolidate shared ingredients across dishes
 
 ---
 
 ## Reviews & Ratings
 
-User feedback lives in `reviews/ratings.md`. Anyone can add a row to rate a recipe 1–5 stars.
+User feedback lives in `reviews/ratings.md`. Anyone can add a row.
 
-| Stars | Meaning |
-|-------|---------|
-| ★★★★★ | Amazing — make again soon |
-| ★★★★☆ | Really good — keep in rotation |
-| ★★★☆☆ | Fine — not a priority |
-| ★★☆☆☆ | Meh — needs changes or skip |
-| ★☆☆☆☆ | Bad — don't make again |
+| Column | Description |
+|--------|-------------|
+| Dish | Recipe slug (filename without `.md`) |
+| Rating | 1-5 stars using ★ and ☆ characters |
+| Person | Who rated it |
+| Version | Which dietary version they ate |
+| Notes | What they liked/disliked |
+| Date | YYYY-MM-DD |
 
 ### How agents should use ratings:
-- **When generating weekly menus:** Prioritize 4–5 star recipes as returning favorites. Avoid 1–2 star recipes unless modified. Unrated recipes are fair game.
-- **When suggesting daily recipes:** Favor highly rated dishes.
-- **When searching for new recipes:** If a dish was rated poorly with notes, look for alternatives that address the feedback.
+- Prioritize 4–5 star recipes as returning favorites
+- Avoid 1–2 star recipes unless modified
+- If rated poorly with notes, search for alternatives that address the feedback
+- Pay attention to which version was rated — a dish might be great for one group and bad for another
 
 ---
 
@@ -262,14 +231,16 @@ User feedback lives in `reviews/ratings.md`. Anyone can add a row to rate a reci
 These run in the background when the agent session is active:
 
 ### Recipe Hunter (every other day)
-1. Check existing recipes to avoid duplicates
-2. Search the web for trending/seasonal recipes
-3. Write 1-2 new recipes in the format above
-4. Commit and push to main
+1. **Read all profiles in `profiles/`**
+2. Check existing recipes to avoid duplicates
+3. Search the web for trending/seasonal recipes
+4. Write 1-2 new recipes with versions for each dietary group
+5. Commit and push to main
 
 ### Meal Planner (1st and 15th of each month)
-1. Read all available recipes and existing week plans
-2. Read `reviews/ratings.md` to prioritize favorites and avoid poorly rated dishes
-3. Pick 4 mains + 1 breakfast, mixing highly rated returning favorites with new/unrated recipes
-4. Generate a weekly menu + consolidated shopping list in the format above
-5. Commit and push to main
+1. **Read all profiles in `profiles/`**
+2. Read all available recipes and existing week plans
+3. Read `reviews/ratings.md` to prioritize favorites
+4. Pick 4 mains + 1 breakfast, favoring profile preferences
+5. Generate a weekly menu + consolidated shopping list
+6. Commit and push to main
