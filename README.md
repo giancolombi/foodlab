@@ -72,8 +72,13 @@ recipes/mains/       Full recipes (one version per dietary group)
 recipes/breakfast/   Breakfast recipes
 weeks/               Weekly menus + shopping lists
 reviews/ratings.md   Rate recipes 1-5 stars
+hooks/               Safety guards (block destructive commands, detect secrets, prevent injection)
 AGENTS.md            Agent instructions (CLAUDE.md symlinks here)
 ```
+
+## Safety Hooks
+
+Agents run with [safety guards](hooks/README.md) inspired by [Sondera's Cedar policies](https://github.com/sondera-ai/sondera-coding-agent-hooks). These block destructive operations (force push, rm -rf, reset --hard), detect secrets in output, and prevent prompt injection — all without requiring Rust or external dependencies. See [`hooks/`](hooks/) for details.
 
 ## Rate a Recipe
 
