@@ -122,6 +122,21 @@ cd foodlab && openclaw
 # Ask: "Read AGENTS.md, then add a profile for me"
 ```
 
+### Cursor
+
+```bash
+# Open foodlab/ in Cursor
+# Agent reads .cursor/settings.json automatically
+# First: "Add a profile for me"
+```
+
+### GitHub Copilot
+
+```bash
+cd foodlab && gh copilot
+# Ask: "Read AGENTS.md, then add a profile for me"
+```
+
 ### No AI? No Problem
 
 Browse [`recipes/`](recipes/) for dishes, [`weeks/`](weeks/) for meal plans with shopping lists, and create your profile manually in [`profiles/`](profiles/).

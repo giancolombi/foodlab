@@ -17,5 +17,16 @@
       "shell:ls *",
       "shell:mkdir *"
     ]
+  },
+  "hooks": {
+    "pre_tool_use": {
+      "command": "./hooks/pre-tool-guard.sh"
+    },
+    "post_tool_use": {
+      "command": "./hooks/post-tool-guard.sh"
+    },
+    "user_prompt": {
+      "command": "./hooks/prompt-guard.sh"
+    }
   }
 }

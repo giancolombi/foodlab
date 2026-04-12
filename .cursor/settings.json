@@ -5,7 +5,6 @@
       "write_file",
       "edit_file",
       "search_files",
-      "search_content",
       "web_search",
       "web_fetch",
       "shell:git add*",

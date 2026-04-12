@@ -35,12 +35,14 @@ Runs on **every user prompt**. Blocks:
 
 ## Supported Agents
 
-| Agent | Config file | Hook format |
-|-------|------------|-------------|
-| Claude Code | `.claude/settings.json` | `hooks.PreToolUse/PostToolUse/UserPromptSubmit` |
-| Gemini CLI | `.gemini/settings.json` | Same stdin/stdout JSON protocol |
-| Codex | `.codex/config.json` | Adapts to Codex hook format |
-| OpenClaw | `.openclaw/config.json` | Adapts to OpenClaw hook format |
+| Agent | Config file | Status |
+|-------|------------|--------|
+| Claude Code | `.claude/settings.json` | Hooks wired |
+| Codex (OpenAI) | `.codex/config.json` | Hooks wired |
+| Gemini CLI (Google) | `.gemini/settings.json` | Hooks wired |
+| OpenClaw | `.openclaw/config.json` | Hooks wired |
+| Cursor | `.cursor/settings.json` | Hooks wired |
+| GitHub Copilot | `.github/copilot/config.json` | Hooks wired |
 
 ## Testing a Hook
 
