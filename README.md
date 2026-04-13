@@ -18,17 +18,15 @@ Works on Claude Pro, Max, Team, and Enterprise plans.
 2. Connect this repo: `https://github.com/giancolombi/foodlab`
 3. Type `/foodlab-help` to see all commands
 
-### ChatGPT
+### ChatGPT (any plan, including free)
 
-**ChatGPT Plus/Team** — Create a Custom GPT:
-1. Go to [chatgpt.com/gpts](https://chatgpt.com/gpts) > **Create**
-2. Paste the instructions from [`.chatgpt/skills/foodlab-meal-planner.json`](https://raw.githubusercontent.com/giancolombi/foodlab/main/.chatgpt/skills/foodlab-meal-planner.json)
-3. Share the GPT link with anyone
+Open a new chat, paste one prompt, and go. Full setup guides:
 
-**ChatGPT Business/Enterprise** — Upload as a Skill:
-1. [Download `foodlab-meal-planner.json`](https://raw.githubusercontent.com/giancolombi/foodlab/main/.chatgpt/skills/foodlab-meal-planner.json)
-2. Profile > **Skills** > **New skill** > **Upload**
-3. Share with your workspace
+- [English](docs/setup-chatgpt-en.md)
+- [Español (Latinoamérica)](docs/setup-chatgpt-es.md)
+- [Português (Brasil)](docs/setup-chatgpt-pt-br.md)
+
+FoodLab reads recipes, profiles, and ratings directly from this GitHub repo — no install needed.
 
 ### Just Browse
 Read recipes directly on GitHub: [`recipes/mains/`](https://github.com/giancolombi/foodlab/tree/main/recipes/mains)
