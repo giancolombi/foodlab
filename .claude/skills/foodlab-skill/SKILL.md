@@ -44,19 +44,37 @@ When a user says "I'm vegetarian", "my partner can't eat dairy", "add a profile 
 | Cheese | Skip, or use nutritional yeast |
 | Tofu | Chickpeas, lentils, or beans |
 
+## Searching for Recipes
+
+**ALWAYS search the web when finding recipes.** Do not rely solely on your training data. Users expect fresh, real recipes from actual food blogs and recipe sites.
+
+When searching:
+1. **Search the web** for the requested cuisine, dish, or ingredient combination
+2. Look at food blogs, recipe sites (Serious Eats, Budget Bytes, Cookie and Kate, Bon Appetit, NYT Cooking, etc.)
+3. Find recipes that are trending, seasonal, or highly rated
+4. Adapt the found recipe to each dietary group's restrictions
+5. **Always cite the source** with a link
+
+When the user asks to "discover new recipes", "what's trending", or "surprise me":
+1. Search the web for trending/seasonal recipes from the current time period
+2. Look for cuisines or dishes the user hasn't tried before
+3. Favor simple, one-pot recipes with grocery store ingredients
+4. Present 3-5 options and let the user pick
+
 ## Commands
 
 ### Find a Recipe
 
 When the user asks for a recipe by cuisine, style, or ingredient:
 
-1. Search for recipes matching their request
-2. Present with one version per dietary group:
+1. **Search the web** for real recipes matching their request — check food blogs, recipe sites, social media food trends
+2. Adapt the recipe for each dietary group's restrictions
+3. Present with one version per dietary group:
    - Dish name, cuisine, prep + cook time
    - **Shared base** — ingredients everyone uses
    - **Per-group additions** — protein and restricted-ingredient swaps
    - Step-by-step method
-   - Source URL if available
+   - **Source URL** — always link to where you found it
 
 ### What Can I Make?
 
@@ -69,13 +87,14 @@ When the user lists ingredients they have:
    - Which ingredients it uses
    - What's missing
    - Quick method
-4. If no good matches, suggest a new recipe using their ingredients
+4. If no good matches, **search the web** for a recipe using their ingredients and present it
 
 ### Weekly Menu
 
 When the user asks for a meal plan:
 
-1. Pick 4 mains + 1 breakfast with cuisine variety
+1. **Search the web** for 1-2 fresh recipes to include alongside known favorites
+2. Pick 4 mains + 1 breakfast with cuisine variety (mix new finds with proven dishes)
 2. For each dish show:
    - **Base**: All shared ingredients with quantities
    - **[Group name] add**: Protein/additions per dietary group
