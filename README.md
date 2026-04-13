@@ -4,26 +4,31 @@ AI-powered meal planning that adapts to everyone's dietary needs. Find recipes, 
 
 ## Get Started (Browser — No Install Needed)
 
-### ChatGPT
+### Claude.ai (Recommended)
 
-**Option A — One-click install (easiest):**
+**Option A — Agent Skill (best experience):**
+1. [Download `foodlab-skill.zip`](https://raw.githubusercontent.com/giancolombi/foodlab/main/foodlab-skill.zip)
+2. In claude.ai: go to **Settings** > **Features** > upload the zip
+3. Start chatting: *"What should I cook tonight?"*
 
-<!-- SHARE_LINK: Replace this with your ChatGPT skill share link once published -->
-> Once published, a share link will be here. For now, use Option B.
+Works on Claude Pro, Max, Team, and Enterprise plans.
 
-**Option B — Upload the skill file:**
-1. [Download `foodlab-meal-planner.json`](https://raw.githubusercontent.com/giancolombi/foodlab/main/.chatgpt/skills/foodlab-meal-planner.json) (right-click > Save As)
-2. In ChatGPT: click your profile icon > **Skills** > **New skill** > **Upload from your computer**
-3. Select the downloaded file
-4. Start chatting: *"What should I cook tonight?"*
-
-**Option C — Workspace (Teams):**
-If your ChatGPT workspace admin has published FoodLab, it appears under Profile > Skills > **Shared with you** — just click Install.
-
-### Claude (Web)
+**Option B — Claude Code (web):**
 1. Go to [claude.ai/code](https://claude.ai/code)
 2. Connect this repo: `https://github.com/giancolombi/foodlab`
 3. Type `/foodlab-help` to see all commands
+
+### ChatGPT
+
+**ChatGPT Plus/Team** — Create a Custom GPT:
+1. Go to [chatgpt.com/gpts](https://chatgpt.com/gpts) > **Create**
+2. Paste the instructions from [`.chatgpt/skills/foodlab-meal-planner.json`](https://raw.githubusercontent.com/giancolombi/foodlab/main/.chatgpt/skills/foodlab-meal-planner.json)
+3. Share the GPT link with anyone
+
+**ChatGPT Business/Enterprise** — Upload as a Skill:
+1. [Download `foodlab-meal-planner.json`](https://raw.githubusercontent.com/giancolombi/foodlab/main/.chatgpt/skills/foodlab-meal-planner.json)
+2. Profile > **Skills** > **New skill** > **Upload**
+3. Share with your workspace
 
 ### Just Browse
 Read recipes directly on GitHub: [`recipes/mains/`](https://github.com/giancolombi/foodlab/tree/main/recipes/mains)
