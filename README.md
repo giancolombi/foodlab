@@ -92,53 +92,31 @@ Tell your agent *"Rate the moroccan tagine 5 stars — loved the flavors"* or ed
 
 ## Setup
 
-Clone the repo and use any AI coding tool. The agent reads `AGENTS.md` / `CLAUDE.md` for instructions automatically.
+### Browser (No Install)
 
-### Claude Code
+| Platform | How to use |
+|----------|-----------|
+| **Claude Code (Web)** | Go to [claude.ai/code](https://claude.ai/code), connect this repo, and use `/find-recipe`, `/weekly-menu`, etc. |
+| **ChatGPT** | Upload `.chatgpt/skills/foodlab-meal-planner.json` via Profile > Skills > Upload. Then just ask for recipes. |
+| **Homebase Web App** | Open the Meals tab > FoodLab — browse recipes, set dietary profiles, rate dishes, generate shopping lists. |
+| **Browse directly** | Read recipes on [GitHub](https://github.com/giancolombi/foodlab/tree/main/recipes/mains) — no tools needed. |
 
-```bash
-cd foodlab && claude
-# CLAUDE.md is read automatically — just start asking
-# First: "Add a profile for me"
-```
-
-### Codex (OpenAI)
-
-```bash
-cd foodlab && codex
-# Ask: "Read AGENTS.md, then add a profile for me"
-```
-
-### Gemini CLI (Google)
+### CLI / IDE
 
 ```bash
-cd foodlab && gemini
-# AGENTS.md is read automatically
-# First: "Add a profile for me"
+git clone https://github.com/giancolombi/foodlab.git
+cd foodlab
 ```
 
-### OpenClaw
+| Tool | Command | Skills |
+|------|---------|--------|
+| **Claude Code** | `claude` | Auto-loaded from `.claude/skills/` — use `/find-recipe`, `/weekly-menu`, etc. |
+| **Codex (OpenAI)** | `codex` | Reads `AGENTS.md` — ask naturally |
+| **Gemini CLI** | `gemini` | Reads `AGENTS.md` — ask naturally |
+| **Cursor** | Open folder | Reads `.cursor/settings.json` — ask naturally |
+| **GitHub Copilot** | `gh copilot` | Reads `AGENTS.md` — ask naturally |
+| **OpenClaw** | `openclaw` | Reads `AGENTS.md` — ask naturally |
 
-```bash
-cd foodlab && openclaw
-# Ask: "Read AGENTS.md, then add a profile for me"
-```
+### First thing to do after setup
 
-### Cursor
-
-```bash
-# Open foodlab/ in Cursor
-# Agent reads .cursor/settings.json automatically
-# First: "Add a profile for me"
-```
-
-### GitHub Copilot
-
-```bash
-cd foodlab && gh copilot
-# Ask: "Read AGENTS.md, then add a profile for me"
-```
-
-### No AI? No Problem
-
-Browse [`recipes/`](recipes/) for dishes, [`weeks/`](weeks/) for meal plans with shopping lists, and create your profile manually in [`profiles/`](profiles/).
+Type `/add-profile` (or *"Add a profile for me"*) to set up your dietary restrictions. This personalizes every recipe to your needs.

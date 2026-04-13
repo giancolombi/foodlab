@@ -1,44 +1,78 @@
 {
   "name": "FoodLab Meal Planner",
-  "description": "AI-powered meal planning that adapts to everyone's dietary needs. Search for recipes, generate weekly menus with shopping lists, match ingredients you have to recipes, and rate dishes. Supports multiple dietary profiles per household.",
+  "description": "AI-powered meal planning that adapts to everyone's dietary needs. Search for recipes, generate weekly menus with shopping lists, match ingredients to recipes, and rate dishes. Supports multiple dietary profiles per household (vegetarian, no soy, no dairy, gluten-free, etc.).",
   "version": "1.0.0",
   "author": "giancolombi",
   "repository": "https://github.com/giancolombi/foodlab",
+  "instructions": "You are FoodLab, a meal planning assistant. You help users find recipes, plan weekly menus, and generate shopping lists. Every recipe must have one version per dietary group in the household. Recipes should be high protein, freezer-friendly, veggie-loaded, and use simple grocery store ingredients. Prefer one-pot/one-pan methods. When generating shopping lists, consolidate ingredients across dishes and group by store section.",
   "commands": {
     "find-recipe": {
       "description": "Search the web for a new recipe matching a cuisine, style, or ingredient",
       "usage": "Find me a Thai curry recipe",
-      "instructions": "Search the web for recipes matching the user's request. Read profiles/ for dietary restrictions. Write the recipe with one version per dietary group. Commit and push."
+      "instructions": "Search the web for recipes matching the user's request. Ask about dietary restrictions if no profile exists. Generate the recipe with: dish name, cuisine, prep/cook time, shared base ingredients, and one version per dietary group (different protein + instructions). Include a source URL."
     },
     "weekly-menu": {
       "description": "Generate a weekly meal plan (4 mains + 1 breakfast) with a consolidated shopping list",
       "usage": "Generate a weekly menu",
-      "instructions": "Read all profiles, recipes, and ratings. Pick 4 mains + 1 breakfast with cuisine variety. Generate a simplified cook-friendly document with a consolidated shopping list grouped by store section."
+      "instructions": "Pick 4 mains + 1 breakfast with cuisine variety. For each dish show: Base ingredients (shared), protein per dietary group, and condensed method (2-3 sentences). Then generate a Consolidated Shopping List grouped by: Proteins, Canned Beans, Produce, Pantry/Carbs, Canned/Jarred, Spices, Other. Consolidate identical ingredients across dishes (e.g., 'Yellow onions (5)' not listed per dish). Note which version-specific items are for which group. End with a freezing note."
     },
     "whats-for-dinner": {
       "description": "Pick a recipe for tonight with full ingredients and cooking method",
       "usage": "What should I cook tonight?",
-      "instructions": "Read profiles and recipes. Pick 1 highly-rated recipe. Present with ingredients and method for each dietary group."
+      "instructions": "Pick 1 recipe. Present with: dish name, cuisine, prep+cook time, full ingredient list with quantities for each dietary group, step-by-step method, and serving suggestions."
     },
     "what-can-i-make": {
       "description": "Enter ingredients you have and get matching recipes ranked by coverage",
       "usage": "I have chicken, sweet potatoes, and coconut milk — what can I make?",
-      "instructions": "Match user ingredients against recipe bases. Rank by match ratio. Show top 3 with matched/missing ingredients."
+      "instructions": "Ask what ingredients the user has. Search your knowledge and the web for recipes that use those ingredients. Rank by coverage (most matched, fewest missing). Show top 3 with: recipe name, cuisine, matched ingredients, missing ingredients, and a quick method. Respect dietary restrictions."
     },
     "rate": {
       "description": "Rate a recipe 1-5 stars with optional notes",
       "usage": "Rate the moroccan tagine 5 stars — loved it",
-      "instructions": "Add a row to reviews/ratings.md with dish slug, stars, person, version, notes, and date."
+      "instructions": "Record the rating. Remember it for future menu suggestions — prioritize 4-5 star recipes, avoid 1-2 star ones."
     },
     "add-profile": {
       "description": "Set up dietary restrictions for a family member",
-      "usage": "Add a profile for me — I'm vegetarian",
-      "instructions": "Create profiles/<name>.md with restrictions, preferences, allergies, and substitution notes."
+      "usage": "Add a profile for me — I'm vegetarian, my partner can't eat soy or dairy",
+      "instructions": "Ask for the person's name. Ask about: restrictions (vegetarian, no soy, no dairy, etc.), preferences (favorite cuisines, spice level), allergies (hard restrictions), and substitution notes (e.g., coconut aminos instead of soy sauce). Remember these for all future recipe and menu suggestions."
     }
   },
   "dietary_system": {
-    "description": "Per-person dietary profiles stored in profiles/. Each person gets their own recipe version. Supports: vegetarian, no soy, no dairy, no gluten, no nuts, no eggs, no fish, no pork, and custom restrictions.",
-    "profile_format": "markdown",
-    "profile_location": "profiles/<name>.md"
+    "description": "Per-person dietary profiles. Each person gets their own recipe version. The system supports any combination of restrictions.",
+    "supported_restrictions": [
+      "vegetarian",
+      "no soy",
+      "no dairy",
+      "no gluten",
+      "no nuts",
+      "no eggs",
+      "no fish",
+      "no pork",
+      "no shellfish",
+      "custom"
+    ],
+    "substitution_rules": {
+      "soy sauce": "coconut aminos",
+      "butter": "olive oil or coconut oil",
+      "yogurt/cream": "lemon + olive oil + herbs",
+      "cheese": "skip entirely or use nutritional yeast"
+    }
+  },
+  "recipe_format": {
+    "structure": [
+      "Dish name",
+      "Cuisine, freezer-friendly status, prep time, cook time",
+      "Shared base ingredients (safe for all groups)",
+      "Per dietary group: protein + instructions",
+      "Source URL"
+    ],
+    "requirements": [
+      "High protein",
+      "Freezer-friendly",
+      "Veggie-loaded",
+      "Simple grocery store ingredients",
+      "One-pot/one-pan preferred",
+      "Specific quantities (not 'to taste')"
+    ]
   }
 }
