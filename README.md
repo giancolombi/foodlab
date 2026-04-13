@@ -46,15 +46,17 @@ The agent reads all profiles and generates a version of each recipe for every di
 
 ## What You Can Ask
 
-| Ask this | What happens |
-|----------|-------------|
-| *"Help"* | Shows all available commands |
-| *"Add a profile for me"* | Sets up your dietary restrictions |
-| *"Find me a Thai curry recipe"* | Searches the web, writes a recipe with versions for each person |
-| *"I have chicken and sweet potatoes — what can I make?"* | Matches your ingredients against existing recipes |
-| *"Generate a weekly menu"* | Picks 4 mains + 1 breakfast, creates a prep guide + shopping list |
-| *"What should I cook tonight?"* | Picks a recipe and shows ingredients + method for your group |
-| *"Rate the moroccan tagine 5 stars"* | Adds your rating — future menus prioritize favorites |
+| Slash Command | Natural Language | What happens |
+|--------------|-----------------|-------------|
+| `/foodlab-help` | *"Help"* | Shows all available commands |
+| `/add-profile` | *"Add a profile for me"* | Sets up dietary restrictions for a family member |
+| `/find-recipe` | *"Find me a Thai curry recipe"* | Searches the web, writes a recipe for each dietary group |
+| `/what-can-i-make` | *"I have chicken and sweet potatoes"* | Matches your ingredients against existing recipes |
+| `/weekly-menu` | *"Generate a weekly menu"* | Picks 4 mains + 1 breakfast, creates prep guide + shopping list |
+| `/whats-for-dinner` | *"What should I cook tonight?"* | Picks a recipe with full ingredients + method |
+| `/rate` | *"Rate the moroccan tagine 5 stars"* | Adds your rating — future menus prioritize favorites |
+
+You can use either the slash command or just ask naturally — the agent understands both.
 
 ## How It Works
 

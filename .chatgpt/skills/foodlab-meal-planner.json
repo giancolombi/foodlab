@@ -1,0 +1,44 @@
+{
+  "name": "FoodLab Meal Planner",
+  "description": "AI-powered meal planning that adapts to everyone's dietary needs. Search for recipes, generate weekly menus with shopping lists, match ingredients you have to recipes, and rate dishes. Supports multiple dietary profiles per household.",
+  "version": "1.0.0",
+  "author": "giancolombi",
+  "repository": "https://github.com/giancolombi/foodlab",
+  "commands": {
+    "find-recipe": {
+      "description": "Search the web for a new recipe matching a cuisine, style, or ingredient",
+      "usage": "Find me a Thai curry recipe",
+      "instructions": "Search the web for recipes matching the user's request. Read profiles/ for dietary restrictions. Write the recipe with one version per dietary group. Commit and push."
+    },
+    "weekly-menu": {
+      "description": "Generate a weekly meal plan (4 mains + 1 breakfast) with a consolidated shopping list",
+      "usage": "Generate a weekly menu",
+      "instructions": "Read all profiles, recipes, and ratings. Pick 4 mains + 1 breakfast with cuisine variety. Generate a simplified cook-friendly document with a consolidated shopping list grouped by store section."
+    },
+    "whats-for-dinner": {
+      "description": "Pick a recipe for tonight with full ingredients and cooking method",
+      "usage": "What should I cook tonight?",
+      "instructions": "Read profiles and recipes. Pick 1 highly-rated recipe. Present with ingredients and method for each dietary group."
+    },
+    "what-can-i-make": {
+      "description": "Enter ingredients you have and get matching recipes ranked by coverage",
+      "usage": "I have chicken, sweet potatoes, and coconut milk — what can I make?",
+      "instructions": "Match user ingredients against recipe bases. Rank by match ratio. Show top 3 with matched/missing ingredients."
+    },
+    "rate": {
+      "description": "Rate a recipe 1-5 stars with optional notes",
+      "usage": "Rate the moroccan tagine 5 stars — loved it",
+      "instructions": "Add a row to reviews/ratings.md with dish slug, stars, person, version, notes, and date."
+    },
+    "add-profile": {
+      "description": "Set up dietary restrictions for a family member",
+      "usage": "Add a profile for me — I'm vegetarian",
+      "instructions": "Create profiles/<name>.md with restrictions, preferences, allergies, and substitution notes."
+    }
+  },
+  "dietary_system": {
+    "description": "Per-person dietary profiles stored in profiles/. Each person gets their own recipe version. Supports: vegetarian, no soy, no dairy, no gluten, no nuts, no eggs, no fish, no pork, and custom restrictions.",
+    "profile_format": "markdown",
+    "profile_location": "profiles/<name>.md"
+  }
+}
