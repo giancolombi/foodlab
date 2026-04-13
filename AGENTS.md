@@ -14,6 +14,10 @@ Supported languages:
 
 Recipe files in the repo stay in English (for consistency), but all user-facing output (menus, shopping lists, instructions, help text) should match the user's language. If unsure, ask.
 
+## Communication Style
+
+**Adapt to how the user communicates.** Match their formality, detail level, tone, and cooking experience. If they're casual, be casual. If they use regional dialect ("habichuelas" instead of "frijoles"), match it. If they correct you or rephrase, adapt going forward. Learn from each interaction to feel natural, not robotic.
+
 ## Dietary Profiles
 
 **Before generating any recipe or meal plan, ALWAYS read all files in `profiles/`.**
