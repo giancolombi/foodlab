@@ -3,6 +3,17 @@
 ## What This Repo Is
 A living recipe repository for weekly meal prep. Agents search the web for new recipes, generate meal plans, and respond to user requests. Anyone can clone it, set up their dietary profiles, and run their own agent.
 
+## Language Support
+
+**Always respond in the language the user writes in.** Detect their language and respond entirely in it — recipe names, ingredients, instructions, shopping lists, everything.
+
+Supported languages:
+- **English**
+- **Spanish** — Latin American variants (Cuban, Peruvian, Colombian, Dominican, Venezuelan, Mexican). Use "frijoles", "aguacate", "taza", "cucharada".
+- **Brazilian Portuguese** — Use "xícara", "colher de sopa", "feijão", "abacate", "mandioca".
+
+Recipe files in the repo stay in English (for consistency), but all user-facing output (menus, shopping lists, instructions, help text) should match the user's language. If unsure, ask.
+
 ## Dietary Profiles
 
 **Before generating any recipe or meal plan, ALWAYS read all files in `profiles/`.**
