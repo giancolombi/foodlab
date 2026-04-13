@@ -5,9 +5,20 @@ AI-powered meal planning that adapts to everyone's dietary needs. Find recipes, 
 ## Get Started (Browser — No Install Needed)
 
 ### ChatGPT
-1. Download [`foodlab-meal-planner.json`](.chatgpt/skills/foodlab-meal-planner.json)
-2. In ChatGPT: click your profile > **Skills** > **New skill** > **Upload**
-3. Start chatting: *"What should I cook tonight?"*
+
+**Option A — One-click install (easiest):**
+
+<!-- SHARE_LINK: Replace this with your ChatGPT skill share link once published -->
+> Once published, a share link will be here. For now, use Option B.
+
+**Option B — Upload the skill file:**
+1. [Download `foodlab-meal-planner.json`](https://raw.githubusercontent.com/giancolombi/foodlab/main/.chatgpt/skills/foodlab-meal-planner.json) (right-click > Save As)
+2. In ChatGPT: click your profile icon > **Skills** > **New skill** > **Upload from your computer**
+3. Select the downloaded file
+4. Start chatting: *"What should I cook tonight?"*
+
+**Option C — Workspace (Teams):**
+If your ChatGPT workspace admin has published FoodLab, it appears under Profile > Skills > **Shared with you** — just click Install.
 
 ### Claude (Web)
 1. Go to [claude.ai/code](https://claude.ai/code)
