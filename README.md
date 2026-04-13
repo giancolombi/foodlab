@@ -4,19 +4,17 @@ AI-powered meal planning that adapts to everyone's dietary needs. Find recipes, 
 
 ## Get Started (Browser — No Install Needed)
 
-### Claude.ai (Recommended)
+### Claude.ai (any plan, including free)
 
-**Option A — Agent Skill (best experience):**
-1. [Download `foodlab-skill.zip`](https://raw.githubusercontent.com/giancolombi/foodlab/main/foodlab-skill.zip)
-2. In claude.ai: go to **Settings** > **Features** > upload the zip
-3. Start chatting: *"What should I cook tonight?"*
+Open a new chat, paste one prompt, and go. Full setup guides:
 
-Works on Claude Pro, Max, Team, and Enterprise plans.
+- [English](docs/setup-claude-chat-en.md)
+- [Español (Latinoamérica)](docs/setup-claude-chat-es.md)
+- [Português (Brasil)](docs/setup-claude-chat-pt-br.md)
 
-**Option B — Claude Code (web):**
-1. Go to [claude.ai/code](https://claude.ai/code)
-2. Connect this repo: `https://github.com/giancolombi/foodlab`
-3. Type `/foodlab-help` to see all commands
+**Paid plans (Pro/Max/Team)** get two better options:
+- Upload [`foodlab-skill.zip`](https://raw.githubusercontent.com/giancolombi/foodlab/main/foodlab-skill.zip) in Settings > Features — skill loads automatically
+- Use [claude.ai/code](https://claude.ai/code) — full slash commands (`/find-recipe`, `/weekly-menu`, etc.)
 
 ### ChatGPT (any plan, including free)
 
