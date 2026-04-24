@@ -284,11 +284,25 @@ function categorize(name: string): Section {
 
 // ---- profile → version mapping ----
 
+export interface VersionMatch {
+  /** Best version to use for this profile. Null only when versions is empty. */
+  version: RecipeVersion | null;
+  /** True if at least one restriction matched the version's label. False means
+   *  we fell back to versions[0] without any real signal — the caller should
+   *  warn the user (allergies in particular shouldn't be silently ignored). */
+  matched: boolean;
+}
+
 /**
  * Pick the recipe version that best matches this profile's restrictions.
  * Heuristic: for each version, count how many of the profile's restrictions
  * are substring-matched by the version's group_label. Highest match wins;
- * ties broken by array order. With no restrictions we pick version 0.
+ * ties broken by array order.
+ *
+ * Returns a `matched` flag so callers can distinguish a real match from a
+ * fallback. For profiles with no restrictions, matched=true (any version is
+ * fine by definition). For profiles with restrictions but no label match,
+ * matched=false and the first version is returned as a best-effort default.
  *
  * Rationale: the data model has no FK from profile→version, so we match on
  * the `group_label` string (e.g. "No Soy / No Dairy"). Fuzzy but works with
@@ -297,14 +311,14 @@ function categorize(name: string): Section {
 export function pickVersion(
   profile: Pick<Profile, "restrictions" | "allergies"> | null,
   versions: RecipeVersion[],
-): RecipeVersion | null {
-  if (!versions.length) return null;
+): VersionMatch {
+  if (!versions.length) return { version: null, matched: false };
   if (!profile || (!profile.restrictions.length && !profile.allergies.length)) {
-    return versions[0];
+    return { version: versions[0], matched: true };
   }
   const needles = [...profile.restrictions, ...profile.allergies];
   let bestIdx = 0;
-  let bestScore = -1;
+  let bestScore = 0;
   versions.forEach((v, i) => {
     // restrictionCoverageScore canonicalizes Spanish/Portuguese restriction
     // phrases to English equivalents so "vegetariano" matches a "Vegetarian"
@@ -315,7 +329,10 @@ export function pickVersion(
       bestIdx = i;
     }
   });
-  return versions[bestIdx];
+  return {
+    version: versions[bestIdx],
+    matched: bestScore > 0,
+  };
 }
 
 // ---- public API ----
@@ -400,9 +417,12 @@ export function consolidate(
       r.versions.forEach((_, i) => groups.set(i, []));
     } else {
       for (const p of profiles) {
-        const v = pickVersion(p, r.versions);
-        if (!v) continue;
-        const idx = r.versions.indexOf(v);
+        const { version, matched } = pickVersion(p, r.versions);
+        // If we couldn't actually match this profile's restrictions to any
+        // version, skip the protein line entirely — better to miss a protein
+        // the user has to re-add than to silently include a restricted one.
+        if (!version || !matched) continue;
+        const idx = r.versions.indexOf(version);
         const list = groups.get(idx) ?? [];
         list.push(p.name);
         groups.set(idx, list);

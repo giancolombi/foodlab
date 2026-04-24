@@ -1,13 +1,27 @@
-// Toggles a recipe's membership in the weekly plan. Uses sonner toasts for
-// feedback so the action feels acknowledged even when the button is tucked
-// into a small corner of a card.
+// Slot picker for assigning a recipe to one or more day/meal slots in the
+// weekly plan. Pops open a small 7-day × 3-meal grid; each cell shows either
+// a check (this recipe is already there) or empty. Tapping toggles that
+// slot's assignment.
+//
+// If the recipe already occupies at least one slot we render the button in
+// its "in plan" state so lists can visually flag it without opening the
+// popover.
 
-import { Check, Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, CalendarPlus } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button, type ButtonProps } from "@/components/ui/button";
+import { Button, type ButtonProps } from "@/design-system";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { usePlan } from "@/contexts/PlanContext";
+import {
+  DAY_KEYS,
+  DAYS,
+  MEALS,
+  usePlan,
+  type Day,
+  type Meal,
+} from "@/contexts/PlanContext";
+import { cn } from "@/lib/utils";
 
 interface Props {
   slug: string;
@@ -22,43 +36,142 @@ export function AddToPlanButton({
   size = "sm",
   className,
 }: Props) {
-  const { has, add, remove } = usePlan();
   const { t } = useLanguage();
-  const inPlan = has(slug);
+  const { assignments, assign, unassign, isInPlan } = usePlan();
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const inPlan = isInPlan(slug);
 
-  const onClick = (e: React.MouseEvent) => {
-    // Recipe cards are wrapped in <Link>; don't navigate when the button is
-    // clicked. Card-level <Link>s in this codebase are inside the card body,
-    // but stop propagation defensively so nested anchors don't fire.
+  // Close on outside click so the popover doesn't linger after selection.
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const onToggleButton = (e: React.MouseEvent) => {
+    // Card-level <Link>s would otherwise swallow the click or navigate.
     e.preventDefault();
     e.stopPropagation();
-    if (inPlan) {
-      remove(slug);
+    setOpen((v) => !v);
+  };
+
+  const toggleSlot = (day: Day, meal: Meal) => {
+    const key = `${day}-${meal}` as const;
+    const existing = assignments[key];
+    if (existing?.slug === slug) {
+      unassign(day, meal);
       toast.success(t("plan.toastRemoved", { title }));
     } else {
-      add(slug);
+      assign(day, meal, slug);
       toast.success(t("plan.toastAdded", { title }));
     }
   };
 
   return (
-    <Button
-      type="button"
-      size={size}
-      variant={inPlan ? "secondary" : "outline"}
-      onClick={onClick}
-      className={className}
-      aria-pressed={inPlan}
-    >
-      {inPlan ? (
-        <>
-          <Check className="h-3.5 w-3.5" /> {t("plan.inPlan")}
-        </>
-      ) : (
-        <>
-          <Plus className="h-3.5 w-3.5" /> {t("plan.add")}
-        </>
+    <div ref={wrapRef} className="relative inline-block">
+      <Button
+        type="button"
+        size={size}
+        variant={inPlan ? "secondary" : "outline"}
+        onClick={onToggleButton}
+        className={className}
+        aria-pressed={inPlan}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+      >
+        {inPlan ? (
+          <>
+            <Check className="h-3.5 w-3.5" /> {t("plan.inPlan")}
+          </>
+        ) : (
+          <>
+            <CalendarPlus className="h-3.5 w-3.5" /> {t("plan.add")}
+          </>
+        )}
+      </Button>
+      {open && (
+        <div
+          role="dialog"
+          aria-label={t("plan.assignRecipe")}
+          className={cn(
+            "absolute z-50 mt-1 p-3 rounded-md border bg-popover shadow-md",
+            // Right-align on desktop, but on mobile let it flow from the left
+            // of the button so it never clips off-screen on narrow viewports.
+            "right-0 left-0 sm:left-auto sm:w-[320px]",
+          )}
+        >
+          <p className="text-xs text-muted-foreground mb-2">
+            {t("plan.assignHint")}
+          </p>
+          <div className="grid grid-cols-[auto_repeat(3,1fr)] gap-1 text-[11px]">
+            <div />
+            {MEALS.map((m) => (
+              <div
+                key={m}
+                className="text-center text-muted-foreground capitalize"
+              >
+                {t(`plan.slot.${m}` as const)}
+              </div>
+            ))}
+            {DAYS.map((d) => (
+              <Row
+                key={d}
+                day={d}
+                dayKey={DAY_KEYS[d]}
+                slug={slug}
+                assignments={assignments}
+                onToggle={toggleSlot}
+                label={t(`plan.day.${DAY_KEYS[d]}` as const)}
+              />
+            ))}
+          </div>
+        </div>
       )}
-    </Button>
+    </div>
+  );
+}
+
+interface RowProps {
+  day: Day;
+  dayKey: string;
+  label: string;
+  slug: string;
+  assignments: ReturnType<typeof usePlan>["assignments"];
+  onToggle: (day: Day, meal: Meal) => void;
+}
+
+function Row({ day, label, slug, assignments, onToggle }: RowProps) {
+  return (
+    <>
+      <div className="py-1 pr-2 text-muted-foreground text-xs">{label}</div>
+      {MEALS.map((m) => {
+        const existing = assignments[`${day}-${m}` as const];
+        const mine = existing?.slug === slug;
+        const occupiedByOther = existing && !mine;
+        return (
+          <button
+            type="button"
+            key={m}
+            onClick={() => onToggle(day, m)}
+            className={cn(
+              "h-8 rounded border text-[10px] font-medium transition-colors",
+              mine
+                ? "bg-primary text-primary-foreground border-primary"
+                : occupiedByOther
+                  ? "bg-muted text-muted-foreground border-input hover:border-primary/40"
+                  : "bg-background text-muted-foreground border-input hover:bg-accent/30",
+            )}
+            aria-pressed={mine}
+            title={existing?.slug}
+          >
+            {mine ? <Check className="h-3 w-3 mx-auto" /> : occupiedByOther ? "•" : ""}
+          </button>
+        );
+      })}
+    </>
   );
 }

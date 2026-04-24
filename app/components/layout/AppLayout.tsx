@@ -1,9 +1,10 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { ChefHat, Globe, LogOut, ShoppingBasket } from "lucide-react";
+import { CalendarDays, ChefHat, Globe, LogOut, ShoppingCart } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/design-system";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlan } from "@/contexts/PlanContext";
 import { LOCALES, type Locale } from "@/i18n/strings";
@@ -13,7 +14,12 @@ import { cn } from "@/lib/utils";
 export default function AppLayout() {
   const { user, signOut } = useAuth();
   const { locale, setLocale, t } = useLanguage();
-  const { count: planCount } = usePlan();
+  const { filledCount: planCount, recipeCount } = usePlan();
+  const { boughtCount } = useCart();
+  // Header cart badge is a presence indicator: "you have recipes planned,
+  // go shop for them". The precise unticked count lives on the Cart page to
+  // avoid materializing the full shopping list on every layout render.
+  const hasSomethingToShop = recipeCount > 0;
   const navigate = useNavigate();
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
@@ -40,6 +46,7 @@ export default function AppLayout() {
     { to: "/", label: t("nav.match") },
     { to: "/recipes", label: t("nav.recipes") },
     { to: "/plan", label: t("nav.plan") },
+    { to: "/cart", label: t("nav.cart") },
     { to: "/profiles", label: t("nav.profiles") },
   ];
 
@@ -85,17 +92,36 @@ export default function AppLayout() {
               </NavLink>
             ))}
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Link
               to="/plan"
-              className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
+              className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40"
               aria-label={t("nav.plan")}
+              title={t("nav.plan")}
             >
-              <ShoppingBasket className="h-4 w-4" />
+              <CalendarDays className="h-4 w-4" />
               {planCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] rounded-full bg-primary text-primary-foreground text-[10px] font-medium inline-flex items-center justify-center px-1">
                   {planCount}
                 </span>
+              )}
+            </Link>
+            <Link
+              to="/cart"
+              className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40"
+              aria-label={t("nav.cart")}
+              title={t("nav.cart")}
+            >
+              <ShoppingCart className="h-4 w-4" />
+              {hasSomethingToShop && (
+                <span
+                  className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-primary"
+                  aria-label={
+                    boughtCount > 0
+                      ? t("nav.cartPartialHint", { n: boughtCount })
+                      : t("nav.cartHasItemsHint")
+                  }
+                />
               )}
             </Link>
             <div className="relative" ref={langRef}>
@@ -157,7 +183,7 @@ export default function AppLayout() {
               end={item.to === "/"}
               className={({ isActive }) =>
                 cn(
-                  "flex-1 text-center py-2 text-sm",
+                  "flex-1 text-center py-2 text-xs truncate",
                   isActive
                     ? "text-primary font-medium"
                     : "text-muted-foreground",

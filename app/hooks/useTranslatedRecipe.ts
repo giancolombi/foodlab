@@ -4,6 +4,12 @@ import { translate } from "@/lib/translator";
 import type { Locale } from "@/i18n/strings";
 import type { RecipeDetail } from "@/types";
 
+interface TranslatedRecipe {
+  recipe: RecipeDetail | null;
+  /** True while any field is still being translated. */
+  translating: boolean;
+}
+
 // Progressively hydrates a recipe's user-facing strings into `targetLocale`.
 // Returns the original recipe immediately; each field updates as it resolves so
 // the UI can render a partial translation while the rest streams in. All
@@ -14,13 +20,25 @@ import type { RecipeDetail } from "@/types";
 export function useTranslatedRecipe(
   recipe: RecipeDetail | null,
   targetLocale: Locale,
-): RecipeDetail | null {
+): TranslatedRecipe {
   const [overrides, setOverrides] = useState<Partial<RecipeDetail> | null>(null);
+  // Tracks how many of the four translation groups are still in flight so
+  // the caller can render a spinner. Starts at 4 when the effect kicks off
+  // and decrements as each group resolves (or errors).
+  const [pending, setPending] = useState(0);
 
   useEffect(() => {
     setOverrides(null);
-    if (!recipe || targetLocale === "en") return;
+    if (!recipe || targetLocale === "en") {
+      setPending(0);
+      return;
+    }
     let cancelled = false;
+    setPending(4);
+    const done = () => {
+      if (cancelled) return;
+      setPending((n) => Math.max(0, n - 1));
+    };
 
     const tr = (s: string) => translate(s, "en", targetLocale);
     const trMaybe = (s: string | null) => (s ? tr(s) : Promise.resolve(s));
@@ -41,20 +59,26 @@ export function useTranslatedRecipe(
     }));
 
     // Title + cuisine land together (small, visible).
-    void Promise.all([titleP, cuisineP]).then(([title, cuisine]) => {
-      if (cancelled) return;
-      setOverrides((o) => ({ ...o, title, cuisine }));
-    });
+    void Promise.all([titleP, cuisineP])
+      .then(([title, cuisine]) => {
+        if (cancelled) return;
+        setOverrides((o) => ({ ...o, title, cuisine }));
+      })
+      .finally(done);
 
-    void sharedP.then((shared_ingredients) => {
-      if (cancelled) return;
-      setOverrides((o) => ({ ...o, shared_ingredients }));
-    });
+    void sharedP
+      .then((shared_ingredients) => {
+        if (cancelled) return;
+        setOverrides((o) => ({ ...o, shared_ingredients }));
+      })
+      .finally(done);
 
-    void serveWithP.then((serve_with) => {
-      if (cancelled) return;
-      setOverrides((o) => ({ ...o, serve_with }));
-    });
+    void serveWithP
+      .then((serve_with) => {
+        if (cancelled) return;
+        setOverrides((o) => ({ ...o, serve_with }));
+      })
+      .finally(done);
 
     // Versions: fire each version's assembly independently so a slow one
     // doesn't block the others from rendering.
@@ -66,17 +90,21 @@ export function useTranslatedRecipe(
         protein: await v.protein,
         instructions: await v.instructions,
       })),
-    ).then((versions) => {
-      if (cancelled) return;
-      setOverrides((o) => ({ ...o, versions }));
-    });
+    )
+      .then((versions) => {
+        if (cancelled) return;
+        setOverrides((o) => ({ ...o, versions }));
+      })
+      .finally(done);
 
     return () => {
       cancelled = true;
     };
   }, [recipe, targetLocale]);
 
-  if (!recipe) return null;
-  if (targetLocale === "en" || !overrides) return recipe;
-  return { ...recipe, ...overrides };
+  if (!recipe) return { recipe: null, translating: false };
+  if (targetLocale === "en") return { recipe, translating: false };
+  const translating = pending > 0;
+  if (!overrides) return { recipe, translating };
+  return { recipe: { ...recipe, ...overrides }, translating };
 }

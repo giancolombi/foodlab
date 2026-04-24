@@ -4,8 +4,10 @@ import { Toaster } from "sonner";
 import AppLayout from "@/components/layout/AppLayout";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CartProvider } from "@/contexts/CartContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { PlanProvider } from "@/contexts/PlanContext";
+import Cart from "@/pages/Cart";
 import IngredientMatcher from "@/pages/IngredientMatcher";
 import Plan from "@/pages/Plan";
 import Profiles from "@/pages/Profiles";
@@ -17,27 +19,30 @@ import SignUp from "@/pages/SignUp";
 export default function App() {
   return (
     <LanguageProvider>
-    <AuthProvider>
-      <PlanProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/signin" element={<SignIn />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AppLayout />}>
-                <Route index element={<IngredientMatcher />} />
-                <Route path="recipes" element={<Recipes />} />
-                <Route path="recipes/:slug" element={<RecipeDetail />} />
-                <Route path="profiles" element={<Profiles />} />
-                <Route path="plan" element={<Plan />} />
-              </Route>
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
-        <Toaster richColors position="top-right" />
-      </PlanProvider>
-    </AuthProvider>
+      <AuthProvider>
+        <PlanProvider>
+          <CartProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/signin" element={<SignIn />} />
+                <Route path="/signup" element={<SignUp />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route element={<AppLayout />}>
+                    <Route index element={<IngredientMatcher />} />
+                    <Route path="recipes" element={<Recipes />} />
+                    <Route path="recipes/:slug" element={<RecipeDetail />} />
+                    <Route path="profiles" element={<Profiles />} />
+                    <Route path="plan" element={<Plan />} />
+                    <Route path="cart" element={<Cart />} />
+                  </Route>
+                </Route>
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </BrowserRouter>
+            <Toaster richColors position="top-right" />
+          </CartProvider>
+        </PlanProvider>
+      </AuthProvider>
     </LanguageProvider>
   );
 }

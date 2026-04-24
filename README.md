@@ -84,20 +84,38 @@ Agents run with [safety guards](hooks/README.md) inspired by [Sondera's Cedar po
 
 ```
 test-kitchen/
-  profiles/          Dietary profiles (one per person)
-  recipes/mains/     Full recipes (one version per dietary group)
-  recipes/breakfast/ Breakfast recipes
-  plans/             Weekly menus + shopping lists
-  reviews/ratings.md Rate recipes 1-5 stars
-app/                 React frontend (Vite)
-api/                 Express backend
-ai/                  Ollama container
-scripts/             DB migrate + seed
-hooks/               Safety guards
-.claude/skills/      Slash commands for Claude Code
-.chatgpt/skills/     Skill manifest for ChatGPT
-AGENTS.md            Agent instructions (CLAUDE.md symlinks here)
+  profiles/            Dietary profiles (one per person)
+  recipes/mains/       Full recipes (one version per dietary group)
+  recipes/breakfast/   Breakfast recipes
+  plans/               Weekly menus + shopping lists
+  reviews/ratings.md   Rate recipes 1-5 stars
+app/                   React frontend (Vite + React 19)
+  design-system/       Shared UI tokens + compositions (import from @/design-system)
+  components/ui/       shadcn-style primitives (button, card, badge, …)
+  components/layout/   AppLayout, ProtectedRoute
+  contexts/            Auth, Language, Plan (weekly slots), Cart (tick state)
+  hooks/               Reusable hooks (useTranslatedRecipe, …)
+  i18n/                Flat key dictionary (en / es / pt-BR)
+  lib/                 api client, translator, shoppingList consolidator, dietaryTerms
+  pages/               IngredientMatcher · Recipes · RecipeDetail · Plan · Cart · Profiles · SignIn / SignUp
+  types/               Shared TS types
+api/                   Express backend + Postgres
+  routes/              Route modules (auth, profiles, recipes, plans, …)
+  llm.ts               Ollama client + shopping-list consolidator
+ai/                    Ollama container + entrypoint
+scripts/               DB migrate + seed
+hooks/                 Agent safety guards
+.claude/skills/        Slash commands for Claude Code
+.chatgpt/skills/       Skill manifest for ChatGPT
+docs/                  Setup guides, developer guide, architecture notes
+AGENTS.md              Agent instructions (CLAUDE.md symlinks here)
 ```
+
+**Design system.** Anything that styles UI imports from `@/design-system` — never from `@/components/ui/*` directly. That single import surface re-exports primitives (Button, Card, Badge) plus higher-level compositions (PageHeader, SectionHeader, EmptyState, ProfileChip, LoadingRow) and exposes typed color / spacing tokens so a theme change in one place propagates everywhere.
+
+**Plan vs Cart.** The web app splits scheduling from shopping:
+- `/plan` is a 7-day × 3-meal grid (breakfast / lunch / dinner per day). Each slot holds one recipe.
+- `/cart` is the consolidated shopping list derived from the current plan — with per-item checkboxes that survive reloads so you can tick as you shop.
 
 ### Automated Jobs
 

@@ -1,7 +1,13 @@
-// Tracks the user's current week plan: a set of recipe slugs with timestamps,
-// plus which dietary profiles will be eating this week. Both persist to
-// localStorage so the plan survives reloads; mirrored in React state so any
-// component (list page, detail page, header badge) re-renders on change.
+// Weekly meal plan. Users assign recipes to specific day+meal slots
+// (Mon..Sun × breakfast/lunch/dinner). The shopping cart is derived from
+// whatever recipes are currently assigned — users can head over to the Cart
+// page to tick off items as they shop.
+//
+// We also track which dietary profiles are eating this week so the cart can
+// pick the right recipe version per person.
+//
+// Persists to localStorage; no server round-trips from here (a future task
+// will mirror this into Postgres so plans sync across devices).
 
 import {
   createContext,
@@ -13,43 +19,107 @@ import {
   type ReactNode,
 } from "react";
 
-export interface PlanEntry {
+export const MEALS = ["breakfast", "lunch", "dinner"] as const;
+export type Meal = (typeof MEALS)[number];
+
+// Day index: 0 = Monday, 6 = Sunday. We standardize on Monday-start because
+// meal prep weeks generally begin Monday; locales that prefer Sunday can flip
+// the rendering later without changing storage.
+export const DAYS = [0, 1, 2, 3, 4, 5, 6] as const;
+export type Day = (typeof DAYS)[number];
+export const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+
+export type SlotKey = `${Day}-${Meal}`;
+export const slotKey = (day: Day, meal: Meal): SlotKey => `${day}-${meal}`;
+
+export interface SlotAssignment {
   slug: string;
-  addedAt: number;
+  assignedAt: number;
 }
 
 interface PlanContextValue {
-  entries: PlanEntry[];
-  slugs: Set<string>;
-  count: number;
-  has: (slug: string) => boolean;
-  add: (slug: string) => void;
-  remove: (slug: string) => void;
-  clear: () => void;
-  /** Profile IDs that will be eating this week. [] = cook all versions. */
+  /** Day/meal slot → recipe assignment. */
+  assignments: Partial<Record<SlotKey, SlotAssignment>>;
+  /** Unique slugs across all assignments. */
+  planSlugs: Set<string>;
+  /** How many slots are filled. */
+  filledCount: number;
+  /** How many distinct recipes are in the plan. */
+  recipeCount: number;
+  isInPlan: (slug: string) => boolean;
+  slotsForSlug: (slug: string) => Array<{ day: Day; meal: Meal }>;
+  assign: (day: Day, meal: Meal, slug: string) => void;
+  unassign: (day: Day, meal: Meal) => void;
+  /** Remove a recipe from every slot it occupies. */
+  removeSlug: (slug: string) => void;
+  clearPlan: () => void;
+
+  /** Profiles that will eat this week. [] during init; default set after load. */
   activeProfileIds: string[];
   setActiveProfileIds: (ids: string[]) => void;
   toggleProfile: (id: string) => void;
 }
 
 const PlanContext = createContext<PlanContextValue | null>(null);
-const PLAN_KEY = "foodlab_plan";
-const PROFILES_KEY = "foodlab_plan_profiles";
 
-function loadPlan(): PlanEntry[] {
-  if (typeof window === "undefined") return [];
+const PLAN_KEY = "foodlab_plan_v2";
+const PROFILES_KEY = "foodlab_plan_profiles";
+// Old v1 key — one-time migration: take every slug, dump them into Monday..
+// slots as dinners so existing users don't lose their plan.
+const LEGACY_KEY = "foodlab_plan";
+
+type AssignmentMap = Partial<Record<SlotKey, SlotAssignment>>;
+
+function loadAssignments(): AssignmentMap {
+  if (typeof window === "undefined") return {};
   try {
     const raw = localStorage.getItem(PLAN_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (e): e is PlanEntry =>
-        e && typeof e.slug === "string" && typeof e.addedAt === "number",
-    );
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        // Defensive: only keep keys that look like SlotKey and values that
+        // have a string slug.
+        const out: AssignmentMap = {};
+        for (const [k, v] of Object.entries(parsed)) {
+          if (
+            /^[0-6]-(breakfast|lunch|dinner)$/.test(k) &&
+            v &&
+            typeof (v as any).slug === "string"
+          ) {
+            out[k as SlotKey] = {
+              slug: (v as any).slug,
+              assignedAt:
+                typeof (v as any).assignedAt === "number"
+                  ? (v as any).assignedAt
+                  : Date.now(),
+            };
+          }
+        }
+        return out;
+      }
+    }
+    // Migrate v1 pool → spread dinners across the week.
+    const legacyRaw = localStorage.getItem(LEGACY_KEY);
+    if (legacyRaw) {
+      const legacy = JSON.parse(legacyRaw);
+      if (Array.isArray(legacy)) {
+        const out: AssignmentMap = {};
+        legacy.slice(0, 7).forEach((e: any, i: number) => {
+          if (e && typeof e.slug === "string") {
+            out[slotKey(i as Day, "dinner")] = {
+              slug: e.slug,
+              assignedAt:
+                typeof e.addedAt === "number" ? e.addedAt : Date.now(),
+            };
+          }
+        });
+        return out;
+      }
+    }
   } catch {
-    return [];
+    // fall through to empty
   }
+  return {};
 }
 
 function loadProfiles(): string[] {
@@ -66,17 +136,17 @@ function loadProfiles(): string[] {
 }
 
 export function PlanProvider({ children }: { children: ReactNode }) {
-  const [entries, setEntries] = useState<PlanEntry[]>(loadPlan);
+  const [assignments, setAssignments] = useState<AssignmentMap>(loadAssignments);
   const [activeProfileIds, setActiveProfileIdsState] =
     useState<string[]>(loadProfiles);
 
   useEffect(() => {
     try {
-      localStorage.setItem(PLAN_KEY, JSON.stringify(entries));
+      localStorage.setItem(PLAN_KEY, JSON.stringify(assignments));
     } catch {
-      // quota exceeded or private-mode; plan still works for the session
+      // quota / private mode — session-only
     }
-  }, [entries]);
+  }, [assignments]);
 
   useEffect(() => {
     try {
@@ -86,22 +156,65 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     }
   }, [activeProfileIds]);
 
-  const slugs = useMemo(() => new Set(entries.map((e) => e.slug)), [entries]);
+  const planSlugs = useMemo(() => {
+    const s = new Set<string>();
+    for (const a of Object.values(assignments)) {
+      if (a?.slug) s.add(a.slug);
+    }
+    return s;
+  }, [assignments]);
 
-  const has = useCallback((slug: string) => slugs.has(slug), [slugs]);
+  const filledCount = useMemo(
+    () => Object.values(assignments).filter(Boolean).length,
+    [assignments],
+  );
+  const recipeCount = planSlugs.size;
 
-  const add = useCallback((slug: string) => {
-    setEntries((prev) => {
-      if (prev.some((e) => e.slug === slug)) return prev;
-      return [...prev, { slug, addedAt: Date.now() }];
+  const isInPlan = useCallback(
+    (slug: string) => planSlugs.has(slug),
+    [planSlugs],
+  );
+
+  const slotsForSlug = useCallback(
+    (slug: string) => {
+      const out: Array<{ day: Day; meal: Meal }> = [];
+      for (const [k, a] of Object.entries(assignments)) {
+        if (a?.slug === slug) {
+          const [dStr, meal] = k.split("-") as [string, Meal];
+          out.push({ day: Number(dStr) as Day, meal });
+        }
+      }
+      return out;
+    },
+    [assignments],
+  );
+
+  const assign = useCallback((day: Day, meal: Meal, slug: string) => {
+    setAssignments((prev) => ({
+      ...prev,
+      [slotKey(day, meal)]: { slug, assignedAt: Date.now() },
+    }));
+  }, []);
+
+  const unassign = useCallback((day: Day, meal: Meal) => {
+    setAssignments((prev) => {
+      const next = { ...prev };
+      delete next[slotKey(day, meal)];
+      return next;
     });
   }, []);
 
-  const remove = useCallback((slug: string) => {
-    setEntries((prev) => prev.filter((e) => e.slug !== slug));
+  const removeSlug = useCallback((slug: string) => {
+    setAssignments((prev) => {
+      const next: AssignmentMap = {};
+      for (const [k, a] of Object.entries(prev)) {
+        if (a && a.slug !== slug) next[k as SlotKey] = a;
+      }
+      return next;
+    });
   }, []);
 
-  const clear = useCallback(() => setEntries([]), []);
+  const clearPlan = useCallback(() => setAssignments({}), []);
 
   const setActiveProfileIds = useCallback((ids: string[]) => {
     setActiveProfileIdsState(ids);
@@ -115,24 +228,31 @@ export function PlanProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<PlanContextValue>(
     () => ({
-      entries,
-      slugs,
-      count: entries.length,
-      has,
-      add,
-      remove,
-      clear,
+      assignments,
+      planSlugs,
+      filledCount,
+      recipeCount,
+      isInPlan,
+      slotsForSlug,
+      assign,
+      unassign,
+      removeSlug,
+      clearPlan,
       activeProfileIds,
       setActiveProfileIds,
       toggleProfile,
     }),
     [
-      entries,
-      slugs,
-      has,
-      add,
-      remove,
-      clear,
+      assignments,
+      planSlugs,
+      filledCount,
+      recipeCount,
+      isInPlan,
+      slotsForSlug,
+      assign,
+      unassign,
+      removeSlug,
+      clearPlan,
       activeProfileIds,
       setActiveProfileIds,
       toggleProfile,

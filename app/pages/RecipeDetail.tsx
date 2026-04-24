@@ -6,6 +6,7 @@ import { AddToPlanButton } from "@/components/AddToPlanButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import { RecipeModifyPanel } from "@/components/RecipeModifyPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -19,7 +20,7 @@ export default function RecipeDetail() {
   const { user } = useAuth();
   const { t, locale } = useLanguage();
   const [raw, setRaw] = useState<RecipeDetailT | null>(null);
-  const recipe = useTranslatedRecipe(raw, locale);
+  const { recipe, translating } = useTranslatedRecipe(raw, locale);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -76,6 +77,12 @@ export default function RecipeDetail() {
             <AddToPlanButton slug={recipe.slug} title={recipe.title} />
           </div>
         </div>
+        {translating && (
+          <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Spinner size="xs" label={t("detail.translating")} />
+            {t("detail.translating")}
+          </div>
+        )}
         <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
           {recipe.cuisine && <Badge variant="secondary">{recipe.cuisine}</Badge>}
           {totalMin > 0 && (

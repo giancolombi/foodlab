@@ -3,6 +3,10 @@
 ## What This Repo Is
 A living recipe repository for weekly meal prep. Agents search the web for new recipes, generate meal plans, and respond to user requests. Anyone can clone it, set up their dietary profiles, and run their own agent.
 
+There are two interaction surfaces:
+- **Markdown + agent chat** — the recipes, profiles, plans, and ratings that live under `test-kitchen/` are the source of truth. All agent workflows below read and write these files.
+- **Web app** (`app/` + `api/` + `ai/`) — an optional self-hosted UI that consumes the same data model via Postgres + a small Express API. It separates scheduling (`/plan` — a 7-day × 3-meal grid) from shopping (`/cart` — consolidated tickable list derived from the plan). If you're editing the web app, import UI from `@/design-system` (tokens + shared compositions) rather than `@/components/ui/*`.
+
 ## Language Support
 
 **Always respond in the language the user writes in.** Detect their language and respond entirely in it — recipe names, ingredients, instructions, shopping lists, everything.

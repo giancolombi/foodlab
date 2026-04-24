@@ -1,60 +1,73 @@
-// Weekly meal plan page. Users build up a list of recipes via the
-// AddToPlanButton on Recipes / RecipeDetail, pick which dietary profiles are
-// eating this week, and get a consolidated shopping list. The list is
-// computed client-side by default (deterministic, instant, offline-capable);
-// a "Smart consolidate" button hits /api/plans/shopping-list for an LLM
-// upgrade that handles odd duplicates and better categorization.
+// Weekly meal plan — a 7-day × 3-meal grid. Each cell shows the recipe
+// assigned to that breakfast / lunch / dinner slot (if any) and lets the user
+// assign, swap, or unassign it. The derived shopping list lives on the Cart
+// page; this page is strictly about *what to eat when*.
+//
+// Mobile-first: on narrow viewports the grid collapses into a vertical stack
+// of days so each day's three meals are easy to tap with a thumb. On wider
+// screens we show a 7-column "week at a glance" grid.
 
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Sparkles, Trash2, Users, X } from "lucide-react";
-import { toast } from "sonner";
-
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
+  AlertTriangle,
+  CalendarDays,
+  ChefHat,
+  ShoppingCart,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
+
+import {
+  Badge,
+  Button,
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  EmptyState,
+  LoadingRow,
+  PageHeader,
+  ProfileChip,
+  SectionHeader,
+} from "@/design-system";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { usePlan } from "@/contexts/PlanContext";
-import { api } from "@/lib/api";
 import {
-  consolidate,
-  pickVersion,
-  SECTION_ORDER,
-  type ConsolidatedItem,
-  type ConsolidatedList,
-  type RecipeForPlan,
-  type Section,
-} from "@/lib/shoppingList";
+  DAY_KEYS,
+  DAYS,
+  MEALS,
+  slotKey,
+  usePlan,
+  type Day,
+  type Meal,
+} from "@/contexts/PlanContext";
+import { api } from "@/lib/api";
+import { pickVersion } from "@/lib/shoppingList";
 import { cn } from "@/lib/utils";
 import type { Profile, RecipeDetail } from "@/types";
 
 export default function Plan() {
-  const { t, locale } = useLanguage();
+  const { t } = useLanguage();
   const {
-    entries,
-    remove,
-    clear,
+    assignments,
+    planSlugs,
+    filledCount,
+    recipeCount,
+    unassign,
+    clearPlan,
     activeProfileIds,
     toggleProfile,
     setActiveProfileIds,
   } = usePlan();
 
-  const [recipes, setRecipes] = useState<RecipeDetail[]>([]);
+  const [recipes, setRecipes] = useState<Record<string, RecipeDetail>>({});
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [smartLoading, setSmartLoading] = useState(false);
-  // When a smart result is present we render it instead of the local one.
-  const [smart, setSmart] = useState<ConsolidatedList | null>(null);
 
-  // Load all selected recipes + available profiles in parallel.
+  // Fetch every recipe referenced by the plan, plus the user's profiles.
+  // We key recipes by slug so slot lookups are O(1).
   useEffect(() => {
     setLoading(true);
-    const slugs = entries.map((e) => e.slug);
+    const slugs = [...planSlugs];
     Promise.all([
       Promise.all(
         slugs.map((slug) =>
@@ -68,171 +81,94 @@ export default function Plan() {
       })),
     ])
       .then(([rcps, { profiles: prs }]) => {
-        setRecipes(rcps.filter((r): r is RecipeDetail => r !== null));
+        const next: Record<string, RecipeDetail> = {};
+        rcps.forEach((r) => {
+          if (r) next[r.slug] = r;
+        });
+        setRecipes(next);
         setProfiles(prs);
-        // Default "cooking for" = all profiles once we know who exists.
-        // Only seed if the user hasn't picked yet (empty array = "pick all").
         if (activeProfileIds.length === 0 && prs.length > 0) {
           setActiveProfileIds(prs.map((p) => p.id));
         }
       })
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entries.length]);
-
-  // Smart result goes stale if the user toggles profiles or removes a recipe.
-  useEffect(() => {
-    setSmart(null);
-  }, [entries, activeProfileIds]);
+  }, [planSlugs.size]);
 
   const activeProfiles = useMemo(
     () => profiles.filter((p) => activeProfileIds.includes(p.id)),
     [profiles, activeProfileIds],
   );
 
-  const local: ConsolidatedList = useMemo(() => {
-    const plan: RecipeForPlan[] = recipes.map((r) => ({
-      slug: r.slug,
-      title: r.title,
-      shared_ingredients: r.shared_ingredients,
-      versions: r.versions,
-    }));
-    return consolidate(plan, activeProfiles);
-  }, [recipes, activeProfiles]);
-
-  const display: ConsolidatedList = smart ?? local;
-
-  const smartConsolidate = async () => {
-    if (recipes.length === 0) return;
-    setSmartLoading(true);
-    // Build the same per-profile pseudo-recipe split we'd pass to the local
-    // consolidator, but send ingredient strings instead of structured parses.
-    const payload = {
-      locale,
-      recipes: recipes.flatMap((r) => {
-        const out: Array<{
-          title: string;
-          forProfiles?: string[];
-          ingredients: string[];
-        }> = [];
-        if (r.shared_ingredients.length) {
-          out.push({ title: r.title, ingredients: r.shared_ingredients });
-        }
-        // Distinct versions across active profiles.
-        const versionToNames = new Map<number, string[]>();
-        if (activeProfiles.length === 0) {
-          r.versions.forEach((_, i) => versionToNames.set(i, []));
-        } else {
-          for (const p of activeProfiles) {
-            const v = pickVersion(p, r.versions);
-            if (!v) continue;
-            const idx = r.versions.indexOf(v);
-            const list = versionToNames.get(idx) ?? [];
-            list.push(p.name);
-            versionToNames.set(idx, list);
-          }
-        }
-        for (const [idx, names] of versionToNames.entries()) {
-          const v = r.versions[idx];
-          if (!v?.protein) continue;
-          out.push({
-            title: r.title,
-            forProfiles: names,
-            ingredients: [v.protein],
-          });
-        }
-        return out;
-      }),
-    };
-    try {
-      const { sections } = await api<{
-        sections: Record<Section, ConsolidatedItem[]>;
-      }>("/plans/shopping-list", { method: "POST", body: payload });
-      const total = Object.values(sections).reduce(
-        (n, arr) => n + arr.length,
-        0,
-      );
-      // Ensure client-side `notes` field is defaulted since the LLM doesn't
-      // emit it; the rest of the shape aligns with ConsolidatedItem.
-      const normalized: Record<Section, ConsolidatedItem[]> = {
-        produce: sections.produce.map(withNotes),
-        proteins: sections.proteins.map(withNotes),
-        dairy: sections.dairy.map(withNotes),
-        pantry: sections.pantry.map(withNotes),
-        other: sections.other.map(withNotes),
-      };
-      setSmart({ sections: normalized, total });
-      toast.success(t("plan.smartDone"));
-    } catch (err: any) {
-      toast.error(err?.message ?? t("plan.smartFailed"));
-    } finally {
-      setSmartLoading(false);
-    }
-  };
-
-  if (entries.length === 0) {
+  if (filledCount === 0) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-4">
-        <h1 className="text-2xl font-semibold">{t("plan.title")}</h1>
-        <p className="text-muted-foreground">{t("plan.empty")}</p>
-        <Button asChild>
-          <Link to="/recipes">{t("plan.browse")}</Link>
-        </Button>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        <PageHeader
+          title={t("plan.title")}
+          subtitle={t("plan.subtitle")}
+        />
+        <EmptyState
+          icon={CalendarDays}
+          title={t("plan.empty")}
+          description={t("plan.emptyHint")}
+          action={
+            <Button asChild>
+              <Link to="/recipes">
+                <ChefHat className="h-4 w-4" /> {t("plan.browse")}
+              </Link>
+            </Button>
+          }
+        />
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-      <div className="flex items-start justify-between gap-2 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-semibold">{t("plan.title")}</h1>
-          <p className="text-muted-foreground">
-            {entries.length === 1
-              ? t("plan.countOne")
-              : t("plan.count", { n: entries.length })}
-          </p>
-        </div>
-        {entries.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (confirm(t("plan.confirmClear"))) clear();
-            }}
-          >
-            <Trash2 className="h-4 w-4" /> {t("plan.clear")}
-          </Button>
-        )}
-      </div>
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <PageHeader
+        title={t("plan.title")}
+        subtitle={
+          recipeCount === 1
+            ? t("plan.countOne", { filled: filledCount })
+            : t("plan.count", { n: recipeCount, filled: filledCount })
+        }
+        actions={
+          <>
+            <Button asChild variant="secondary" size="sm">
+              <Link to="/cart">
+                <ShoppingCart className="h-4 w-4" /> {t("plan.goToCart")}
+              </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (confirm(t("plan.confirmClear"))) clearPlan();
+              }}
+            >
+              <Trash2 className="h-4 w-4" /> {t("plan.clear")}
+            </Button>
+          </>
+        }
+      />
 
       {profiles.length > 0 && (
-        <section>
-          <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
+        <section className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Users className="h-4 w-4" /> {t("plan.cookingFor")}
           </div>
           <div className="flex flex-wrap gap-2">
-            {profiles.map((p) => {
-              const active = activeProfileIds.includes(p.id);
-              return (
-                <button
-                  type="button"
-                  key={p.id}
-                  onClick={() => toggleProfile(p.id)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                    active
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-foreground border-input hover:bg-accent",
-                  )}
-                  aria-pressed={active}
-                >
-                  {p.name}
-                </button>
-              );
-            })}
+            {profiles.map((p) => (
+              <ProfileChip
+                key={p.id}
+                active={activeProfileIds.includes(p.id)}
+                onToggle={() => toggleProfile(p.id)}
+              >
+                {p.name}
+              </ProfileChip>
+            ))}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground">
             {activeProfiles.length === 0
               ? t("plan.cookingForAll")
               : t("plan.cookingForHint", {
@@ -242,120 +178,248 @@ export default function Plan() {
         </section>
       )}
 
-      <section className="space-y-2">
-        <h2 className="font-medium">{t("plan.recipes")}</h2>
-        {loading ? (
-          <p className="text-muted-foreground text-sm">
-            {t("recipes.loading")}
-          </p>
-        ) : (
-          <div className="grid gap-2">
-            {recipes.map((r) => (
-              <Card key={r.slug} className="p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <Link
-                    to={`/recipes/${r.slug}`}
-                    className="font-medium hover:underline"
-                  >
-                    {r.title}
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => remove(r.slug)}
-                    aria-label={t("plan.remove")}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                {activeProfiles.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {activeProfiles.map((p) => {
-                      const v = pickVersion(p, r.versions);
-                      if (!v) return null;
-                      return (
-                        <Badge key={p.id} variant="secondary">
-                          {p.name}: {v.name}
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                )}
-              </Card>
-            ))}
-          </div>
-        )}
-      </section>
+      {loading && (
+        <LoadingRow label={t("plan.loadingRecipes")} />
+      )}
 
-      <section className="space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <h2 className="font-medium">
-            {t("plan.shoppingList")}{" "}
-            <span className="text-muted-foreground text-sm">
-              ({display.total})
-            </span>
-          </h2>
-          <Button
-            size="sm"
-            variant={smart ? "secondary" : "outline"}
-            onClick={smartConsolidate}
-            disabled={smartLoading || recipes.length === 0}
-          >
-            <Sparkles className="h-4 w-4" />
-            {smartLoading
-              ? t("plan.smartLoading")
-              : smart
-                ? t("plan.smartDone")
-                : t("plan.smartConsolidate")}
-          </Button>
+      {/* Desktop: 7 columns (one per day). Mobile: vertical stack of days. */}
+      <section>
+        <div className="hidden md:grid md:grid-cols-7 md:gap-2">
+          {DAYS.map((d) => (
+            <DayColumn
+              key={d}
+              day={d}
+              recipes={recipes}
+              assignments={assignments}
+              activeProfiles={activeProfiles}
+              onUnassign={unassign}
+              t={t}
+            />
+          ))}
         </div>
-
-        {SECTION_ORDER.map((section) => {
-          const items = display.sections[section];
-          if (!items.length) return null;
-          return (
-            <Card key={section}>
-              <CardHeader className="pb-1">
-                <CardTitle className="text-sm capitalize">
-                  {t(`plan.section.${section}` as any)}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <ul className="space-y-1 text-sm">
-                  {items.map((item, i) => (
-                    <li key={`${item.name}-${i}`}>
-                      <div className="flex items-baseline gap-2 flex-wrap">
-                        <span className="capitalize">{item.name}</span>
-                        {item.quantity && (
-                          <span className="text-muted-foreground">
-                            {item.quantity}
-                          </span>
-                        )}
-                        {item.forProfiles.length > 0 && (
-                          <Badge variant="outline" className="text-[10px]">
-                            {t("plan.forLabel", {
-                              names: item.forProfiles.join(", "),
-                            })}
-                          </Badge>
-                        )}
-                      </div>
-                      {item.notes.length > 0 && (
-                        <div className="text-[11px] text-muted-foreground pl-2">
-                          {item.notes.join(" · ")}
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <div className="md:hidden space-y-3">
+          {DAYS.map((d) => (
+            <DayStack
+              key={d}
+              day={d}
+              recipes={recipes}
+              assignments={assignments}
+              activeProfiles={activeProfiles}
+              onUnassign={unassign}
+              t={t}
+            />
+          ))}
+        </div>
       </section>
+
+      <SectionHeader
+        title={t("plan.nextStep")}
+        hint={t("plan.nextStepHint")}
+      />
+      <div className="flex flex-wrap gap-2">
+        <Button asChild>
+          <Link to="/cart">
+            <ShoppingCart className="h-4 w-4" /> {t("plan.goToCart")}
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/recipes">
+            <ChefHat className="h-4 w-4" /> {t("plan.browseMore")}
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 }
 
-function withNotes(item: ConsolidatedItem | Omit<ConsolidatedItem, "notes">): ConsolidatedItem {
-  return { notes: [], ...(item as ConsolidatedItem) };
+// ---------- Day column (desktop) ----------
+
+interface DayViewProps {
+  day: Day;
+  recipes: Record<string, RecipeDetail>;
+  assignments: ReturnType<typeof usePlan>["assignments"];
+  activeProfiles: Profile[];
+  onUnassign: (d: Day, m: Meal) => void;
+  t: (k: string, vars?: Record<string, unknown>) => string;
+}
+
+function DayColumn({
+  day,
+  recipes,
+  assignments,
+  activeProfiles,
+  onUnassign,
+  t,
+}: DayViewProps) {
+  return (
+    <div className="min-w-0">
+      <div className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
+        {t(`plan.day.${DAY_KEYS[day]}`)}
+      </div>
+      <div className="space-y-1.5">
+        {MEALS.map((m) => (
+          <SlotCard
+            key={m}
+            day={day}
+            meal={m}
+            recipe={lookupSlot(assignments, recipes, day, m)}
+            activeProfiles={activeProfiles}
+            onUnassign={onUnassign}
+            t={t}
+            compact
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Day stack (mobile) ----------
+
+function DayStack({
+  day,
+  recipes,
+  assignments,
+  activeProfiles,
+  onUnassign,
+  t,
+}: DayViewProps) {
+  return (
+    <Card>
+      <CardContent className="p-3 space-y-2">
+        <div className="text-sm font-medium">{t(`plan.day.${DAY_KEYS[day]}`)}</div>
+        <div className="grid grid-cols-1 gap-1.5">
+          {MEALS.map((m) => (
+            <SlotCard
+              key={m}
+              day={day}
+              meal={m}
+              recipe={lookupSlot(assignments, recipes, day, m)}
+              activeProfiles={activeProfiles}
+              onUnassign={onUnassign}
+              t={t}
+            />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function lookupSlot(
+  assignments: ReturnType<typeof usePlan>["assignments"],
+  recipes: Record<string, RecipeDetail>,
+  day: Day,
+  meal: Meal,
+): RecipeDetail | null {
+  const a = assignments[slotKey(day, meal)];
+  if (!a) return null;
+  return recipes[a.slug] ?? null;
+}
+
+// ---------- Individual slot ----------
+
+interface SlotCardProps {
+  day: Day;
+  meal: Meal;
+  recipe: RecipeDetail | null;
+  activeProfiles: Profile[];
+  onUnassign: (d: Day, m: Meal) => void;
+  t: (k: string, vars?: Record<string, unknown>) => string;
+  compact?: boolean;
+}
+
+function SlotCard({
+  day,
+  meal,
+  recipe,
+  activeProfiles,
+  onUnassign,
+  t,
+  compact,
+}: SlotCardProps) {
+  // Empty slot — dashed placeholder that points users at the recipe list so
+  // they can use AddToPlanButton to fill it. A direct "assign from plan"
+  // flow would require a recipe picker modal; we keep the source of recipes
+  // as the recipes page to reduce surface area.
+  if (!recipe) {
+    return (
+      <Link
+        to="/recipes"
+        className={cn(
+          "block rounded border border-dashed border-input bg-background/50",
+          "text-xs text-muted-foreground hover:bg-accent/30 hover:border-primary/40 transition-colors",
+          compact ? "px-2 py-1.5" : "px-3 py-2",
+        )}
+      >
+        <div className="font-medium text-foreground/70 capitalize">
+          {t(`plan.slot.${meal}`)}
+        </div>
+        <div>{t("plan.slotEmpty")}</div>
+      </Link>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "rounded border bg-card text-card-foreground",
+        compact ? "px-2 py-1.5" : "px-3 py-2",
+      )}
+    >
+      <div className="flex items-start justify-between gap-1">
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide capitalize">
+            {t(`plan.slot.${meal}`)}
+          </div>
+          <Link
+            to={`/recipes/${recipe.slug}`}
+            className="block text-sm font-medium leading-tight hover:underline truncate"
+            title={recipe.title}
+          >
+            {recipe.title}
+          </Link>
+        </div>
+        <button
+          type="button"
+          onClick={() => onUnassign(day, meal)}
+          className="h-5 w-5 rounded text-muted-foreground hover:text-foreground hover:bg-accent/40 inline-flex items-center justify-center flex-shrink-0"
+          aria-label={t("plan.remove")}
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+      {activeProfiles.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1">
+          {activeProfiles.map((p) => {
+            const { version, matched } = pickVersion(p, recipe.versions);
+            if (!version) return null;
+            if (!matched) {
+              return (
+                <Badge
+                  key={p.id}
+                  variant="destructive"
+                  className="gap-1 text-[10px] py-0 px-1.5"
+                  title={t("plan.versionWarningHint")}
+                >
+                  <AlertTriangle className="h-2.5 w-2.5" />
+                  {p.name}
+                </Badge>
+              );
+            }
+            return (
+              <Badge
+                key={p.id}
+                variant="secondary"
+                className="text-[10px] py-0 px-1.5"
+                title={version.name}
+              >
+                {p.name}
+              </Badge>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
