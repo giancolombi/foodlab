@@ -5,65 +5,78 @@ import type { Locale } from "@/i18n/strings";
 import type { RecipeDetail } from "@/types";
 
 // Progressively hydrates a recipe's user-facing strings into `targetLocale`.
-// Returns the original recipe immediately; mutations happen as each field
-// resolves so the UI can render a partial translation while the rest streams.
-// If `enabled` is false or the locale is English, returns the recipe as-is.
+// Returns the original recipe immediately; each field updates as it resolves so
+// the UI can render a partial translation while the rest streams in. All
+// translate() calls fire concurrently — the translator batches them into a
+// single API request via its microtask-flushed queue.
+// If the locale is English, returns the recipe as-is. If the backend is
+// unavailable, individual translate() calls reject and we keep the original.
 export function useTranslatedRecipe(
   recipe: RecipeDetail | null,
   targetLocale: Locale,
-  enabled: boolean,
 ): RecipeDetail | null {
   const [overrides, setOverrides] = useState<Partial<RecipeDetail> | null>(null);
 
   useEffect(() => {
     setOverrides(null);
-    if (!recipe || !enabled || targetLocale === "en") return;
+    if (!recipe || targetLocale === "en") return;
     let cancelled = false;
 
     const tr = (s: string) => translate(s, "en", targetLocale);
     const trMaybe = (s: string | null) => (s ? tr(s) : Promise.resolve(s));
 
-    (async () => {
-      try {
-        // Title + cuisine first (small, visible, low latency after model is warm).
-        const [title, cuisine] = await Promise.all([
-          tr(recipe.title),
-          trMaybe(recipe.cuisine),
-        ]);
-        if (cancelled) return;
-        setOverrides((o) => ({ ...o, title, cuisine }));
+    // Kick off EVERY translation synchronously so the batcher collapses them
+    // into a single request. Then attach .then handlers to land results as
+    // they arrive — each field lights up independently, no stage gating.
+    const titleP = tr(recipe.title);
+    const cuisineP = trMaybe(recipe.cuisine);
+    const sharedP = Promise.all(recipe.shared_ingredients.map(tr));
+    const serveWithP = Promise.all(recipe.serve_with.map(tr));
+    const versionsP = recipe.versions.map((v) => ({
+      raw: v,
+      name: tr(v.name),
+      group_label: trMaybe(v.group_label),
+      protein: trMaybe(v.protein),
+      instructions: Promise.all(v.instructions.map(tr)),
+    }));
 
-        // Shared ingredients + serve_with in parallel.
-        const [shared_ingredients, serve_with] = await Promise.all([
-          Promise.all(recipe.shared_ingredients.map(tr)),
-          Promise.all(recipe.serve_with.map(tr)),
-        ]);
-        if (cancelled) return;
-        setOverrides((o) => ({ ...o, shared_ingredients, serve_with }));
+    // Title + cuisine land together (small, visible).
+    void Promise.all([titleP, cuisineP]).then(([title, cuisine]) => {
+      if (cancelled) return;
+      setOverrides((o) => ({ ...o, title, cuisine }));
+    });
 
-        // Versions — each one has metadata + instructions.
-        const versions = await Promise.all(
-          recipe.versions.map(async (v) => ({
-            ...v,
-            name: await tr(v.name),
-            group_label: await trMaybe(v.group_label),
-            protein: await trMaybe(v.protein),
-            instructions: await Promise.all(v.instructions.map(tr)),
-          })),
-        );
-        if (cancelled) return;
-        setOverrides((o) => ({ ...o, versions }));
-      } catch (err) {
-        console.warn("[useTranslatedRecipe] failed:", err);
-      }
-    })();
+    void sharedP.then((shared_ingredients) => {
+      if (cancelled) return;
+      setOverrides((o) => ({ ...o, shared_ingredients }));
+    });
+
+    void serveWithP.then((serve_with) => {
+      if (cancelled) return;
+      setOverrides((o) => ({ ...o, serve_with }));
+    });
+
+    // Versions: fire each version's assembly independently so a slow one
+    // doesn't block the others from rendering.
+    void Promise.all(
+      versionsP.map(async (v) => ({
+        ...v.raw,
+        name: await v.name,
+        group_label: await v.group_label,
+        protein: await v.protein,
+        instructions: await v.instructions,
+      })),
+    ).then((versions) => {
+      if (cancelled) return;
+      setOverrides((o) => ({ ...o, versions }));
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [recipe, targetLocale, enabled]);
+  }, [recipe, targetLocale]);
 
   if (!recipe) return null;
-  if (!enabled || targetLocale === "en" || !overrides) return recipe;
+  if (targetLocale === "en" || !overrides) return recipe;
   return { ...recipe, ...overrides };
 }

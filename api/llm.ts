@@ -524,6 +524,251 @@ export function renderRecipeMarkdown(
   return lines.join("\n").trim() + "\n";
 }
 
+// ---------- Translate ----------
+
+const TRANSLATE_SYSTEM_PROMPT = `You translate recipe text between languages.
+
+Input: a JSON array of strings (ingredients, instructions, titles — English recipe prose).
+Output: ONLY a JSON object of shape {"translations": string[]} — one translation per input, SAME ORDER, SAME LENGTH.
+
+Rules:
+- Preserve all numbers, quantities, units, times, temperatures, and proper names exactly.
+- Keep the same structure (line breaks, lists, punctuation).
+- Do not add commentary, notes, or explanations.
+- If a string is already in the target language, return it unchanged.
+- Output JSON only. No prose, no markdown fences.
+
+LANGUAGE: {LOCALE_DIRECTIVE}`;
+
+/**
+ * Translate an array of strings from one supported locale to another via Ollama.
+ * Returns an array the same length as `texts`; if the model returns a mismatched
+ * count we fall back to the originals so callers never get a shorter array.
+ *
+ * Batching note: qwen2.5:3b handles ~40–50 short recipe lines per call comfortably
+ * within 2048 ctx. Callers that expect more should split and call in parallel.
+ */
+export async function translateTexts(args: {
+  texts: string[];
+  src: Locale;
+  tgt: Locale;
+}): Promise<string[]> {
+  const src = normalizeLocale(args.src);
+  const tgt = normalizeLocale(args.tgt);
+  if (src === tgt || args.texts.length === 0) return args.texts;
+
+  const systemPrompt = TRANSLATE_SYSTEM_PROMPT.replace(
+    "{LOCALE_DIRECTIVE}",
+    LOCALE_DIRECTIVE[tgt],
+  );
+
+  const body = {
+    model: OLLAMA_MODEL,
+    stream: false,
+    format: "json",
+    // Keep the model resident for 24h after any call — first request pays the
+    // cold-start, every subsequent one (within 24h) hits a warm model.
+    keep_alive: "24h",
+    messages: [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: `Translate from ${src} to ${tgt}. Return {"translations": [...]} with ${args.texts.length} entries.\n\nInputs:\n${JSON.stringify(args.texts)}`,
+      },
+    ],
+    options: {
+      temperature: 0,
+      num_ctx: 2048,
+      num_predict: 1500,
+    },
+  };
+
+  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`Ollama ${res.status}: ${await res.text()}`);
+  }
+  const data = (await res.json()) as { message?: { content?: string } };
+  const content = data.message?.content ?? "";
+
+  let parsed: { translations?: unknown };
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    const m = content.match(/\{[\s\S]*\}/);
+    parsed = m ? JSON.parse(m[0]) : {};
+  }
+
+  const out = Array.isArray(parsed.translations) ? parsed.translations : [];
+  // Guarantee same length + string type. Fall back to input on any hole.
+  return args.texts.map((orig, i) => {
+    const t = out[i];
+    return typeof t === "string" && t.trim().length > 0 ? t : orig;
+  });
+}
+
+// ---------- Shopping list consolidation ----------
+
+const SHOPPING_LIST_SYSTEM_PROMPT = `You consolidate a multi-recipe ingredient list into a clean grocery shopping list for a household.
+
+Input: an array of {recipe, forProfiles?: string[], ingredients[]} objects — raw ingredient lines per recipe. When "forProfiles" is present, those lines are only needed when cooking that version for those specific people (e.g. a protein swap). Lines without "forProfiles" are shared across the household.
+Output: ONLY a JSON object of shape:
+{"sections": {"produce": Item[], "proteins": Item[], "dairy": Item[], "pantry": Item[], "other": Item[]}}
+where Item = {"name": string, "quantity": string, "sources": string[], "forProfiles": string[]}
+
+Rules:
+- Merge duplicate ingredients across recipes when they apply to the same audience. If two recipes both use garlic for everyone, output ONE entry with summed quantity.
+- Do NOT merge a per-profile line into a shared line. If "chicken thighs" is tagged forProfiles=["Gian"], keep it separate from any other chicken entries.
+- Sum quantities when units match (e.g. "2 tbsp olive oil" + "1 tbsp olive oil" = "3 tbsp olive oil").
+- When units differ for the same item, list them separated by "+" (e.g. "1 cup + 2 tbsp").
+- Strip prep modifiers (minced, diced, chopped) from the name; keep the core ingredient.
+- Categorize into exactly one of: produce, proteins, dairy, pantry, other.
+- "sources" lists the recipe titles (from the input) that contributed to this item.
+- "forProfiles" echoes which people the item is for; empty array [] means it's for everyone.
+- Alphabetize within each section.
+- Output JSON only. No prose, no markdown fences.
+
+LANGUAGE: {LOCALE_DIRECTIVE}`;
+
+export interface ConsolidatedListItem {
+  name: string;
+  quantity: string;
+  sources: string[];
+  forProfiles: string[];
+}
+
+export type ConsolidatedSections = Record<
+  "produce" | "proteins" | "dairy" | "pantry" | "other",
+  ConsolidatedListItem[]
+>;
+
+/**
+ * Use Ollama to consolidate and categorize ingredients across multiple recipes.
+ * Falls back to returning empty sections if parsing fails — callers should
+ * keep their client-side deterministic version as the default so this is
+ * purely a quality upgrade.
+ */
+export async function consolidateShoppingList(args: {
+  recipes: Array<{
+    title: string;
+    forProfiles?: string[];
+    ingredients: string[];
+  }>;
+  locale?: Locale;
+}): Promise<ConsolidatedSections> {
+  const locale = normalizeLocale(args.locale);
+  const systemPrompt = SHOPPING_LIST_SYSTEM_PROMPT.replace(
+    "{LOCALE_DIRECTIVE}",
+    LOCALE_DIRECTIVE[locale],
+  );
+
+  const body = {
+    model: OLLAMA_MODEL,
+    stream: false,
+    format: "json",
+    keep_alive: "24h",
+    messages: [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: `Consolidate these recipes:\n${JSON.stringify(args.recipes)}`,
+      },
+    ],
+    options: {
+      temperature: 0,
+      num_ctx: 4096,
+      num_predict: 2000,
+    },
+  };
+
+  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`Ollama ${res.status}: ${await res.text()}`);
+  }
+  const data = (await res.json()) as { message?: { content?: string } };
+  const content = data.message?.content ?? "";
+
+  let parsed: { sections?: Partial<ConsolidatedSections> };
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    const m = content.match(/\{[\s\S]*\}/);
+    parsed = m ? JSON.parse(m[0]) : {};
+  }
+
+  const empty: ConsolidatedSections = {
+    produce: [],
+    proteins: [],
+    dairy: [],
+    pantry: [],
+    other: [],
+  };
+
+  // Shape-check each section and each item defensively — the model sometimes
+  // inserts unexpected keys or drops fields.
+  const sanitize = (arr: unknown): ConsolidatedListItem[] => {
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .map((x: unknown) => {
+        if (!x || typeof x !== "object") return null;
+        const item = x as Record<string, unknown>;
+        const name = typeof item.name === "string" ? item.name : "";
+        if (!name) return null;
+        return {
+          name,
+          quantity:
+            typeof item.quantity === "string" ? item.quantity : "",
+          sources: Array.isArray(item.sources)
+            ? item.sources.filter((s: unknown): s is string => typeof s === "string")
+            : [],
+          forProfiles: Array.isArray(item.forProfiles)
+            ? item.forProfiles.filter(
+                (s: unknown): s is string => typeof s === "string",
+              )
+            : [],
+        };
+      })
+      .filter((x): x is ConsolidatedListItem => x !== null);
+  };
+
+  const sections = parsed.sections ?? {};
+  return {
+    produce: sanitize(sections.produce),
+    proteins: sanitize(sections.proteins),
+    dairy: sanitize(sections.dairy),
+    pantry: sanitize(sections.pantry),
+    other: sanitize(sections.other),
+  } ?? empty;
+}
+
+/**
+ * Ask Ollama to load the model into memory without generating anything. Used
+ * as a background "warmup" so the first real translation request doesn't pay
+ * cold-start latency. Per Ollama docs, omitting `prompt` with `keep_alive` set
+ * just loads the model.
+ */
+export async function warmOllama(): Promise<void> {
+  try {
+    await fetch(`${OLLAMA_URL}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        keep_alive: "24h",
+      }),
+    });
+  } catch {
+    // non-fatal: translation will just cold-start on its first real call
+  }
+}
+
 export async function checkOllama(): Promise<{
   ok: boolean;
   model: string;

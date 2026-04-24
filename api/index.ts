@@ -4,8 +4,10 @@ import express from "express";
 import { checkOllama } from "./llm.js";
 import authRoutes from "./routes/auth.js";
 import matchRoutes from "./routes/match.js";
+import planRoutes from "./routes/plans.js";
 import profileRoutes from "./routes/profiles.js";
 import recipeRoutes from "./routes/recipes.js";
+import translateRoutes from "./routes/translate.js";
 
 const app = express();
 const PORT = Number(process.env.API_PORT || 3001);
@@ -26,6 +28,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/profiles", profileRoutes);
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/match", matchRoutes);
+app.use("/api/plans", planRoutes);
+app.use("/api/translate", translateRoutes);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("Unhandled error:", err);

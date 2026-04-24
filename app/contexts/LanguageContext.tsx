@@ -12,14 +12,11 @@ import { translate, type Locale, type StringKey } from "@/i18n/strings";
 interface LanguageContextValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  translateContent: boolean;
-  setTranslateContent: (v: boolean) => void;
   t: (key: StringKey, params?: Record<string, string | number>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 const STORAGE_KEY = "foodlab_locale";
-const TRANSLATE_KEY = "foodlab_translate_content";
 
 function detectInitialLocale(): Locale {
   if (typeof window === "undefined") return "en";
@@ -31,26 +28,13 @@ function detectInitialLocale(): Locale {
   return "en";
 }
 
-function detectInitialTranslate(): boolean {
-  if (typeof window === "undefined") return false;
-  return localStorage.getItem(TRANSLATE_KEY) === "1";
-}
-
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(detectInitialLocale);
-  const [translateContent, setTranslateContentState] = useState<boolean>(
-    detectInitialTranslate,
-  );
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
     localStorage.setItem(STORAGE_KEY, next);
     document.documentElement.lang = next === "pt-BR" ? "pt-BR" : next;
-  }, []);
-
-  const setTranslateContent = useCallback((next: boolean) => {
-    setTranslateContentState(next);
-    localStorage.setItem(TRANSLATE_KEY, next ? "1" : "0");
   }, []);
 
   const t = useCallback<LanguageContextValue["t"]>(
@@ -59,8 +43,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ locale, setLocale, translateContent, setTranslateContent, t }),
-    [locale, setLocale, translateContent, setTranslateContent, t],
+    () => ({ locale, setLocale, t }),
+    [locale, setLocale, t],
   );
 
   return (
