@@ -377,7 +377,7 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "detail.savedByYou": "Salva por você",
   "detail.community": "Comunidade",
   "detail.totalMin": "{n} min no total",
-  "detail.freezerFriendly": "freezer-friendly",
+  "detail.freezerFriendly": "apto para freezer",
   "detail.modifiedFrom": "Modificada de",
   "detail.sharedIngredients": "Ingredientes compartilhados",
   "detail.serveWith": "Servir com",
