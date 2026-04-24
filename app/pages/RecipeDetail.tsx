@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Clock, Snowflake, Sparkles } from "lucide-react";
 
+import { AddToPlanButton } from "@/components/AddToPlanButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,9 +17,9 @@ export default function RecipeDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { t, locale, translateContent } = useLanguage();
+  const { t, locale } = useLanguage();
   const [raw, setRaw] = useState<RecipeDetailT | null>(null);
-  const recipe = useTranslatedRecipe(raw, locale, translateContent);
+  const recipe = useTranslatedRecipe(raw, locale);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -71,6 +72,9 @@ export default function RecipeDetail() {
           {!isCurated && !isMine && (
             <Badge variant="outline">{t("detail.community")}</Badge>
           )}
+          <div className="ml-auto">
+            <AddToPlanButton slug={recipe.slug} title={recipe.title} />
+          </div>
         </div>
         <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
           {recipe.cuisine && <Badge variant="secondary">{recipe.cuisine}</Badge>}

@@ -20,15 +20,11 @@ const en = {
   // nav + layout
   "nav.match": "What can I make?",
   "nav.recipes": "Recipes",
+  "nav.plan": "Plan",
   "nav.profiles": "Profiles",
   "nav.signOut": "Sign out",
-  "layout.footer": "FoodLab · open-source · self-hosted LLM via Ollama",
+  "layout.footer": "FoodLab · open-source",
   "layout.language": "Language",
-  "layout.translateContent": "Translate recipe content",
-  "layout.translateContentHint":
-    "Experimental. Runs a translation model in your browser (~600 MB first time).",
-  "layout.translateUnavailable":
-    "WebGPU not available — try Chrome/Edge on desktop.",
 
   // matcher
   "match.title": "What can I make?",
@@ -170,6 +166,37 @@ const en = {
   "signup.signin": "Sign in",
   "signup.failed": "Sign up failed",
 
+  // plan
+  "plan.title": "Weekly plan",
+  "plan.empty":
+    "Your plan is empty. Add recipes from the catalog to build this week's menu and a consolidated shopping list.",
+  "plan.browse": "Browse recipes",
+  "plan.add": "Add to plan",
+  "plan.inPlan": "In plan",
+  "plan.remove": "Remove",
+  "plan.clear": "Clear plan",
+  "plan.confirmClear": "Clear all recipes from this week's plan?",
+  "plan.count": "{n} recipes this week",
+  "plan.countOne": "1 recipe this week",
+  "plan.recipes": "This week's recipes",
+  "plan.cookingFor": "Cooking for",
+  "plan.cookingForAll":
+    "No profiles selected — the plan will include every dietary version.",
+  "plan.cookingForHint": "Tailoring versions and quantities for: {names}",
+  "plan.shoppingList": "Shopping list",
+  "plan.smartConsolidate": "Smart consolidate",
+  "plan.smartLoading": "Consolidating…",
+  "plan.smartDone": "Smart list ready",
+  "plan.smartFailed": "Smart consolidation failed — showing local list",
+  "plan.forLabel": "for {names}",
+  "plan.toastAdded": 'Added "{title}" to your plan',
+  "plan.toastRemoved": 'Removed "{title}" from your plan',
+  "plan.section.produce": "Produce",
+  "plan.section.proteins": "Proteins",
+  "plan.section.dairy": "Dairy",
+  "plan.section.pantry": "Pantry",
+  "plan.section.other": "Other",
+
   // generic
   "common.backToRecipes": "Back to recipes",
   "common.generic.error": "Something went wrong",
@@ -180,15 +207,42 @@ export type StringKey = keyof typeof en;
 const es: Partial<Record<StringKey, string>> = {
   "nav.match": "¿Qué puedo hacer?",
   "nav.recipes": "Recetas",
+  "nav.plan": "Plan",
   "nav.profiles": "Perfiles",
   "nav.signOut": "Cerrar sesión",
-  "layout.footer": "FoodLab · código abierto · LLM local vía Ollama",
+
+  "plan.title": "Plan semanal",
+  "plan.empty":
+    "Tu plan está vacío. Agrega recetas del catálogo para armar el menú de la semana y una lista de compras consolidada.",
+  "plan.browse": "Ver recetas",
+  "plan.add": "Agregar al plan",
+  "plan.inPlan": "En el plan",
+  "plan.remove": "Quitar",
+  "plan.clear": "Vaciar plan",
+  "plan.confirmClear": "¿Vaciar todas las recetas del plan de esta semana?",
+  "plan.count": "{n} recetas esta semana",
+  "plan.countOne": "1 receta esta semana",
+  "plan.recipes": "Recetas de esta semana",
+  "plan.cookingFor": "Cocinando para",
+  "plan.cookingForAll":
+    "Sin perfiles seleccionados — el plan incluirá todas las versiones dietéticas.",
+  "plan.cookingForHint": "Ajustando versiones y cantidades para: {names}",
+  "plan.shoppingList": "Lista de compras",
+  "plan.smartConsolidate": "Consolidación inteligente",
+  "plan.smartLoading": "Consolidando…",
+  "plan.smartDone": "Lista inteligente lista",
+  "plan.smartFailed":
+    "Falló la consolidación inteligente — mostrando lista local",
+  "plan.forLabel": "para {names}",
+  "plan.toastAdded": 'Se agregó "{title}" a tu plan',
+  "plan.toastRemoved": 'Se quitó "{title}" de tu plan',
+  "plan.section.produce": "Frutas y verduras",
+  "plan.section.proteins": "Proteínas",
+  "plan.section.dairy": "Lácteos",
+  "plan.section.pantry": "Despensa",
+  "plan.section.other": "Otros",
+  "layout.footer": "FoodLab · código abierto",
   "layout.language": "Idioma",
-  "layout.translateContent": "Traducir contenido de recetas",
-  "layout.translateContentHint":
-    "Experimental. Ejecuta un modelo de traducción en tu navegador (~600 MB la primera vez).",
-  "layout.translateUnavailable":
-    "WebGPU no disponible — prueba con Chrome/Edge de escritorio.",
 
   "match.title": "¿Qué puedo hacer?",
   "match.subtitle":
@@ -334,15 +388,42 @@ const es: Partial<Record<StringKey, string>> = {
 const ptBR: Partial<Record<StringKey, string>> = {
   "nav.match": "O que posso fazer?",
   "nav.recipes": "Receitas",
+  "nav.plan": "Plano",
   "nav.profiles": "Perfis",
   "nav.signOut": "Sair",
-  "layout.footer": "FoodLab · código aberto · LLM local via Ollama",
+
+  "plan.title": "Plano da semana",
+  "plan.empty":
+    "Seu plano está vazio. Adicione receitas do catálogo para montar o cardápio da semana e uma lista de compras consolidada.",
+  "plan.browse": "Ver receitas",
+  "plan.add": "Adicionar ao plano",
+  "plan.inPlan": "No plano",
+  "plan.remove": "Remover",
+  "plan.clear": "Limpar plano",
+  "plan.confirmClear": "Limpar todas as receitas do plano desta semana?",
+  "plan.count": "{n} receitas esta semana",
+  "plan.countOne": "1 receita esta semana",
+  "plan.recipes": "Receitas desta semana",
+  "plan.cookingFor": "Cozinhando para",
+  "plan.cookingForAll":
+    "Nenhum perfil selecionado — o plano incluirá todas as versões alimentares.",
+  "plan.cookingForHint": "Ajustando versões e quantidades para: {names}",
+  "plan.shoppingList": "Lista de compras",
+  "plan.smartConsolidate": "Consolidação inteligente",
+  "plan.smartLoading": "Consolidando…",
+  "plan.smartDone": "Lista inteligente pronta",
+  "plan.smartFailed":
+    "Falha na consolidação inteligente — mostrando lista local",
+  "plan.forLabel": "para {names}",
+  "plan.toastAdded": '"{title}" adicionada ao plano',
+  "plan.toastRemoved": '"{title}" removida do plano',
+  "plan.section.produce": "Hortifrúti",
+  "plan.section.proteins": "Proteínas",
+  "plan.section.dairy": "Laticínios",
+  "plan.section.pantry": "Dispensa",
+  "plan.section.other": "Outros",
+  "layout.footer": "FoodLab · código aberto",
   "layout.language": "Idioma",
-  "layout.translateContent": "Traduzir conteúdo das receitas",
-  "layout.translateContentHint":
-    "Experimental. Roda um modelo de tradução no seu navegador (~600 MB na primeira vez).",
-  "layout.translateUnavailable":
-    "WebGPU indisponível — tente Chrome/Edge no desktop.",
 
   "match.title": "O que posso fazer?",
   "match.subtitle":

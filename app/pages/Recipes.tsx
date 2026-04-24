@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Clock, Snowflake } from "lucide-react";
 
+import { AddToPlanButton } from "@/components/AddToPlanButton";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -161,7 +162,7 @@ export default function Recipes() {
                       )}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="pt-0">
+                  <CardContent className="pt-0 space-y-2">
                     <div className="flex flex-wrap gap-1">
                       {r.versions.map((v) => (
                         <Badge key={v.name} variant="secondary">
@@ -169,6 +170,7 @@ export default function Recipes() {
                         </Badge>
                       ))}
                     </div>
+                    <AddToPlanButton slug={r.slug} title={r.title} />
                   </CardContent>
                 </Card>
               </Link>

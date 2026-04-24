@@ -1,22 +1,31 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { ChefHat, Globe, LogOut } from "lucide-react";
+import { ChefHat, Globe, LogOut, ShoppingBasket } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { usePlan } from "@/contexts/PlanContext";
 import { LOCALES, type Locale } from "@/i18n/strings";
-import { webgpuAvailable } from "@/lib/translator";
+import { translateAvailable, warmTranslator } from "@/lib/translator";
 import { cn } from "@/lib/utils";
 
 export default function AppLayout() {
   const { user, signOut } = useAuth();
-  const { locale, setLocale, translateContent, setTranslateContent, t } =
-    useLanguage();
-  const canTranslateContent = webgpuAvailable();
+  const { locale, setLocale, t } = useLanguage();
+  const { count: planCount } = usePlan();
   const navigate = useNavigate();
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
+
+  // Preload the translation model whenever a non-English locale is active.
+  // Fire-and-forget; debounced inside warmTranslator().
+  useEffect(() => {
+    if (locale === "en") return;
+    translateAvailable().then((ok) => {
+      if (ok) warmTranslator();
+    });
+  }, [locale]);
 
   useEffect(() => {
     if (!langOpen) return;
@@ -30,6 +39,7 @@ export default function AppLayout() {
   const NAV = [
     { to: "/", label: t("nav.match") },
     { to: "/recipes", label: t("nav.recipes") },
+    { to: "/plan", label: t("nav.plan") },
     { to: "/profiles", label: t("nav.profiles") },
   ];
 
@@ -76,6 +86,18 @@ export default function AppLayout() {
             ))}
           </nav>
           <div className="flex items-center gap-2">
+            <Link
+              to="/plan"
+              className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
+              aria-label={t("nav.plan")}
+            >
+              <ShoppingBasket className="h-4 w-4" />
+              {planCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] rounded-full bg-primary text-primary-foreground text-[10px] font-medium inline-flex items-center justify-center px-1">
+                  {planCount}
+                </span>
+              )}
+            </Link>
             <div className="relative" ref={langRef}>
               <Button
                 variant="ghost"
@@ -93,7 +115,7 @@ export default function AppLayout() {
               {langOpen && (
                 <div
                   role="menu"
-                  className="absolute right-0 mt-1 w-56 rounded-md border bg-popover shadow-md z-50 py-1"
+                  className="absolute right-0 mt-1 w-40 rounded-md border bg-popover shadow-md z-50 py-1"
                 >
                   {LOCALES.map((l) => (
                     <button
@@ -109,40 +131,6 @@ export default function AppLayout() {
                       {l.native}
                     </button>
                   ))}
-                  {locale !== "en" && (
-                    <>
-                      <div className="border-t my-1" />
-                      <label
-                        className={cn(
-                          "flex items-start gap-2 px-3 py-1.5 text-xs cursor-pointer hover:bg-accent",
-                          !canTranslateContent && "opacity-60 cursor-not-allowed",
-                        )}
-                        title={
-                          canTranslateContent
-                            ? undefined
-                            : t("layout.translateUnavailable")
-                        }
-                      >
-                        <input
-                          type="checkbox"
-                          className="mt-0.5"
-                          checked={translateContent}
-                          disabled={!canTranslateContent}
-                          onChange={(e) =>
-                            setTranslateContent(e.target.checked)
-                          }
-                        />
-                        <span>
-                          <span className="block font-medium">
-                            {t("layout.translateContent")}
-                          </span>
-                          <span className="block text-muted-foreground">
-                            {t("layout.translateContentHint")}
-                          </span>
-                        </span>
-                      </label>
-                    </>
-                  )}
                 </div>
               )}
             </div>
