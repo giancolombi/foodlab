@@ -62,7 +62,7 @@ services:
     ports:
       - "3001:3001"
 
-  web:
+  app:
     build:
       context: .
       dockerfile: app/Dockerfile

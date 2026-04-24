@@ -6,6 +6,7 @@ COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile || pnpm install
 COPY vite.config.ts tsconfig.json tsconfig.app.json tsconfig.api.json tsconfig.node.json index.html postcss.config.js components.json vite-env.d.ts ./
 COPY app ./app
+COPY public ./public
 ARG VITE_API_URL
 ENV VITE_API_URL=${VITE_API_URL}
 RUN pnpm build

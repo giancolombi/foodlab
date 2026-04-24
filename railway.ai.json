@@ -2,8 +2,8 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "DOCKERFILE",
-    "dockerfilePath": "web/Dockerfile.ollama",
-    "buildContext": "web"
+    "dockerfilePath": "ai/Dockerfile",
+    "buildContext": "."
   },
   "deploy": {
     "startCommand": "/usr/local/bin/ollama-entrypoint.sh",
