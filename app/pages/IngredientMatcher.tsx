@@ -3,17 +3,18 @@ import { Link, useNavigate } from "react-router-dom";
 import { ChevronDown, Pencil, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
+  Badge,
+  Button,
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+  Label,
+  PageHeader,
+  ProfileChip,
+  Textarea,
+} from "@/design-system";
 import { RecipeModifyPanel } from "@/components/RecipeModifyPanel";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { api } from "@/lib/api";
@@ -112,11 +113,8 @@ export default function IngredientMatcher() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">{t("match.title")}</h1>
-        <p className="text-muted-foreground">{t("match.subtitle")}</p>
-      </div>
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <PageHeader title={t("match.title")} subtitle={t("match.subtitle")} />
 
       <Card>
         <form onSubmit={handleSubmit}>
@@ -151,17 +149,10 @@ export default function IngredientMatcher() {
                   {profiles.map((p) => {
                     const active = selectedProfileIds.includes(p.id);
                     return (
-                      <button
-                        type="button"
+                      <ProfileChip
                         key={p.id}
-                        onClick={() => toggleProfile(p.id)}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                          active
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-background text-foreground border-input hover:bg-accent",
-                        )}
-                        aria-pressed={active}
+                        active={active}
+                        onToggle={() => toggleProfile(p.id)}
                       >
                         {p.name}
                         {p.restrictions.length > 0 && (
@@ -175,7 +166,7 @@ export default function IngredientMatcher() {
                             {p.restrictions.length > 2 ? "…" : ""}
                           </span>
                         )}
-                      </button>
+                      </ProfileChip>
                     );
                   })}
                   <p className="text-xs text-muted-foreground w-full">
@@ -245,7 +236,9 @@ export default function IngredientMatcher() {
                           {r.title ?? r.slug}
                         </Link>
                       </CardTitle>
-                      <CardDescription>{r.reason}</CardDescription>
+                      <p className="text-sm text-muted-foreground">
+                        {r.reason}
+                      </p>
                     </div>
                     <Badge variant="accent">{Math.round(r.score)}%</Badge>
                   </div>

@@ -9,6 +9,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   CheckCheck,
+  Download,
+  Share2,
   ShoppingCart,
   Sparkles,
   Trash2,
@@ -32,6 +34,7 @@ import {
 import { useCart } from "@/contexts/CartContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlan } from "@/contexts/PlanContext";
+import { useUnits } from "@/contexts/UnitsContext";
 import { api } from "@/lib/api";
 import {
   consolidate,
@@ -42,6 +45,12 @@ import {
   type RecipeForPlan,
   type Section,
 } from "@/lib/shoppingList";
+import {
+  downloadTextFile,
+  shareOrCopy,
+  toMarkdown,
+  toPlainText,
+} from "@/lib/exportShoppingList";
 import { cn } from "@/lib/utils";
 import type { Profile, RecipeDetail } from "@/types";
 
@@ -53,8 +62,10 @@ export default function Cart() {
     activeProfileIds,
     toggleProfile,
     setActiveProfileIds,
+    includeServeWith,
   } = usePlan();
   const { isBought, toggleBought, clearBought, boughtCount } = useCart();
+  const { units } = useUnits();
 
   const [recipes, setRecipes] = useState<RecipeDetail[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -88,10 +99,10 @@ export default function Cart() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planSlugs.size]);
 
-  // Smart result is invalidated by plan / profile changes.
+  // Smart result is invalidated by plan / profile / serve-with changes.
   useEffect(() => {
     setSmart(null);
-  }, [planSlugs, activeProfileIds]);
+  }, [planSlugs, activeProfileIds, includeServeWith]);
 
   const activeProfiles = useMemo(
     () => profiles.filter((p) => activeProfileIds.includes(p.id)),
@@ -103,16 +114,58 @@ export default function Cart() {
       slug: r.slug,
       title: r.title,
       shared_ingredients: r.shared_ingredients,
+      serve_with: r.serve_with,
       versions: r.versions,
     }));
-    return consolidate(plan, activeProfiles);
-  }, [recipes, activeProfiles]);
+    return consolidate(plan, activeProfiles, { includeServeWith, unitSystem: units });
+  }, [recipes, activeProfiles, includeServeWith, units]);
 
   const display: ConsolidatedList = smart ?? local;
+
+  const exportOpts = useMemo(
+    () => ({
+      title: t("cart.exportTitle"),
+      sectionLabel: {
+        produce: t("cart.section.produce"),
+        proteins: t("cart.section.proteins"),
+        dairy: t("cart.section.dairy"),
+        pantry: t("cart.section.pantry"),
+        other: t("cart.section.other"),
+      } as Record<Section, string>,
+      forLabel: (names: string) => t("cart.forLabel", { names }),
+    }),
+    [t],
+  );
+
+  const handleShare = async () => {
+    if (display.total === 0) return;
+    const text = toPlainText(display, exportOpts);
+    try {
+      const mode = await shareOrCopy(text, exportOpts.title);
+      toast.success(mode === "shared" ? t("cart.shared") : t("cart.copied"));
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+      toast.error(t("cart.shareFailed"));
+    }
+  };
+
+  const handleDownload = () => {
+    if (display.total === 0) return;
+    const md = toMarkdown(display, exportOpts);
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadTextFile(`shopping-list-${stamp}.md`, md, "text/markdown;charset=utf-8");
+    toast.success(t("cart.downloaded"));
+  };
 
   const smartConsolidate = async () => {
     if (recipes.length === 0) return;
     setSmartLoading(true);
+
+    // Build one payload entry per recipe. Shared ingredients (+ optional
+    // serve_with) go in a single shared entry; per-profile proteins are
+    // grouped by version so each distinct version is one entry with the
+    // profile names attached. This replaces the old approach that fragmented
+    // each recipe into many pseudo-entries.
     const payload = {
       locale,
       recipes: recipes.flatMap((r) => {
@@ -121,9 +174,18 @@ export default function Cart() {
           forProfiles?: string[];
           ingredients: string[];
         }> = [];
-        if (r.shared_ingredients.length) {
-          out.push({ title: r.title, ingredients: r.shared_ingredients });
+
+        // Shared base + optional sides → one entry (no forProfiles).
+        const shared = [
+          ...r.shared_ingredients,
+          ...(includeServeWith ? r.serve_with : []),
+        ];
+        if (shared.length) {
+          out.push({ title: r.title, ingredients: shared });
         }
+
+        // Per-version proteins: group profiles → version index, then emit
+        // one entry per distinct version needed.
         const versionToNames = new Map<number, string[]>();
         if (activeProfiles.length === 0) {
           r.versions.forEach((_, i) => versionToNames.set(i, []));
@@ -142,7 +204,7 @@ export default function Cart() {
           if (!v?.protein) continue;
           out.push({
             title: r.title,
-            forProfiles: names,
+            forProfiles: names.length ? names : undefined,
             ingredients: [v.protein],
           });
         }
@@ -213,6 +275,26 @@ export default function Cart() {
                     ? t("cart.smartDone")
                     : t("cart.smartConsolidate")}
               </span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleShare}
+              disabled={display.total === 0}
+              title={t("cart.shareHint")}
+            >
+              <Share2 className="h-4 w-4" />
+              <span className="hidden sm:inline">{t("cart.share")}</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleDownload}
+              disabled={display.total === 0}
+              title={t("cart.downloadHint")}
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">{t("cart.download")}</span>
             </Button>
             {boughtCount > 0 && (
               <Button

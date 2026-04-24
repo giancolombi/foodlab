@@ -17,6 +17,7 @@
 // version (so "Gian's chicken" doesn't merge with "Maria's chickpeas"), but
 // the shared base ingredients consolidate across every selected recipe.
 
+import { convertUnit, type UnitSystem } from "@/contexts/UnitsContext";
 import { restrictionCoverageScore } from "@/lib/dietaryTerms";
 import type { Profile, RecipeVersion } from "@/types";
 
@@ -341,7 +342,15 @@ export interface RecipeForPlan {
   slug: string;
   title: string;
   shared_ingredients: string[];
+  serve_with: string[];
   versions: RecipeVersion[];
+}
+
+export interface ConsolidateOptions {
+  /** Include `serve_with` items (side dishes, garnishes) in the list. */
+  includeServeWith?: boolean;
+  /** Target unit system — converts quantities at formatting time. */
+  unitSystem?: UnitSystem;
 }
 
 interface Agg {
@@ -400,6 +409,7 @@ function addLine(
 export function consolidate(
   recipes: RecipeForPlan[],
   profiles: Profile[] = [],
+  options: ConsolidateOptions = {},
 ): ConsolidatedList {
   const byItem = new Map<string, Agg>();
 
@@ -407,6 +417,15 @@ export function consolidate(
     // Shared ingredients: added once per recipe, no profile label.
     for (const line of r.shared_ingredients) {
       addLine(byItem, line, r.title, null);
+    }
+
+    // Serve-with sides: optional — off by default since many users buy these
+    // ad-hoc (bread, rice) rather than from the list. When enabled, treat them
+    // like shared ingredients (everyone shares the sides).
+    if (options.includeServeWith) {
+      for (const line of r.serve_with) {
+        addLine(byItem, line, r.title, null);
+      }
     }
 
     // Proteins: group profiles by which version they'd eat.
@@ -447,9 +466,18 @@ export function consolidate(
     other: [],
   };
 
+  const unitSys = options.unitSystem;
+
   for (const agg of byItem.values()) {
     const quantityParts: string[] = [];
     for (const [unit, total] of agg.sums.entries()) {
+      if (unitSys && unit) {
+        const converted = convertUnit(total, unit, unitSys);
+        if (converted) {
+          quantityParts.push(formatQuantity(converted.qty, converted.unit));
+          continue;
+        }
+      }
       quantityParts.push(formatQuantity(total, unit || null));
     }
     const item: ConsolidatedItem = {

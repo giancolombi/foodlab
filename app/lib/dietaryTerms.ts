@@ -76,6 +76,69 @@ export const DIETARY_ALIASES: Record<string, string> = {
   "no cerdo": "no pork",
   "no alcohol": "no alcohol",
   "sem álcool": "no alcohol",
+  halal: "halal",
+  "comida halal": "halal",
+  "alimentação halal": "halal",
+  kosher: "kosher",
+  "comida kosher": "kosher",
+  "alimentação kosher": "kosher",
+  casher: "kosher",
+
+  // keto / low-carb
+  keto: "keto",
+  cetogenica: "keto",
+  cetogénica: "keto",
+  cetogênica: "keto",
+  "dieta keto": "keto",
+  "low carb": "low-carb",
+  "low-carb": "low-carb",
+  "baja en carbohidratos": "low-carb",
+  "baixo carboidrato": "low-carb",
+  "pouco carboidrato": "low-carb",
+
+  // paleo
+  paleo: "paleo",
+  paleolítica: "paleo",
+  paleolitica: "paleo",
+  paleolítico: "paleo",
+
+  // whole30
+  whole30: "whole30",
+  "whole 30": "whole30",
+
+  // FODMAP
+  fodmap: "low-fodmap",
+  "low fodmap": "low-fodmap",
+  "low-fodmap": "low-fodmap",
+  "bajo en fodmap": "low-fodmap",
+  "baixo fodmap": "low-fodmap",
+
+  // diabetic / low-sugar
+  diabetico: "low-sugar",
+  diabética: "low-sugar",
+  diabético: "low-sugar",
+  "sin azúcar": "low-sugar",
+  "sem açúcar": "low-sugar",
+  "low sugar": "low-sugar",
+  "low-sugar": "low-sugar",
+
+  // sodium
+  "sin sal": "low-sodium",
+  "sem sal": "low-sodium",
+  "low sodium": "low-sodium",
+  "low-sodium": "low-sodium",
+  "bajo en sodio": "low-sodium",
+  "baixo sódio": "low-sodium",
+
+  // common allergen variants
+  "sin maní": "no peanuts",
+  "sin cacahuate": "no peanuts",
+  "sem amendoim": "no peanuts",
+  peanut: "no peanuts",
+  "sin pescado": "no fish",
+  "sem peixe": "no fish",
+  "sin sésamo": "no sesame",
+  "sem gergelim": "no sesame",
 };
 
 /**

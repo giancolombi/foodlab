@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { CalendarDays, ChefHat, Globe, LogOut, ShoppingCart } from "lucide-react";
+import { CalendarDays, ChefHat, Globe, LogOut, Ruler, ShoppingCart } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 import { Button } from "@/design-system";
@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlan } from "@/contexts/PlanContext";
+import { useUnits, type UnitSystem } from "@/contexts/UnitsContext";
 import { LOCALES, type Locale } from "@/i18n/strings";
 import { translateAvailable, warmTranslator } from "@/lib/translator";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ export default function AppLayout() {
   const { locale, setLocale, t } = useLanguage();
   const { filledCount: planCount, recipeCount } = usePlan();
   const { boughtCount } = useCart();
+  const { units, setUnits } = useUnits();
   // Header cart badge is a presence indicator: "you have recipes planned,
   // go shop for them". The precise unticked count lives on the Cart page to
   // avoid materializing the full shopping list on every layout render.
@@ -124,6 +126,21 @@ export default function AppLayout() {
                 />
               )}
             </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                setUnits(units === "imperial" ? "metric" : "imperial")
+              }
+              aria-label={t("layout.units")}
+              title={t("layout.unitsHint")}
+              className="gap-1.5"
+            >
+              <Ruler className="h-4 w-4" />
+              <span className="text-xs uppercase">
+                {units === "imperial" ? "US" : "SI"}
+              </span>
+            </Button>
             <div className="relative" ref={langRef}>
               <Button
                 variant="ghost"

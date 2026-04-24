@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { PlanProvider } from "@/contexts/PlanContext";
+import { UnitsProvider } from "@/contexts/UnitsContext";
 import Cart from "@/pages/Cart";
 import IngredientMatcher from "@/pages/IngredientMatcher";
 import Plan from "@/pages/Plan";
@@ -19,9 +20,10 @@ import SignUp from "@/pages/SignUp";
 export default function App() {
   return (
     <LanguageProvider>
-      <AuthProvider>
-        <PlanProvider>
-          <CartProvider>
+      <UnitsProvider>
+        <AuthProvider>
+          <PlanProvider>
+            <CartProvider>
             <BrowserRouter>
               <Routes>
                 <Route path="/signin" element={<SignIn />} />
@@ -40,9 +42,10 @@ export default function App() {
               </Routes>
             </BrowserRouter>
             <Toaster richColors position="top-right" />
-          </CartProvider>
-        </PlanProvider>
-      </AuthProvider>
+            </CartProvider>
+          </PlanProvider>
+        </AuthProvider>
+      </UnitsProvider>
     </LanguageProvider>
   );
 }

@@ -2,18 +2,20 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
+  Badge,
+  Button,
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+  EmptyState,
+  Input,
+  Label,
+  PageHeader,
+  Textarea,
+} from "@/design-system";
+import { User } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { api } from "@/lib/api";
 import type { Profile } from "@/types";
@@ -110,18 +112,18 @@ export default function Profiles() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{t("profiles.title")}</h1>
-          <p className="text-muted-foreground">{t("profiles.subtitle")}</p>
-        </div>
-        {!editing && (
-          <Button onClick={() => setEditing({ ...EMPTY })}>
-            <Plus className="h-4 w-4" /> {t("profiles.new")}
-          </Button>
-        )}
-      </div>
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-4">
+      <PageHeader
+        title={t("profiles.title")}
+        subtitle={t("profiles.subtitle")}
+        actions={
+          !editing ? (
+            <Button onClick={() => setEditing({ ...EMPTY })}>
+              <Plus className="h-4 w-4" /> {t("profiles.new")}
+            </Button>
+          ) : undefined
+        }
+      />
 
       {editing && (
         <Card>
@@ -225,9 +227,9 @@ export default function Profiles() {
                 <div>
                   <CardTitle>{p.name}</CardTitle>
                   {p.restrictions.length > 0 && (
-                    <CardDescription>
+                    <p className="text-sm text-muted-foreground">
                       {p.restrictions.join(" · ")}
-                    </CardDescription>
+                    </p>
                   )}
                 </div>
                 <div className="flex gap-1">
@@ -276,7 +278,15 @@ export default function Profiles() {
           </Card>
         ))}
         {!editing && profiles.length === 0 && (
-          <p className="text-muted-foreground text-sm">{t("profiles.empty")}</p>
+          <EmptyState
+            icon={User}
+            title={t("profiles.empty")}
+            action={
+              <Button onClick={() => setEditing({ ...EMPTY })}>
+                <Plus className="h-4 w-4" /> {t("profiles.new")}
+              </Button>
+            }
+          />
         )}
       </div>
     </div>

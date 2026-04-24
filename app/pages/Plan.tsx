@@ -7,15 +7,18 @@
 // of days so each day's three meals are easy to tap with a thumb. On wider
 // screens we show a 7-column "week at a glance" grid.
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import {
   AlertTriangle,
   CalendarDays,
   ChefHat,
   ShoppingCart,
+  Sparkles,
   Trash2,
   Users,
+  Utensils,
   X,
 } from "lucide-react";
 
@@ -54,14 +57,18 @@ export default function Plan() {
     recipeCount,
     unassign,
     clearPlan,
+    mergeAssignments,
     activeProfileIds,
     toggleProfile,
     setActiveProfileIds,
+    includeServeWith,
+    setIncludeServeWith,
   } = usePlan();
 
   const [recipes, setRecipes] = useState<Record<string, RecipeDetail>>({});
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
 
   // Fetch every recipe referenced by the plan, plus the user's profiles.
   // We key recipes by slug so slot lookups are O(1).
@@ -100,6 +107,27 @@ export default function Plan() {
     [profiles, activeProfileIds],
   );
 
+  const handleGenerate = useCallback(async () => {
+    setGenerating(true);
+    try {
+      const { assignments: incoming } = await api<{
+        assignments: Record<string, { slug: string; assignedAt: number }>;
+      }>("/plans/generate", {
+        method: "POST",
+        body: {
+          profileIds: activeProfileIds,
+          excludeSlugs: [...planSlugs],
+        },
+      });
+      mergeAssignments(incoming as any);
+      toast.success(t("plan.generated"));
+    } catch (err: any) {
+      toast.error(err?.message ?? t("plan.generateFailed"));
+    } finally {
+      setGenerating(false);
+    }
+  }, [activeProfileIds, planSlugs, mergeAssignments, t]);
+
   if (filledCount === 0) {
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
@@ -112,11 +140,17 @@ export default function Plan() {
           title={t("plan.empty")}
           description={t("plan.emptyHint")}
           action={
-            <Button asChild>
-              <Link to="/recipes">
-                <ChefHat className="h-4 w-4" /> {t("plan.browse")}
-              </Link>
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleGenerate} disabled={generating}>
+                <Sparkles className="h-4 w-4" />
+                {generating ? t("plan.generating") : t("plan.generate")}
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/recipes">
+                  <ChefHat className="h-4 w-4" /> {t("plan.browse")}
+                </Link>
+              </Button>
+            </div>
           }
         />
       </div>
@@ -134,6 +168,17 @@ export default function Plan() {
         }
         actions={
           <>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleGenerate}
+              disabled={generating}
+            >
+              <Sparkles className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                {generating ? t("plan.generating") : t("plan.generate")}
+              </span>
+            </Button>
             <Button asChild variant="secondary" size="sm">
               <Link to="/cart">
                 <ShoppingCart className="h-4 w-4" /> {t("plan.goToCart")}
@@ -177,6 +222,26 @@ export default function Plan() {
           </p>
         </section>
       )}
+
+      <section className="space-y-2">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Utensils className="h-4 w-4" /> {t("plan.shoppingOptions")}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <ProfileChip
+            active={includeServeWith}
+            onToggle={() => setIncludeServeWith(!includeServeWith)}
+            leading={<Utensils className="h-3 w-3" />}
+          >
+            {t("plan.includeServeWith")}
+          </ProfileChip>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {includeServeWith
+            ? t("plan.includeServeWithOnHint")
+            : t("plan.includeServeWithOffHint")}
+        </p>
+      </section>
 
       {loading && (
         <LoadingRow label={t("plan.loadingRecipes")} />

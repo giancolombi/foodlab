@@ -1,19 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Clock, Snowflake } from "lucide-react";
+import { CalendarCheck, Clock, Snowflake } from "lucide-react";
 
 import { AddToPlanButton } from "@/components/AddToPlanButton";
-import { Badge } from "@/components/ui/badge";
 import {
+  Badge,
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+  Input,
+  PageHeader,
+  ProfileChip,
+} from "@/design-system";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { usePlan } from "@/contexts/PlanContext";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { RecipeListItem } from "@/types";
@@ -23,6 +25,7 @@ type OwnerFilter = "all" | "curated" | "mine";
 export default function Recipes() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { isInPlan, slotsForSlug } = usePlan();
   const [recipes, setRecipes] = useState<RecipeListItem[]>([]);
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState<OwnerFilter>("all");
@@ -72,46 +75,29 @@ export default function Recipes() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">{t("recipes.title")}</h1>
-        <p className="text-muted-foreground">
-          {recipes.length === 1
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-4">
+      <PageHeader
+        title={t("recipes.title")}
+        subtitle={
+          recipes.length === 1
             ? t("recipes.countOne")
-            : t("recipes.count", { n: recipes.length })}
-        </p>
-      </div>
+            : t("recipes.count", { n: recipes.length })
+        }
+      />
 
       <div className="flex flex-wrap gap-2">
-        {filters.map((f) => {
-          const active = ownerFilter === f.value;
-          return (
-            <button
-              type="button"
-              key={f.value}
-              onClick={() => setOwnerFilter(f.value)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                active
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-foreground border-input hover:bg-accent",
-              )}
-              aria-pressed={active}
-            >
-              {f.label}
-              {typeof f.count === "number" && (
-                <span
-                  className={cn(
-                    "text-[10px] opacity-80",
-                    !active && "text-muted-foreground",
-                  )}
-                >
-                  {f.count}
-                </span>
-              )}
-            </button>
-          );
-        })}
+        {filters.map((f) => (
+          <ProfileChip
+            key={f.value}
+            active={ownerFilter === f.value}
+            onToggle={() => setOwnerFilter(f.value)}
+          >
+            {f.label}
+            {typeof f.count === "number" && (
+              <span className="ml-1 text-[10px] opacity-80">{f.count}</span>
+            )}
+          </ProfileChip>
+        ))}
       </div>
 
       <Input
@@ -134,19 +120,42 @@ export default function Recipes() {
             const time =
               (r.prep_minutes ?? 0) + (r.cook_minutes ?? 0) || null;
             const isMine = user && r.owner_user_id === user.id;
+            const inPlan = isInPlan(r.slug);
+            const slotCount = inPlan ? slotsForSlug(r.slug).length : 0;
             return (
               <Link key={r.id} to={`/recipes/${r.slug}`}>
-                <Card className="h-full hover:border-primary/50 transition-colors">
+                <Card
+                  className={cn(
+                    "h-full hover:border-primary/50 transition-colors",
+                    inPlan && "border-primary/40 bg-primary/[0.03]",
+                  )}
+                >
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">
-                      <CardTitle>{r.title}</CardTitle>
-                      {isMine && (
-                        <Badge variant="accent" className="shrink-0">
-                          {t("recipes.badge.mine")}
-                        </Badge>
-                      )}
+                      <CardTitle className="leading-tight">{r.title}</CardTitle>
+                      <div className="flex flex-wrap justify-end gap-1 shrink-0">
+                        {inPlan && (
+                          <Badge
+                            variant="secondary"
+                            className="gap-1"
+                            title={t("recipes.badge.inPlanHint", {
+                              n: slotCount,
+                            })}
+                          >
+                            <CalendarCheck className="h-3 w-3" />
+                            {slotCount > 1
+                              ? t("recipes.badge.inPlanN", { n: slotCount })
+                              : t("recipes.badge.inPlan")}
+                          </Badge>
+                        )}
+                        {isMine && (
+                          <Badge variant="accent">
+                            {t("recipes.badge.mine")}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <CardDescription className="flex flex-wrap gap-2 items-center">
+                    <div className="flex flex-wrap gap-2 items-center text-sm text-muted-foreground">
                       {r.cuisine && <span>{r.cuisine}</span>}
                       {time && (
                         <span className="inline-flex items-center gap-1">
@@ -160,7 +169,7 @@ export default function Recipes() {
                           {t("recipes.freezer")}
                         </span>
                       )}
-                    </CardDescription>
+                    </div>
                   </CardHeader>
                   <CardContent className="pt-0 space-y-2">
                     <div className="flex flex-wrap gap-1">
@@ -181,3 +190,4 @@ export default function Recipes() {
     </div>
   );
 }
+

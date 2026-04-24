@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { RecipeModifyPanel } from "@/components/RecipeModifyPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useUnits, convertTemperatures } from "@/contexts/UnitsContext";
 import { useTranslatedRecipe } from "@/hooks/useTranslatedRecipe";
 import { api } from "@/lib/api";
 import type { RecipeDetail as RecipeDetailT } from "@/types";
@@ -19,6 +20,7 @@ export default function RecipeDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t, locale } = useLanguage();
+  const { units } = useUnits();
   const [raw, setRaw] = useState<RecipeDetailT | null>(null);
   const { recipe, translating } = useTranslatedRecipe(raw, locale);
   const [error, setError] = useState<string | null>(null);
@@ -152,7 +154,7 @@ export default function RecipeDetail() {
           {v.instructions.length > 0 && (
             <ol className="list-decimal pl-5 text-sm space-y-1">
               {v.instructions.map((step, i) => (
-                <li key={i}>{step}</li>
+                <li key={i}>{convertTemperatures(step, units)}</li>
               ))}
             </ol>
           )}

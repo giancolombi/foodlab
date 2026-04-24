@@ -15,9 +15,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+
+import { api, getToken } from "@/lib/api";
 
 export const MEALS = ["breakfast", "lunch", "dinner"] as const;
 export type Meal = (typeof MEALS)[number];
@@ -53,17 +56,24 @@ interface PlanContextValue {
   /** Remove a recipe from every slot it occupies. */
   removeSlug: (slug: string) => void;
   clearPlan: () => void;
+  /** Merge a batch of assignments into the plan (used by auto-generate). */
+  mergeAssignments: (incoming: Partial<Record<SlotKey, SlotAssignment>>) => void;
 
   /** Profiles that will eat this week. [] during init; default set after load. */
   activeProfileIds: string[];
   setActiveProfileIds: (ids: string[]) => void;
   toggleProfile: (id: string) => void;
+
+  /** Include serve_with items in the shopping list. Off by default. */
+  includeServeWith: boolean;
+  setIncludeServeWith: (v: boolean) => void;
 }
 
 const PlanContext = createContext<PlanContextValue | null>(null);
 
 const PLAN_KEY = "foodlab_plan_v2";
 const PROFILES_KEY = "foodlab_plan_profiles";
+const SERVE_WITH_KEY = "foodlab_plan_serve_with";
 // Old v1 key — one-time migration: take every slug, dump them into Monday..
 // slots as dinners so existing users don't lose their plan.
 const LEGACY_KEY = "foodlab_plan";
@@ -122,6 +132,15 @@ function loadAssignments(): AssignmentMap {
   return {};
 }
 
+function loadIncludeServeWith(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(SERVE_WITH_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 function loadProfiles(): string[] {
   if (typeof window === "undefined") return [];
   try {
@@ -139,6 +158,9 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   const [assignments, setAssignments] = useState<AssignmentMap>(loadAssignments);
   const [activeProfileIds, setActiveProfileIdsState] =
     useState<string[]>(loadProfiles);
+  const [includeServeWith, setIncludeServeWithState] = useState<boolean>(
+    loadIncludeServeWith,
+  );
 
   useEffect(() => {
     try {
@@ -155,6 +177,75 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       // ignore
     }
   }, [activeProfileIds]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SERVE_WITH_KEY, includeServeWith ? "1" : "0");
+    } catch {
+      // ignore
+    }
+  }, [includeServeWith]);
+
+  const setIncludeServeWith = useCallback((v: boolean) => {
+    setIncludeServeWithState(v);
+  }, []);
+
+  // ---- Server sync ----
+  // On mount, if authenticated, fetch the server plan and merge with local.
+  // Server wins if it has a newer updatedAt; otherwise keep local (offline-first).
+  const didFetch = useRef(false);
+  useEffect(() => {
+    if (didFetch.current) return;
+    if (!getToken()) return;
+    didFetch.current = true;
+    api<{
+      plan: {
+        assignments: AssignmentMap;
+        activeProfileIds: string[];
+        includeServeWith: boolean;
+        updatedAt: string | null;
+      };
+    }>("/plans")
+      .then(({ plan }) => {
+        if (!plan.updatedAt) return; // no server plan yet
+        const serverSlots = Object.keys(plan.assignments).length;
+        const localSlots = Object.keys(assignments).length;
+        // Simple heuristic: take the richer plan (more slots filled).
+        // A proper last-write-wins would require storing updatedAt locally too.
+        if (serverSlots >= localSlots) {
+          setAssignments(plan.assignments);
+          if (plan.activeProfileIds.length) {
+            setActiveProfileIdsState(plan.activeProfileIds);
+          }
+          setIncludeServeWithState(plan.includeServeWith);
+        }
+      })
+      .catch(() => {
+        // Offline or not authenticated — keep localStorage plan
+      });
+    // Only on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debounce-save to server when plan changes.
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => {
+    if (!getToken()) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      api("/plans", {
+        method: "PUT",
+        body: {
+          assignments,
+          activeProfileIds,
+          includeServeWith,
+        },
+      }).catch(() => {
+        // Silently fail — localStorage is the fallback
+      });
+    }, 1500);
+    return () => clearTimeout(saveTimer.current);
+  }, [assignments, activeProfileIds, includeServeWith]);
 
   const planSlugs = useMemo(() => {
     const s = new Set<string>();
@@ -216,6 +307,13 @@ export function PlanProvider({ children }: { children: ReactNode }) {
 
   const clearPlan = useCallback(() => setAssignments({}), []);
 
+  const mergeAssignments = useCallback(
+    (incoming: Partial<Record<SlotKey, SlotAssignment>>) => {
+      setAssignments((prev) => ({ ...prev, ...incoming }));
+    },
+    [],
+  );
+
   const setActiveProfileIds = useCallback((ids: string[]) => {
     setActiveProfileIdsState(ids);
   }, []);
@@ -238,9 +336,12 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       unassign,
       removeSlug,
       clearPlan,
+      mergeAssignments,
       activeProfileIds,
       setActiveProfileIds,
       toggleProfile,
+      includeServeWith,
+      setIncludeServeWith,
     }),
     [
       assignments,
@@ -253,9 +354,12 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       unassign,
       removeSlug,
       clearPlan,
+      mergeAssignments,
       activeProfileIds,
       setActiveProfileIds,
       toggleProfile,
+      includeServeWith,
+      setIncludeServeWith,
     ],
   );
 
