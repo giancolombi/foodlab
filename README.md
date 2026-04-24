@@ -27,7 +27,7 @@ Open a new chat, paste one prompt, and go. Full setup guides:
 FoodLab reads recipes, profiles, and ratings directly from this GitHub repo — no install needed.
 
 ### Just Browse
-Read recipes directly on GitHub: [`recipes/mains/`](https://github.com/giancolombi/foodlab/tree/main/recipes/mains)
+Read recipes directly on GitHub: [`test-kitchen/recipes/mains/`](https://github.com/giancolombi/foodlab/tree/main/test-kitchen/recipes/mains)
 
 ---
 
@@ -83,11 +83,16 @@ Agents run with [safety guards](hooks/README.md) inspired by [Sondera's Cedar po
 ### Repo Structure
 
 ```
-profiles/            Dietary profiles (one per person)
-recipes/mains/       Full recipes (one version per dietary group)
-recipes/breakfast/   Breakfast recipes
-weeks/               Weekly menus + shopping lists
-reviews/ratings.md   Rate recipes 1-5 stars
+test-kitchen/
+  profiles/          Dietary profiles (one per person)
+  recipes/mains/     Full recipes (one version per dietary group)
+  recipes/breakfast/ Breakfast recipes
+  plans/             Weekly menus + shopping lists
+  reviews/ratings.md Rate recipes 1-5 stars
+app/                 React frontend (Vite)
+api/                 Express backend
+ai/                  Ollama container
+scripts/             DB migrate + seed
 hooks/               Safety guards
 .claude/skills/      Slash commands for Claude Code
 .chatgpt/skills/     Skill manifest for ChatGPT

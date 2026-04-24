@@ -16,8 +16,8 @@ https://github.com/giancolombi/foodlab
 1. Tente ler:
    - AGENTS.md (regras de funcionamento)
    - profiles/ (restrições alimentares de cada pessoa)
-   - recipes/mains/ e recipes/breakfast/ (receitas disponíveis)
-   - reviews/ratings.md (avaliações anteriores)
+   - test-kitchen/recipes/mains/ e test-kitchen/recipes/breakfast/ (receitas disponíveis)
+   - test-kitchen/reviews/ratings.md (avaliações anteriores)
 
    Se não conseguir acessar o repositório, me peça pra colar os arquivos necessários.
 

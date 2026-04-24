@@ -11,8 +11,8 @@ Match the user's available ingredients against the recipe collection.
 ## Steps
 
 1. Ask the user: "What ingredients do you have?" (if not already provided)
-2. Read all profiles in `profiles/` to filter out restricted ingredients
-3. Read all recipes in `recipes/mains/` and `recipes/breakfast/`
+2. Read all profiles in `test-kitchen/profiles/` to filter out restricted ingredients
+3. Read all recipes in `test-kitchen/recipes/mains/` and `test-kitchen/recipes/breakfast/`
 4. For each recipe, compare the user's ingredients against the shared base (ignore pantry staples: oil, salt, garlic, onion, common spices)
 5. Rank by match ratio: best = most ingredients matched, fewest missing
 6. Show the top 3 matches:

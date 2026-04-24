@@ -20,9 +20,9 @@ Recipe files in the repo stay in English (for consistency), but all user-facing 
 
 ## Dietary Profiles
 
-**Before generating any recipe or meal plan, ALWAYS read all files in `profiles/`.**
+**Before generating any recipe or meal plan, ALWAYS read all files in `test-kitchen/profiles/`.**
 
-Each person who eats these meals has their own profile in `profiles/<name>.md` defining their restrictions, preferences, allergies, and substitution notes. See `profiles/README.md` for the format.
+Each person who eats these meals has their own profile in `test-kitchen/profiles/<name>.md` defining their restrictions, preferences, allergies, and substitution notes. See `test-kitchen/profiles/README.md` for the format.
 
 ### How to use profiles:
 
@@ -41,8 +41,8 @@ Generate a single version of each recipe with no dietary restrictions. Prompt th
 
 When a user says "add a profile", "set up dietary restrictions", "I'm vegetarian", "my partner can't eat dairy", etc.:
 
-1. Create or update the appropriate file in `profiles/<name>.md`
-2. Follow the format in `profiles/README.md`
+1. Create or update the appropriate file in `test-kitchen/profiles/<name>.md`
+2. Follow the format in `test-kitchen/profiles/README.md`
 3. Commit and push
 4. Confirm what was saved
 
@@ -103,10 +103,10 @@ Welcome to FoodLab! Here's what you can ask me:
    "The bibimbap was just okay, 3 stars"
 
 📖 BROWSE
-   Check recipes/mains/ and recipes/breakfast/ for dishes
-   Check weeks/ for past meal plans + shopping lists
-   Check reviews/ratings.md for ratings
-   Check profiles/ for dietary profiles
+   Check test-kitchen/recipes/mains/ and test-kitchen/recipes/breakfast/ for dishes
+   Check test-kitchen/plans/ for past meal plans + shopping lists
+   Check test-kitchen/reviews/ratings.md for ratings
+   Check test-kitchen/profiles/ for dietary profiles
 
 Each recipe has a version for every dietary group in your household.
 ```
@@ -117,7 +117,7 @@ When a user wants to set up or modify dietary profiles:
 
 1. Ask for the person's name if not provided
 2. Ask about restrictions, preferences, allergies, and substitution notes
-3. Create or update `profiles/<name>.md` following the format in `profiles/README.md`
+3. Create or update `test-kitchen/profiles/<name>.md` following the format in `test-kitchen/profiles/README.md`
 4. Commit and push
 5. Confirm what was saved and how it will affect recipes
 
@@ -125,9 +125,9 @@ When a user wants to set up or modify dietary profiles:
 
 When a user requests a specific type of recipe:
 
-1. **Read all profiles in `profiles/`**
+1. **Read all profiles in `test-kitchen/profiles/`**
 2. Search the web for recipes matching their request
-3. Check `recipes/mains/` and `recipes/breakfast/` to avoid duplicates
+3. Check `test-kitchen/recipes/mains/` and `test-kitchen/recipes/breakfast/` to avoid duplicates
 4. Write the recipe file with one version per dietary group, following the Recipe File Format below
 5. Commit and push
 6. Show the user the recipe summary — dish name, all versions, key ingredients
@@ -136,8 +136,8 @@ When a user requests a specific type of recipe:
 
 When a user tells you what ingredients they have:
 
-1. Read all recipes in `recipes/mains/` and `recipes/breakfast/`
-2. **Read all profiles in `profiles/`** to filter out recipes with restricted ingredients
+1. Read all recipes in `test-kitchen/recipes/mains/` and `test-kitchen/recipes/breakfast/`
+2. **Read all profiles in `test-kitchen/profiles/`** to filter out recipes with restricted ingredients
 3. Find recipes where the user's ingredients cover most of the base
 4. Rank matches: best match = fewest missing ingredients
 5. Show top 3 matches with: recipe name, cuisine, matched/missing ingredients, quick method
@@ -147,24 +147,24 @@ When a user tells you what ingredients they have:
 
 When a user asks for a weekly meal plan:
 
-1. **Read all profiles in `profiles/`**
-2. Read all recipes in `recipes/mains/` and `recipes/breakfast/`
-3. Read `reviews/ratings.md` for feedback
-4. Read the most recent file in `weeks/` to avoid repeating
+1. **Read all profiles in `test-kitchen/profiles/`**
+2. Read all recipes in `test-kitchen/recipes/mains/` and `test-kitchen/recipes/breakfast/`
+3. Read `test-kitchen/reviews/ratings.md` for feedback
+4. Read the most recent file in `test-kitchen/plans/` to avoid repeating
 5. Pick 4 mains + 1 breakfast:
    - Prioritize 4–5 star rated recipes
    - Avoid 1–2 star recipes unless modified
    - Include 1–2 unrated/new recipes
    - Ensure variety in cuisines and cooking methods
    - Favor preferences listed in profiles
-6. Generate `weeks/week-NN.md` in the Weekly Meal Plan Format below, with columns for each dietary group
+6. Generate `test-kitchen/plans/week-NN.md` in the Weekly Meal Plan Format below, with columns for each dietary group
 7. Commit and push
 
 ### "Give me a recipe for today" / "What should I cook tonight?"
 
 When a user asks for a single meal:
 
-1. **Read all profiles in `profiles/`**
+1. **Read all profiles in `test-kitchen/profiles/`**
 2. Read recipes and ratings
 3. Pick 1 recipe — favor highly rated, vary from recent
 4. Present with ingredients and method for each dietary group
@@ -173,7 +173,7 @@ When a user asks for a single meal:
 
 When a user gives feedback:
 
-1. Read `reviews/ratings.md`
+1. Read `test-kitchen/reviews/ratings.md`
 2. Add their rating: dish slug, stars (★), person name, version, notes, date
 3. Commit and push
 
@@ -181,7 +181,7 @@ When a user gives feedback:
 
 ## Recipe File Format
 
-- Location: `recipes/mains/` or `recipes/breakfast/`
+- Location: `test-kitchen/recipes/mains/` or `test-kitchen/recipes/breakfast/`
 - Filename: kebab-case (e.g., `west-african-peanut-stew.md`)
 - Structure:
   1. Dish name as H1
@@ -198,7 +198,7 @@ If there's only one dietary group (or no profiles), write a single version with 
 
 ## Weekly Meal Plan + Shopping List Format
 
-Generate as a single file in `weeks/week-NN.md`.
+Generate as a single file in `test-kitchen/plans/week-NN.md`.
 
 ### Structure:
 
@@ -222,7 +222,7 @@ Generate as a single file in `weeks/week-NN.md`.
 
 ## Reviews & Ratings
 
-User feedback lives in `reviews/ratings.md`. Anyone can add a row.
+User feedback lives in `test-kitchen/reviews/ratings.md`. Anyone can add a row.
 
 | Column | Description |
 |--------|-------------|
@@ -246,16 +246,16 @@ User feedback lives in `reviews/ratings.md`. Anyone can add a row.
 These run in the background when the agent session is active:
 
 ### Recipe Hunter (every other day)
-1. **Read all profiles in `profiles/`**
+1. **Read all profiles in `test-kitchen/profiles/`**
 2. Check existing recipes to avoid duplicates
 3. Search the web for trending/seasonal recipes
 4. Write 1-2 new recipes with versions for each dietary group
 5. Commit and push to main
 
 ### Meal Planner (1st and 15th of each month)
-1. **Read all profiles in `profiles/`**
+1. **Read all profiles in `test-kitchen/profiles/`**
 2. Read all available recipes and existing week plans
-3. Read `reviews/ratings.md` to prioritize favorites
+3. Read `test-kitchen/reviews/ratings.md` to prioritize favorites
 4. Pick 4 mains + 1 breakfast, favoring profile preferences
 5. Generate a weekly menu + consolidated shopping list
 6. Commit and push to main

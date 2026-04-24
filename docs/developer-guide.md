@@ -13,7 +13,7 @@ github.com/giancolombi/foodlab/
 │   ├── mains/           Main dish recipes (markdown)
 │   └── breakfast/       Breakfast recipes (markdown)
 ├── weeks/               Weekly meal plans + shopping lists (markdown)
-├── reviews/ratings.md   Star ratings table (markdown)
+├── test-kitchen/reviews/ratings.md   Star ratings table (markdown)
 ├── AGENTS.md            Agent behavior instructions
 └── .claude/skills/      Claude Code slash commands
 ```
@@ -25,9 +25,9 @@ github.com/giancolombi/foodlab/
 Fetch files directly — no auth needed for public repos.
 
 ```
-https://raw.githubusercontent.com/giancolombi/foodlab/main/recipes/mains/moroccan-tagine.md
+https://raw.githubusercontent.com/giancolombi/foodlab/main/test-kitchen/recipes/mains/moroccan-tagine.md
 https://raw.githubusercontent.com/giancolombi/foodlab/main/profiles/example-vegetarian.md
-https://raw.githubusercontent.com/giancolombi/foodlab/main/reviews/ratings.md
+https://raw.githubusercontent.com/giancolombi/foodlab/main/test-kitchen/reviews/ratings.md
 ```
 
 ### Option 2: GitHub API (structured)
@@ -43,7 +43,7 @@ Returns JSON array of file objects with `name`, `path`, `download_url`.
 Get file content:
 
 ```bash
-curl https://api.github.com/repos/giancolombi/foodlab/contents/recipes/mains/moroccan-tagine.md \
+curl https://api.github.com/repos/giancolombi/foodlab/contents/test-kitchen/recipes/mains/moroccan-tagine.md \
   -H "Accept: application/vnd.github.raw"
 ```
 
@@ -57,7 +57,7 @@ Best for apps that need offline access or want to write back (new recipes, ratin
 
 ## Data Formats
 
-### Recipe Files (`recipes/mains/*.md`, `recipes/breakfast/*.md`)
+### Recipe Files (`test-kitchen/recipes/mains/*.md`, `test-kitchen/recipes/breakfast/*.md`)
 
 Each recipe is a markdown file with this structure:
 
@@ -103,7 +103,7 @@ Each recipe is a markdown file with this structure:
 - Steps: numbered lines (`1. `, `2. `, etc.) within each version section
 - Sources: markdown links in the last section
 
-### Profile Files (`profiles/*.md`)
+### Profile Files (`test-kitchen/profiles/*.md`)
 
 ```markdown
 # [Person Name]
@@ -129,7 +129,7 @@ Each recipe is a markdown file with this structure:
 - Sections: split by `## ` headers
 - Items: lines starting with `- ` within each section
 
-### Ratings (`reviews/ratings.md`)
+### Ratings (`test-kitchen/test-kitchen/reviews/ratings.md`)
 
 Markdown table:
 
@@ -144,7 +144,7 @@ Markdown table:
 - Rating: count `★` characters (1-5)
 - Dish matches recipe filename without `.md`
 
-### Weekly Plans (`weeks/week-NN.md`)
+### Weekly Plans (`test-kitchen/plans/week-NN.md`)
 
 Simplified cook-friendly documents with:
 - Summary table of all meals
@@ -346,7 +346,7 @@ If your app needs to add recipes, ratings, or profiles, use the GitHub API with 
 
 ```bash
 # 1. Get current ratings file
-CONTENT=$(curl -s https://api.github.com/repos/giancolombi/foodlab/contents/reviews/ratings.md \
+CONTENT=$(curl -s https://api.github.com/repos/giancolombi/foodlab/contents/test-kitchen/reviews/ratings.md \
   -H "Authorization: Bearer $GITHUB_TOKEN")
 SHA=$(echo "$CONTENT" | jq -r '.sha')
 CURRENT=$(echo "$CONTENT" | jq -r '.content' | base64 -d)
@@ -356,7 +356,7 @@ NEW_LINE="| moroccan-tagine | ★★★★★ | Alex | veg | Amazing | 2026-04-1
 UPDATED=$(echo "$CURRENT"; echo "$NEW_LINE")
 
 # 3. Push update
-curl -X PUT https://api.github.com/repos/giancolombi/foodlab/contents/reviews/ratings.md \
+curl -X PUT https://api.github.com/repos/giancolombi/foodlab/contents/test-kitchen/reviews/ratings.md \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
   -d "{
     \"message\": \"Add rating for moroccan-tagine\",
@@ -370,7 +370,7 @@ curl -X PUT https://api.github.com/repos/giancolombi/foodlab/contents/reviews/ra
 Same pattern — create a new file via the GitHub Contents API:
 
 ```bash
-curl -X PUT https://api.github.com/repos/giancolombi/foodlab/contents/recipes/mains/new-recipe.md \
+curl -X PUT https://api.github.com/repos/giancolombi/foodlab/contents/test-kitchen/recipes/mains/new-recipe.md \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
   -d "{
     \"message\": \"Add new recipe\",
@@ -419,7 +419,7 @@ To contribute recipes back to the FoodLab collection:
 1. Fork the repo
 2. Add recipe files following the format in `AGENTS.md`
 3. Open a pull request
-4. Recipes must have versions for each dietary group in `profiles/`
+4. Recipes must have versions for each dietary group in `test-kitchen/profiles/`
 
 ## License
 

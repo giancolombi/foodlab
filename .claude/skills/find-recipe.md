@@ -10,10 +10,10 @@ Search the web for a new recipe matching the user's request and add it to the re
 
 ## Steps
 
-1. Read all profiles in `profiles/` for dietary restrictions
-2. Read `ls recipes/mains/ recipes/breakfast/` to check what already exists
+1. Read all profiles in `test-kitchen/profiles/` for dietary restrictions
+2. Read `ls test-kitchen/recipes/mains/ test-kitchen/recipes/breakfast/` to check what already exists
 3. Search the web for recipes matching the user's request (cuisine, style, ingredient focus)
-4. Write the recipe file in `recipes/mains/` (or `recipes/breakfast/`) with one version per dietary group, following the format in AGENTS.md
+4. Write the recipe file in `test-kitchen/recipes/mains/` (or `test-kitchen/recipes/breakfast/`) with one version per dietary group, following the format in AGENTS.md
 5. Commit and push
 6. Show the user a summary: dish name, cuisine, versions, key ingredients
 

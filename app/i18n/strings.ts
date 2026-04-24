@@ -1,0 +1,490 @@
+// Hand-rolled i18n. Keys are flat strings grouped by screen. Missing keys fall
+// back to English, so new strings won't break other locales while translations
+// catch up. Add a new locale by creating an object with the same keys.
+
+export type Locale = "en" | "es" | "pt-BR";
+
+export const LOCALES: { value: Locale; label: string; native: string }[] = [
+  { value: "en", label: "English", native: "English" },
+  { value: "es", label: "Spanish", native: "Español" },
+  { value: "pt-BR", label: "Portuguese", native: "Português" },
+];
+
+export const LOCALE_LLM_DIRECTIVE: Record<Locale, string> = {
+  en: "Respond in English.",
+  es: "Respond in Latin American Spanish — neutral for Cuban, Peruvian, Colombian, Dominican, Venezuelan, Mexican readers. Use: frijoles, aguacate, taza, cucharada, cucharadita, cebolla, ajo, res. Avoid Spain-specific terms (judías, patata, zumo).",
+  "pt-BR": "Respond in Brazilian Portuguese. Use: xícara, colher de sopa, colher de chá, feijão, abacate, mandioca, geladeira, cebola, alho, carne. Avoid European Portuguese (chávena, frigorífico, ananás).",
+};
+
+const en = {
+  // nav + layout
+  "nav.match": "What can I make?",
+  "nav.recipes": "Recipes",
+  "nav.profiles": "Profiles",
+  "nav.signOut": "Sign out",
+  "layout.footer": "FoodLab · open-source · self-hosted LLM via Ollama",
+  "layout.language": "Language",
+
+  // matcher
+  "match.title": "What can I make?",
+  "match.subtitle":
+    "List what's in your fridge. FoodLab's local LLM ranks recipes from the catalog.",
+  "match.ingredientsLabel": "Your ingredients",
+  "match.ingredientsPlaceholder":
+    "chicken thighs, sweet potato, coconut milk, onion, garlic…",
+  "match.ingredientsHint": "Comma-separated or one per line.",
+  "match.eatingFor": "Eating for",
+  "match.addProfilePrompt": "Add a dietary profile",
+  "match.addProfileSuffix": " to filter out restricted ingredients.",
+  "match.filterNone": "No filter — recommendations work for anyone.",
+  "match.filterSome": "Recipes must work for all {n} selected.",
+  "match.submit": "Recommend recipes",
+  "match.streaming": "Streaming…",
+  "match.stop": "Stop",
+  "match.topMatches": "Top matches",
+  "match.thinking": "thinking…",
+  "match.progress": "{chars} chars · {n}/3 picks",
+  "match.errorEmptyList": "List at least one ingredient.",
+  "match.noStrongMatches": "No strong matches. Try adding more ingredients.",
+  "match.noMatches":
+    "No good matches yet. Try adding more ingredients or loosening restrictions.",
+  "match.youHave": "You have",
+  "match.youllNeed": "You'll need",
+  "match.viewRecipe": "View recipe",
+  "match.customize": "Customize",
+  "match.close": "Close",
+
+  // recipes list
+  "recipes.title": "Recipes",
+  "recipes.count": "{n} recipes in the catalog.",
+  "recipes.countOne": "1 recipe in the catalog.",
+  "recipes.searchPlaceholder": "Search by name or cuisine…",
+  "recipes.loading": "Loading…",
+  "recipes.filter.all": "All",
+  "recipes.filter.curated": "Curated",
+  "recipes.filter.mine": "My recipes",
+  "recipes.empty.mine":
+    "You haven't saved any recipes yet. Open a recipe and use 'Customize' to make one.",
+  "recipes.empty.none": "No recipes match.",
+  "recipes.badge.mine": "Mine",
+  "recipes.minutes": "{n} min",
+  "recipes.freezer": "freezer",
+
+  // recipe detail
+  "detail.back": "Back",
+  "detail.savedByYou": "Saved by you",
+  "detail.community": "Community",
+  "detail.totalMin": "{n} min total",
+  "detail.freezerFriendly": "freezer-friendly",
+  "detail.modifiedFrom": "Modified from",
+  "detail.sharedIngredients": "Shared ingredients",
+  "detail.serveWith": "Serve with",
+  "detail.protein": "Protein:",
+  "detail.source": "Source:",
+  "detail.customizeTitle": "Customize this recipe",
+  "detail.customizeSubtitle":
+    "Tell the model how you'd like it changed — swap a protein, scale it up or down, make it spicier, work around what's in your fridge.",
+  "detail.loading": "Loading…",
+
+  // modify panel
+  "modify.instructionPlaceholder":
+    'e.g. "swap chicken for tofu", "halve the recipe", "make it spicier"',
+  "modify.generate": "Generate modification",
+  "modify.cooking": "Cooking…",
+  "modify.stop": "Stop",
+  "modify.signinPrompt": "Sign in",
+  "modify.signinSuffix": " to customize and save your own version.",
+  "modify.preview": "Modified recipe preview",
+  "modify.streaming": "streaming…",
+  "modify.save": "Save to my recipes",
+  "modify.saving": "Saving…",
+  "modify.share": "Save & share",
+  "modify.shareTooltip":
+    "Public sharing is coming soon — moderation tooling needs to land first",
+  "modify.discard": "Discard",
+  "modify.reviewHint": "Generated. Review below before saving.",
+  "modify.errorTooShort": "Describe the change in a few more words.",
+  "modify.errorSignin": "Sign in to modify recipes.",
+  "modify.errorSave": "Could not save",
+  "modify.savedToast": 'Saved "{title}" to your recipes',
+  "modify.title": "Title",
+  "modify.cuisine": "Cuisine",
+  "modify.prep": "Prep",
+  "modify.cook": "Cook",
+  "modify.summary": "What changed",
+
+  // profiles
+  "profiles.title": "Dietary profiles",
+  "profiles.subtitle":
+    "One per person. Restrictions filter which recipes get recommended.",
+  "profiles.new": "New profile",
+  "profiles.editTitle": "Edit profile",
+  "profiles.newTitle": "New profile",
+  "profiles.name": "Name",
+  "profiles.restrictions": "Restrictions",
+  "profiles.restrictionsPlaceholder": "vegetarian, no dairy, no soy",
+  "profiles.allergies": "Allergies",
+  "profiles.allergiesPlaceholder": "tree nuts, shellfish",
+  "profiles.preferences": "Preferences",
+  "profiles.preferencesPlaceholder": "spicy, one-pot meals, Korean food",
+  "profiles.notes": "Notes",
+  "profiles.notesPlaceholder": "Uses coconut aminos instead of soy sauce",
+  "profiles.save": "Save",
+  "profiles.cancel": "Cancel",
+  "profiles.empty":
+    "No profiles yet. Add one to personalize recipe recommendations.",
+  "profiles.allergiesLabel": "Allergies:",
+  "profiles.preferencesLabel": "Preferences:",
+  "profiles.confirmDelete": "Delete this profile?",
+  "profiles.updated": "Profile updated",
+  "profiles.created": "Profile created",
+  "profiles.nameRequired": "Name is required",
+  "profiles.saveFailed": "Save failed",
+  "profiles.deleteFailed": "Delete failed",
+
+  // sign in / up
+  "signin.title": "Welcome back",
+  "signin.subtitle": "Sign in to find recipes for what's in your fridge.",
+  "signin.email": "Email",
+  "signin.password": "Password",
+  "signin.submit": "Sign in",
+  "signin.submitting": "Signing in…",
+  "signin.newHere": "New here?",
+  "signin.createAccount": "Create an account",
+  "signin.failed": "Sign in failed",
+  "signup.title": "Create your FoodLab account",
+  "signup.subtitle":
+    "Then add a dietary profile for each person in your household.",
+  "signup.displayName": "Your name",
+  "signup.displayNameOptional": "Optional",
+  "signup.passwordHint": "At least 8 characters.",
+  "signup.passwordTooShort": "Password must be at least 8 characters",
+  "signup.submit": "Create account",
+  "signup.submitting": "Creating account…",
+  "signup.haveAccount": "Already have an account?",
+  "signup.signin": "Sign in",
+  "signup.failed": "Sign up failed",
+
+  // generic
+  "common.backToRecipes": "Back to recipes",
+  "common.generic.error": "Something went wrong",
+} as const;
+
+export type StringKey = keyof typeof en;
+
+const es: Partial<Record<StringKey, string>> = {
+  "nav.match": "¿Qué puedo hacer?",
+  "nav.recipes": "Recetas",
+  "nav.profiles": "Perfiles",
+  "nav.signOut": "Cerrar sesión",
+  "layout.footer": "FoodLab · código abierto · LLM local vía Ollama",
+  "layout.language": "Idioma",
+
+  "match.title": "¿Qué puedo hacer?",
+  "match.subtitle":
+    "Lista lo que tienes en el refrigerador. El LLM local de FoodLab ordena recetas del catálogo.",
+  "match.ingredientsLabel": "Tus ingredientes",
+  "match.ingredientsPlaceholder":
+    "muslos de pollo, batata, leche de coco, cebolla, ajo…",
+  "match.ingredientsHint": "Separados por coma o uno por línea.",
+  "match.eatingFor": "Cocinando para",
+  "match.addProfilePrompt": "Agregar un perfil dietético",
+  "match.addProfileSuffix": " para filtrar ingredientes restringidos.",
+  "match.filterNone": "Sin filtro — las recomendaciones sirven para cualquiera.",
+  "match.filterSome": "Las recetas deben funcionar para los {n} seleccionados.",
+  "match.submit": "Recomendar recetas",
+  "match.streaming": "Transmitiendo…",
+  "match.stop": "Parar",
+  "match.topMatches": "Mejores coincidencias",
+  "match.thinking": "pensando…",
+  "match.progress": "{chars} caracteres · {n}/3 elegidas",
+  "match.errorEmptyList": "Lista al menos un ingrediente.",
+  "match.noStrongMatches":
+    "No hay coincidencias fuertes. Prueba agregar más ingredientes.",
+  "match.noMatches":
+    "Aún no hay buenas coincidencias. Agrega más ingredientes o afloja las restricciones.",
+  "match.youHave": "Ya tienes",
+  "match.youllNeed": "Te faltan",
+  "match.viewRecipe": "Ver receta",
+  "match.customize": "Personalizar",
+  "match.close": "Cerrar",
+
+  "recipes.title": "Recetas",
+  "recipes.count": "{n} recetas en el catálogo.",
+  "recipes.countOne": "1 receta en el catálogo.",
+  "recipes.searchPlaceholder": "Buscar por nombre o cocina…",
+  "recipes.loading": "Cargando…",
+  "recipes.filter.all": "Todas",
+  "recipes.filter.curated": "Curadas",
+  "recipes.filter.mine": "Mis recetas",
+  "recipes.empty.mine":
+    "Aún no guardas recetas. Abre una receta y usa 'Personalizar' para crear una.",
+  "recipes.empty.none": "Ninguna receta coincide.",
+  "recipes.badge.mine": "Mía",
+  "recipes.minutes": "{n} min",
+  "recipes.freezer": "freezer",
+
+  "detail.back": "Volver",
+  "detail.savedByYou": "Guardada por ti",
+  "detail.community": "Comunidad",
+  "detail.totalMin": "{n} min en total",
+  "detail.freezerFriendly": "apta para freezer",
+  "detail.modifiedFrom": "Modificada de",
+  "detail.sharedIngredients": "Ingredientes compartidos",
+  "detail.serveWith": "Servir con",
+  "detail.protein": "Proteína:",
+  "detail.source": "Fuente:",
+  "detail.customizeTitle": "Personalizar esta receta",
+  "detail.customizeSubtitle":
+    "Dile al modelo cómo cambiarla — cambiar la proteína, aumentar o reducir porciones, hacerla más picante, adaptarla a lo que tienes.",
+  "detail.loading": "Cargando…",
+
+  "modify.instructionPlaceholder":
+    'ej. "cambia pollo por tofu", "reduce a la mitad", "más picante"',
+  "modify.generate": "Generar modificación",
+  "modify.cooking": "Cocinando…",
+  "modify.stop": "Parar",
+  "modify.signinPrompt": "Inicia sesión",
+  "modify.signinSuffix": " para personalizar y guardar tu versión.",
+  "modify.preview": "Vista previa de la receta modificada",
+  "modify.streaming": "transmitiendo…",
+  "modify.save": "Guardar en mis recetas",
+  "modify.saving": "Guardando…",
+  "modify.share": "Guardar y compartir",
+  "modify.shareTooltip":
+    "Compartir públicamente llegará pronto — primero necesitamos herramientas de moderación",
+  "modify.discard": "Descartar",
+  "modify.reviewHint": "Generada. Revisa abajo antes de guardar.",
+  "modify.errorTooShort": "Describe el cambio con más palabras.",
+  "modify.errorSignin": "Inicia sesión para modificar recetas.",
+  "modify.errorSave": "No se pudo guardar",
+  "modify.savedToast": 'Guardada "{title}" en tus recetas',
+  "modify.title": "Título",
+  "modify.cuisine": "Cocina",
+  "modify.prep": "Preparación",
+  "modify.cook": "Cocción",
+  "modify.summary": "Qué cambió",
+
+  "profiles.title": "Perfiles dietéticos",
+  "profiles.subtitle":
+    "Uno por persona. Las restricciones filtran qué recetas se recomiendan.",
+  "profiles.new": "Nuevo perfil",
+  "profiles.editTitle": "Editar perfil",
+  "profiles.newTitle": "Nuevo perfil",
+  "profiles.name": "Nombre",
+  "profiles.restrictions": "Restricciones",
+  "profiles.restrictionsPlaceholder": "vegetariano, sin lácteos, sin soja",
+  "profiles.allergies": "Alergias",
+  "profiles.allergiesPlaceholder": "nueces, mariscos",
+  "profiles.preferences": "Preferencias",
+  "profiles.preferencesPlaceholder": "picante, comidas en una sola olla, coreana",
+  "profiles.notes": "Notas",
+  "profiles.notesPlaceholder":
+    "Usa aminoácidos de coco en lugar de salsa de soja",
+  "profiles.save": "Guardar",
+  "profiles.cancel": "Cancelar",
+  "profiles.empty":
+    "Aún no hay perfiles. Agrega uno para personalizar las recomendaciones.",
+  "profiles.allergiesLabel": "Alergias:",
+  "profiles.preferencesLabel": "Preferencias:",
+  "profiles.confirmDelete": "¿Eliminar este perfil?",
+  "profiles.updated": "Perfil actualizado",
+  "profiles.created": "Perfil creado",
+  "profiles.nameRequired": "El nombre es obligatorio",
+  "profiles.saveFailed": "No se pudo guardar",
+  "profiles.deleteFailed": "No se pudo eliminar",
+
+  "signin.title": "Bienvenido de vuelta",
+  "signin.subtitle":
+    "Inicia sesión para encontrar recetas con lo que tienes en el refrigerador.",
+  "signin.email": "Correo",
+  "signin.password": "Contraseña",
+  "signin.submit": "Iniciar sesión",
+  "signin.submitting": "Iniciando sesión…",
+  "signin.newHere": "¿Nuevo aquí?",
+  "signin.createAccount": "Crear una cuenta",
+  "signin.failed": "No se pudo iniciar sesión",
+  "signup.title": "Crea tu cuenta de FoodLab",
+  "signup.subtitle":
+    "Después agrega un perfil dietético para cada persona de tu casa.",
+  "signup.displayName": "Tu nombre",
+  "signup.displayNameOptional": "Opcional",
+  "signup.passwordHint": "Al menos 8 caracteres.",
+  "signup.passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
+  "signup.submit": "Crear cuenta",
+  "signup.submitting": "Creando cuenta…",
+  "signup.haveAccount": "¿Ya tienes cuenta?",
+  "signup.signin": "Iniciar sesión",
+  "signup.failed": "No se pudo crear la cuenta",
+
+  "common.backToRecipes": "Volver a recetas",
+  "common.generic.error": "Algo salió mal",
+};
+
+const ptBR: Partial<Record<StringKey, string>> = {
+  "nav.match": "O que posso fazer?",
+  "nav.recipes": "Receitas",
+  "nav.profiles": "Perfis",
+  "nav.signOut": "Sair",
+  "layout.footer": "FoodLab · código aberto · LLM local via Ollama",
+  "layout.language": "Idioma",
+
+  "match.title": "O que posso fazer?",
+  "match.subtitle":
+    "Liste o que tem na geladeira. O LLM local do FoodLab ordena receitas do catálogo.",
+  "match.ingredientsLabel": "Seus ingredientes",
+  "match.ingredientsPlaceholder":
+    "coxas de frango, batata-doce, leite de coco, cebola, alho…",
+  "match.ingredientsHint": "Separados por vírgula ou um por linha.",
+  "match.eatingFor": "Cozinhando para",
+  "match.addProfilePrompt": "Adicione um perfil alimentar",
+  "match.addProfileSuffix": " para filtrar ingredientes restritos.",
+  "match.filterNone": "Sem filtro — as recomendações funcionam para qualquer um.",
+  "match.filterSome": "As receitas precisam funcionar para todos os {n} selecionados.",
+  "match.submit": "Recomendar receitas",
+  "match.streaming": "Transmitindo…",
+  "match.stop": "Parar",
+  "match.topMatches": "Melhores combinações",
+  "match.thinking": "pensando…",
+  "match.progress": "{chars} caracteres · {n}/3 escolhidas",
+  "match.errorEmptyList": "Liste pelo menos um ingrediente.",
+  "match.noStrongMatches":
+    "Sem combinações fortes. Tente adicionar mais ingredientes.",
+  "match.noMatches":
+    "Ainda não há boas combinações. Adicione mais ingredientes ou afrouxe as restrições.",
+  "match.youHave": "Você tem",
+  "match.youllNeed": "Você vai precisar de",
+  "match.viewRecipe": "Ver receita",
+  "match.customize": "Personalizar",
+  "match.close": "Fechar",
+
+  "recipes.title": "Receitas",
+  "recipes.count": "{n} receitas no catálogo.",
+  "recipes.countOne": "1 receita no catálogo.",
+  "recipes.searchPlaceholder": "Buscar por nome ou cozinha…",
+  "recipes.loading": "Carregando…",
+  "recipes.filter.all": "Todas",
+  "recipes.filter.curated": "Selecionadas",
+  "recipes.filter.mine": "Minhas receitas",
+  "recipes.empty.mine":
+    "Você ainda não salvou receitas. Abra uma receita e use 'Personalizar' para criar.",
+  "recipes.empty.none": "Nenhuma receita corresponde.",
+  "recipes.badge.mine": "Minha",
+  "recipes.minutes": "{n} min",
+  "recipes.freezer": "freezer",
+
+  "detail.back": "Voltar",
+  "detail.savedByYou": "Salva por você",
+  "detail.community": "Comunidade",
+  "detail.totalMin": "{n} min no total",
+  "detail.freezerFriendly": "freezer-friendly",
+  "detail.modifiedFrom": "Modificada de",
+  "detail.sharedIngredients": "Ingredientes compartilhados",
+  "detail.serveWith": "Servir com",
+  "detail.protein": "Proteína:",
+  "detail.source": "Fonte:",
+  "detail.customizeTitle": "Personalizar esta receita",
+  "detail.customizeSubtitle":
+    "Diga ao modelo como mudar — trocar proteína, aumentar ou diminuir porções, deixar mais picante, adaptar ao que tem na geladeira.",
+  "detail.loading": "Carregando…",
+
+  "modify.instructionPlaceholder":
+    'ex. "trocar frango por tofu", "reduzir pela metade", "mais picante"',
+  "modify.generate": "Gerar modificação",
+  "modify.cooking": "Cozinhando…",
+  "modify.stop": "Parar",
+  "modify.signinPrompt": "Entre",
+  "modify.signinSuffix": " para personalizar e salvar sua versão.",
+  "modify.preview": "Prévia da receita modificada",
+  "modify.streaming": "transmitindo…",
+  "modify.save": "Salvar nas minhas receitas",
+  "modify.saving": "Salvando…",
+  "modify.share": "Salvar e compartilhar",
+  "modify.shareTooltip":
+    "Compartilhamento público chega em breve — primeiro precisamos de ferramentas de moderação",
+  "modify.discard": "Descartar",
+  "modify.reviewHint": "Gerada. Revise abaixo antes de salvar.",
+  "modify.errorTooShort": "Descreva a mudança com mais palavras.",
+  "modify.errorSignin": "Entre para modificar receitas.",
+  "modify.errorSave": "Não foi possível salvar",
+  "modify.savedToast": '"{title}" salva nas suas receitas',
+  "modify.title": "Título",
+  "modify.cuisine": "Cozinha",
+  "modify.prep": "Preparo",
+  "modify.cook": "Cocção",
+  "modify.summary": "O que mudou",
+
+  "profiles.title": "Perfis alimentares",
+  "profiles.subtitle":
+    "Um por pessoa. As restrições filtram quais receitas são recomendadas.",
+  "profiles.new": "Novo perfil",
+  "profiles.editTitle": "Editar perfil",
+  "profiles.newTitle": "Novo perfil",
+  "profiles.name": "Nome",
+  "profiles.restrictions": "Restrições",
+  "profiles.restrictionsPlaceholder": "vegetariano, sem laticínios, sem soja",
+  "profiles.allergies": "Alergias",
+  "profiles.allergiesPlaceholder": "castanhas, frutos do mar",
+  "profiles.preferences": "Preferências",
+  "profiles.preferencesPlaceholder":
+    "picante, refeições em uma panela só, coreana",
+  "profiles.notes": "Observações",
+  "profiles.notesPlaceholder": "Usa aminos de coco no lugar do shoyu",
+  "profiles.save": "Salvar",
+  "profiles.cancel": "Cancelar",
+  "profiles.empty":
+    "Nenhum perfil ainda. Adicione um para personalizar as recomendações.",
+  "profiles.allergiesLabel": "Alergias:",
+  "profiles.preferencesLabel": "Preferências:",
+  "profiles.confirmDelete": "Excluir este perfil?",
+  "profiles.updated": "Perfil atualizado",
+  "profiles.created": "Perfil criado",
+  "profiles.nameRequired": "Nome é obrigatório",
+  "profiles.saveFailed": "Falha ao salvar",
+  "profiles.deleteFailed": "Falha ao excluir",
+
+  "signin.title": "Bem-vindo de volta",
+  "signin.subtitle":
+    "Entre para encontrar receitas com o que tem na geladeira.",
+  "signin.email": "E-mail",
+  "signin.password": "Senha",
+  "signin.submit": "Entrar",
+  "signin.submitting": "Entrando…",
+  "signin.newHere": "Novo aqui?",
+  "signin.createAccount": "Criar uma conta",
+  "signin.failed": "Falha ao entrar",
+  "signup.title": "Crie sua conta FoodLab",
+  "signup.subtitle":
+    "Depois adicione um perfil alimentar para cada pessoa da casa.",
+  "signup.displayName": "Seu nome",
+  "signup.displayNameOptional": "Opcional",
+  "signup.passwordHint": "Pelo menos 8 caracteres.",
+  "signup.passwordTooShort": "A senha precisa ter pelo menos 8 caracteres",
+  "signup.submit": "Criar conta",
+  "signup.submitting": "Criando conta…",
+  "signup.haveAccount": "Já tem conta?",
+  "signup.signin": "Entrar",
+  "signup.failed": "Falha ao criar conta",
+
+  "common.backToRecipes": "Voltar às receitas",
+  "common.generic.error": "Algo deu errado",
+};
+
+const DICTS: Record<Locale, Partial<Record<StringKey, string>>> = {
+  en,
+  es,
+  "pt-BR": ptBR,
+};
+
+export function translate(
+  locale: Locale,
+  key: StringKey,
+  params?: Record<string, string | number>,
+): string {
+  const dict = DICTS[locale];
+  const raw = (dict?.[key] as string | undefined) ?? (en[key] as string) ?? key;
+  if (!params) return raw;
+  return raw.replace(/\{(\w+)\}/g, (_, name) =>
+    params[name] !== undefined ? String(params[name]) : `{${name}}`,
+  );
+}
