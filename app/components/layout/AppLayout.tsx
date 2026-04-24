@@ -6,11 +6,14 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LOCALES, type Locale } from "@/i18n/strings";
+import { webgpuAvailable } from "@/lib/translator";
 import { cn } from "@/lib/utils";
 
 export default function AppLayout() {
   const { user, signOut } = useAuth();
-  const { locale, setLocale, t } = useLanguage();
+  const { locale, setLocale, translateContent, setTranslateContent, t } =
+    useLanguage();
+  const canTranslateContent = webgpuAvailable();
   const navigate = useNavigate();
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
@@ -90,7 +93,7 @@ export default function AppLayout() {
               {langOpen && (
                 <div
                   role="menu"
-                  className="absolute right-0 mt-1 w-40 rounded-md border bg-popover shadow-md z-50 py-1"
+                  className="absolute right-0 mt-1 w-56 rounded-md border bg-popover shadow-md z-50 py-1"
                 >
                   {LOCALES.map((l) => (
                     <button
@@ -106,6 +109,40 @@ export default function AppLayout() {
                       {l.native}
                     </button>
                   ))}
+                  {locale !== "en" && (
+                    <>
+                      <div className="border-t my-1" />
+                      <label
+                        className={cn(
+                          "flex items-start gap-2 px-3 py-1.5 text-xs cursor-pointer hover:bg-accent",
+                          !canTranslateContent && "opacity-60 cursor-not-allowed",
+                        )}
+                        title={
+                          canTranslateContent
+                            ? undefined
+                            : t("layout.translateUnavailable")
+                        }
+                      >
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={translateContent}
+                          disabled={!canTranslateContent}
+                          onChange={(e) =>
+                            setTranslateContent(e.target.checked)
+                          }
+                        />
+                        <span>
+                          <span className="block font-medium">
+                            {t("layout.translateContent")}
+                          </span>
+                          <span className="block text-muted-foreground">
+                            {t("layout.translateContentHint")}
+                          </span>
+                        </span>
+                      </label>
+                    </>
+                  )}
                 </div>
               )}
             </div>

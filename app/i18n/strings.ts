@@ -24,6 +24,11 @@ const en = {
   "nav.signOut": "Sign out",
   "layout.footer": "FoodLab · open-source · self-hosted LLM via Ollama",
   "layout.language": "Language",
+  "layout.translateContent": "Translate recipe content",
+  "layout.translateContentHint":
+    "Experimental. Runs a translation model in your browser (~600 MB first time).",
+  "layout.translateUnavailable":
+    "WebGPU not available — try Chrome/Edge on desktop.",
 
   // matcher
   "match.title": "What can I make?",
@@ -179,6 +184,11 @@ const es: Partial<Record<StringKey, string>> = {
   "nav.signOut": "Cerrar sesión",
   "layout.footer": "FoodLab · código abierto · LLM local vía Ollama",
   "layout.language": "Idioma",
+  "layout.translateContent": "Traducir contenido de recetas",
+  "layout.translateContentHint":
+    "Experimental. Ejecuta un modelo de traducción en tu navegador (~600 MB la primera vez).",
+  "layout.translateUnavailable":
+    "WebGPU no disponible — prueba con Chrome/Edge de escritorio.",
 
   "match.title": "¿Qué puedo hacer?",
   "match.subtitle":
@@ -328,6 +338,11 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "nav.signOut": "Sair",
   "layout.footer": "FoodLab · código aberto · LLM local via Ollama",
   "layout.language": "Idioma",
+  "layout.translateContent": "Traduzir conteúdo das receitas",
+  "layout.translateContentHint":
+    "Experimental. Roda um modelo de tradução no seu navegador (~600 MB na primeira vez).",
+  "layout.translateUnavailable":
+    "WebGPU indisponível — tente Chrome/Edge no desktop.",
 
   "match.title": "O que posso fazer?",
   "match.subtitle":

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RecipeModifyPanel } from "@/components/RecipeModifyPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useTranslatedRecipe } from "@/hooks/useTranslatedRecipe";
 import { api } from "@/lib/api";
 import type { RecipeDetail as RecipeDetailT } from "@/types";
 
@@ -15,16 +16,17 @@ export default function RecipeDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { t } = useLanguage();
-  const [recipe, setRecipe] = useState<RecipeDetailT | null>(null);
+  const { t, locale, translateContent } = useLanguage();
+  const [raw, setRaw] = useState<RecipeDetailT | null>(null);
+  const recipe = useTranslatedRecipe(raw, locale, translateContent);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slug) return;
-    setRecipe(null);
+    setRaw(null);
     setError(null);
     api<{ recipe: RecipeDetailT }>(`/recipes/${slug}`)
-      .then(({ recipe }) => setRecipe(recipe))
+      .then(({ recipe }) => setRaw(recipe))
       .catch((e) => setError(e.message));
   }, [slug]);
 
