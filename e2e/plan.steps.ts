@@ -1,12 +1,9 @@
 import { Given, When, Then, loadFeature, runScenarios, expect } from "./support/bdd";
-import { createTestUser, injectAuth } from "./support/helpers";
-
-let token: string;
+import { createTestUser, injectAuth, getCurrentTestUser } from "./support/helpers";
 
 Given("I am signed in", async ({ page }) => {
   const user = await createTestUser();
-  token = user.token;
-  await injectAuth(page, token);
+  await injectAuth(page, user.token);
 });
 
 Given(/^I navigate to "(.+)"$/, async ({ page }, path) => {
@@ -16,7 +13,7 @@ Given(/^I navigate to "(.+)"$/, async ({ page }, path) => {
 
 Given("the plan has at least one recipe", async ({ page }) => {
   const recipesRes = await fetch("http://localhost:3001/api/recipes", {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${getCurrentTestUser().token}` },
   });
   if (!recipesRes.ok) throw new Error(`Recipes fetch failed: ${recipesRes.status}`);
   const { recipes } = await recipesRes.json();
@@ -26,19 +23,6 @@ Given("the plan has at least one recipe", async ({ page }) => {
   await page.evaluate((a: any) => {
     localStorage.setItem("foodlab_plan_v2", JSON.stringify(a));
   }, assignments);
-});
-
-When(/^I click the "(.+)" button$/, async ({ page }, name) => {
-  // If this is a destructive action, register a dialog handler first.
-  if (/clear/i.test(name)) {
-    page.once("dialog", (d) => d.accept());
-  }
-  await page.getByRole("button", { name: new RegExp(name, "i") }).click();
-});
-
-When("I confirm the dialog", async ({ page }) => {
-  // Dialog was accepted by the handler set before the triggering click.
-  await page.waitForTimeout(300);
 });
 
 Then(/^I should see an empty state with text "(.+)"$/, async ({ page }, text) => {
@@ -60,7 +44,11 @@ Then(/^I should see at least (\d+) assigned meal slot$/, async ({ page }, _n) =>
 });
 
 Then(/^I should see a "(.+)" link$/, async ({ page }, text) => {
-  await expect(page.getByRole("link", { name: new RegExp(text, "i") })).toBeVisible();
+  // Plan page has two "Shopping list" links (header action + next-step CTA),
+  // so match the first visible one instead of failing strict mode.
+  await expect(
+    page.getByRole("link", { name: new RegExp(text, "i") }).first(),
+  ).toBeVisible();
 });
 
 

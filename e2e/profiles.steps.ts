@@ -1,12 +1,14 @@
 import { Given, When, Then, loadFeature, runScenarios, expect } from "./support/bdd";
-import { createTestUser, injectAuth, createProfile } from "./support/helpers";
-
-let token: string;
+import {
+  createTestUser,
+  injectAuth,
+  createProfile,
+  getCurrentTestUser,
+} from "./support/helpers";
 
 Given("I am signed in", async ({ page }) => {
   const user = await createTestUser();
-  token = user.token;
-  await injectAuth(page, token);
+  await injectAuth(page, user.token);
 });
 
 Given(/^I navigate to "(.+)"$/, async ({ page }, path) => {
@@ -15,7 +17,7 @@ Given(/^I navigate to "(.+)"$/, async ({ page }, path) => {
 });
 
 Given(/^a profile "(.+)" exists$/, async (_world, name) => {
-  await createProfile(token, { name, restrictions: ["no soy"] });
+  await createProfile(getCurrentTestUser().token, { name, restrictions: ["no soy"] });
 });
 
 When(/^I click the "(.+)" button$/, async ({ page }, name) => {

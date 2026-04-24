@@ -350,7 +350,7 @@ export default function Cart() {
           const items = display.sections[section];
           if (!items.length) return null;
           return (
-            <Card key={section}>
+            <Card key={section} data-testid="cart-section">
               <CardHeader className="pb-1">
                 <CardTitle className="text-sm capitalize">
                   {t(`cart.section.${section}` as const)}

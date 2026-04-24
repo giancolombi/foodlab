@@ -25,7 +25,21 @@ When(/^I fill in "(.+)" with "(.+)"$/, async ({ page }, field, value) => {
 });
 
 When(/^I click the "(.+)" button$/, async ({ page }, name) => {
-  await page.getByRole("button", { name: new RegExp(name, "i") }).click();
+  // Some pages render the same action twice (header CTA + empty-state CTA),
+  // so target the first match to avoid strict-mode violations.
+  const button = page
+    .getByRole("button", { name: new RegExp(name, "i") })
+    .first();
+  if (/clear/i.test(name)) {
+    // "Clear week" / "Clear bought" trigger a confirm() dialog — wait for it
+    // alongside the click so the handler is attached before the dialog fires.
+    await Promise.all([
+      page.waitForEvent("dialog").then((d) => d.accept()),
+      button.click(),
+    ]);
+  } else {
+    await button.click();
+  }
 });
 
 When("I click the sign-out button", async ({ page }) => {

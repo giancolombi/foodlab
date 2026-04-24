@@ -1,12 +1,9 @@
 import { Given, When, Then, loadFeature, runScenarios, expect } from "./support/bdd";
-import { createTestUser, injectAuth } from "./support/helpers";
-
-let token: string;
+import { createTestUser, injectAuth, getCurrentTestUser } from "./support/helpers";
 
 Given("I am signed in", async ({ page }) => {
   const user = await createTestUser();
-  token = user.token;
-  await injectAuth(page, token);
+  await injectAuth(page, user.token);
 });
 
 Given(/^I navigate to "(.+)"$/, async ({ page }, path) => {
@@ -17,7 +14,7 @@ Given(/^I navigate to "(.+)"$/, async ({ page }, path) => {
 Given("the plan has at least one recipe", async ({ page }) => {
   // Seed plan by fetching a recipe slug from the API and assigning it directly.
   const recipesRes = await fetch("http://localhost:3001/api/recipes", {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${getCurrentTestUser().token}` },
   });
   if (!recipesRes.ok) throw new Error(`Recipes fetch failed: ${recipesRes.status}`);
   const { recipes } = await recipesRes.json();
@@ -44,8 +41,8 @@ Then(/^I should see an empty state with text "(.+)"$/, async ({ page }, text) =>
 });
 
 Then(/^I should see at least (\d+) shopping list section/, async ({ page }, n) => {
-  await page.waitForTimeout(2000);
-  const sections = page.locator("h3, [class*='CardTitle']");
+  const sections = page.locator("[data-testid='cart-section']");
+  await sections.first().waitFor({ timeout: 5000 });
   const count = await sections.count();
   expect(count).toBeGreaterThanOrEqual(parseInt(n));
 });

@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { api, setToken } from "@/lib/api";
+import { api, ApiError, setToken } from "@/lib/api";
 import type { User } from "@/types";
 
 interface AuthContextValue {
@@ -35,9 +35,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { user } = await api<{ user: User }>("/auth/me");
         setUser(user);
-      } catch {
+      } catch (err) {
         setUser(null);
-        setToken(null);
+        // Only drop the stored token when the server actually rejects it.
+        // Network errors or fetches aborted by navigation shouldn't nuke a
+        // valid token mid-flight.
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          setToken(null);
+        }
       } finally {
         setLoading(false);
       }

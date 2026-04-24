@@ -13,6 +13,16 @@ export interface TestUser {
 
 let userCounter = 0;
 
+// Tracks the most recently signed-in user so step definitions registered in
+// other files (plan, cart, profiles) can reach the token even when the
+// `I am signed in` step that claimed the scenario lives in auth.steps.ts.
+let currentTestUser: TestUser | null = null;
+
+export function getCurrentTestUser(): TestUser {
+  if (!currentTestUser) throw new Error("No test user signed in — call createTestUser first");
+  return currentTestUser;
+}
+
 /** Create a fresh user via the API and return credentials + token. */
 export async function createTestUser(overrides?: Partial<TestUser>): Promise<TestUser> {
   userCounter++;
@@ -34,13 +44,15 @@ export async function createTestUser(overrides?: Partial<TestUser>): Promise<Tes
     });
     if (!signInRes.ok) throw new Error(`Sign-in fallback failed: ${signInRes.status}`);
     const data = await signInRes.json();
-    return { email, password, displayName, token: data.token };
+    currentTestUser = { email, password, displayName, token: data.token };
+    return currentTestUser;
   }
   if (!res.ok) {
     throw new Error(`Failed to create test user: ${res.status} ${await res.text()}`);
   }
   const data = await res.json();
-  return { email, password, displayName, token: data.token };
+  currentTestUser = { email, password, displayName, token: data.token };
+  return currentTestUser;
 }
 
 /** Sign in through the UI. */
