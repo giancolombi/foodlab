@@ -20,9 +20,9 @@ Given(/^I navigate to "(.+)"$/, async ({ page }, path) => {
 });
 
 When(/^I type "(.+)" into the search box$/, async ({ page }, text) => {
-  await page.getByPlaceholder(/search/i).fill(text);
+  await page.getByPlaceholder(/search by name/i).fill(text);
   // Allow filtering to settle.
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(500);
 });
 
 When("I click the first recipe card", async ({ page }) => {
@@ -37,7 +37,9 @@ Then(/^I should see the page title "(.+)"$/, async ({ page }, title) => {
 
 Then(/^I should see at least (\d+) recipe card$/, async ({ page }, n) => {
   const cards = page.locator("a[href^='/recipes/']");
-  await expect(cards).toHaveCount(parseInt(n), { timeout: 10000 });
+  await cards.first().waitFor({ timeout: 10000 });
+  const count = await cards.count();
+  expect(count).toBeGreaterThanOrEqual(parseInt(n));
 });
 
 Then(/^every visible recipe card should contain "(.+)"$/, async ({ page }, text) => {

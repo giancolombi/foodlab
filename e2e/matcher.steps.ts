@@ -19,11 +19,10 @@ When(/^I click the "(.+)" button$/, async ({ page }, name) => {
   await page.getByRole("button", { name: new RegExp(name, "i") }).click();
 });
 
-Then("I should see a loading indicator", async ({ page }) => {
-  // Either the streaming indicator or the "thinking" text.
-  const indicator = page.getByText(/thinking|streaming|progress/i)
-    .or(page.locator(".animate-ping"));
-  await expect(indicator.first()).toBeVisible({ timeout: 10000 });
+Then("the submit button should be disabled while streaming", async ({ page }) => {
+  // After clicking submit, the button becomes disabled during streaming.
+  const btn = page.getByRole("button", { name: /recommend|streaming/i });
+  await expect(btn).toBeDisabled({ timeout: 5000 });
 });
 
 loadFeature("matcher.feature");

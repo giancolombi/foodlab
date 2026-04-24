@@ -15,16 +15,15 @@ Given(/^I navigate to "(.+)"$/, async ({ page }, path) => {
 });
 
 Given("the plan has at least one recipe", async ({ page }) => {
-  const res = await fetch("http://localhost:3001/api/plans/generate", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ profileIds: [], excludeSlugs: [] }),
+  // Seed plan by fetching a recipe slug from the API and assigning it directly.
+  const recipesRes = await fetch("http://localhost:3001/api/recipes", {
+    headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error(`Generate failed: ${res.status}`);
-  const { assignments } = await res.json();
+  if (!recipesRes.ok) throw new Error(`Recipes fetch failed: ${recipesRes.status}`);
+  const { recipes } = await recipesRes.json();
+  if (!recipes.length) throw new Error("No recipes in database to seed plan");
+  const slug = recipes[0].slug;
+  const assignments = { "0-dinner": { slug, assignedAt: Date.now() } };
   await page.evaluate((a: any) => {
     localStorage.setItem("foodlab_plan_v2", JSON.stringify(a));
   }, assignments);

@@ -10,7 +10,10 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export { expect };
 

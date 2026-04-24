@@ -15,39 +15,30 @@ Given(/^I navigate to "(.+)"$/, async ({ page }, path) => {
 });
 
 Given("the plan has at least one recipe", async ({ page }) => {
-  // Auto-fill via API.
-  const res = await fetch("http://localhost:3001/api/plans/generate", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ profileIds: [], excludeSlugs: [] }),
+  const recipesRes = await fetch("http://localhost:3001/api/recipes", {
+    headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error(`Generate failed: ${res.status}`);
-  const { assignments } = await res.json();
-  // Save to plan API.
-  await fetch("http://localhost:3001/api/plans", {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ assignments, activeProfileIds: [], includeServeWith: false }),
-  });
-  // Inject into localStorage so the page picks it up.
+  if (!recipesRes.ok) throw new Error(`Recipes fetch failed: ${recipesRes.status}`);
+  const { recipes } = await recipesRes.json();
+  if (!recipes.length) throw new Error("No recipes in database to seed plan");
+  const slug = recipes[0].slug;
+  const assignments = { "0-dinner": { slug, assignedAt: Date.now() } };
   await page.evaluate((a: any) => {
     localStorage.setItem("foodlab_plan_v2", JSON.stringify(a));
   }, assignments);
 });
 
 When(/^I click the "(.+)" button$/, async ({ page }, name) => {
+  // If this is a destructive action, register a dialog handler first.
+  if (/clear/i.test(name)) {
+    page.once("dialog", (d) => d.accept());
+  }
   await page.getByRole("button", { name: new RegExp(name, "i") }).click();
 });
 
 When("I confirm the dialog", async ({ page }) => {
-  page.on("dialog", (d) => d.accept());
-  await page.waitForTimeout(200);
+  // Dialog was accepted by the handler set before the triggering click.
+  await page.waitForTimeout(300);
 });
 
 Then(/^I should see an empty state with text "(.+)"$/, async ({ page }, text) => {
@@ -72,12 +63,6 @@ Then(/^I should see a "(.+)" link$/, async ({ page }, text) => {
   await expect(page.getByRole("link", { name: new RegExp(text, "i") })).toBeVisible();
 });
 
-Then("I should see an empty state", async ({ page }) => {
-  await page.waitForTimeout(1000);
-  // After clearing, either the empty state text or the dashed placeholder slots appear.
-  const empty = page.getByText(/no meals planned/i);
-  await expect(empty).toBeVisible({ timeout: 5000 });
-});
 
 loadFeature("plan.feature");
 runScenarios();

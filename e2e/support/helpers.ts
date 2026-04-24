@@ -25,6 +25,17 @@ export async function createTestUser(overrides?: Partial<TestUser>): Promise<Tes
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password, displayName }),
   });
+  if (res.status === 409) {
+    // Already exists — sign in instead.
+    const signInRes = await fetch(`${API_BASE}/auth/signin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!signInRes.ok) throw new Error(`Sign-in fallback failed: ${signInRes.status}`);
+    const data = await signInRes.json();
+    return { email, password, displayName, token: data.token };
+  }
   if (!res.ok) {
     throw new Error(`Failed to create test user: ${res.status} ${await res.text()}`);
   }
@@ -44,10 +55,16 @@ export async function signInUI(page: Page, email: string, password: string) {
 
 /** Inject a token into localStorage so the page is already authenticated. */
 export async function injectAuth(page: Page, token: string) {
-  await page.goto("/signin");
+  // Set token before the app boots so AuthContext picks it up on /auth/me.
+  await page.context().addCookies([]); // ensure context is initialized
+  await page.goto("/signin", { waitUntil: "commit" });
   await page.evaluate((t) => localStorage.setItem("foodlab_token", t), token);
   await page.goto("/");
-  await page.waitForURL("/", { timeout: 10000 });
+  // Wait for either the home page or a redirect — AuthContext needs time
+  // to call /auth/me and set the user before ProtectedRoute lets us through.
+  await page.waitForURL((url) => !url.pathname.includes("signin"), {
+    timeout: 10000,
+  });
 }
 
 /** Create a profile via the API. */

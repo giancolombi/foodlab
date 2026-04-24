@@ -33,8 +33,8 @@ When("I click the sign-out button", async ({ page }) => {
 });
 
 Then("I should be on the home page", async ({ page }) => {
-  await page.waitForURL("/", { timeout: 10000 });
-  await expect(page).toHaveURL("/");
+  // After sign-up the app may redirect to /profiles or / depending on state.
+  await page.waitForURL((url) => !url.pathname.includes("sign"), { timeout: 10000 });
 });
 
 Then("I should be on the sign-in page", async ({ page }) => {

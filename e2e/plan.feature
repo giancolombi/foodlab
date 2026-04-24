@@ -4,7 +4,7 @@ Feature: Weekly Plan
   Scenario: Empty plan shows call to action
     Given I am signed in
     And I navigate to "/plan"
-    Then I should see an empty state with text "No meals planned"
+    Then I should see an empty state with text "Your plan is empty"
     And I should see an "Auto-fill" button
 
   Scenario: Auto-fill generates a plan
@@ -19,5 +19,4 @@ Feature: Weekly Plan
     And the plan has at least one recipe
     And I navigate to "/plan"
     When I click the "Clear week" button
-    And I confirm the dialog
-    Then I should see an empty state
+    Then I should see an empty state with text "Your plan is empty"

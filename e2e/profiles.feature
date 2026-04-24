@@ -26,5 +26,4 @@ Feature: Dietary Profiles
     And a profile "ToDelete" exists
     And I navigate to "/profiles"
     When I click the delete button for "ToDelete"
-    And I confirm the dialog
     Then I should not see a profile card for "ToDelete"
