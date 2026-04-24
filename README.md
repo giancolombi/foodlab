@@ -59,6 +59,8 @@ All recipes are high protein, freezer-friendly, and veggie-loaded.
 
 **[Developer Guide](docs/developer-guide.md)** — integrate FoodLab into your own apps. Includes parsing examples (JavaScript + Python), GitHub API usage, ingredient matching, writing back ratings/recipes, and a reference implementation.
 
+**[Architecture](docs/architecture.md)** — how the web app is laid out: design system, Plan vs Cart split, per-profile version selection, i18n, and where new code should live.
+
 <details>
 <summary>CLI / IDE setup (click to expand)</summary>
 
