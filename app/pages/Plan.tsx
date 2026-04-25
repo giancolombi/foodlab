@@ -140,10 +140,15 @@ export default function Plan() {
           title={t("plan.empty")}
           description={t("plan.emptyHint")}
           action={
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap justify-center">
               <Button onClick={handleGenerate} disabled={generating}>
                 <Sparkles className="h-4 w-4" />
                 {generating ? t("plan.generating") : t("plan.generate")}
+              </Button>
+              <Button asChild variant="secondary">
+                <Link to="/plan/compose">
+                  <Sparkles className="h-4 w-4" /> {t("plan.compose")}
+                </Link>
               </Button>
               <Button asChild variant="outline">
                 <Link to="/recipes">
@@ -178,6 +183,12 @@ export default function Plan() {
               <span className="hidden sm:inline">
                 {generating ? t("plan.generating") : t("plan.generate")}
               </span>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/plan/compose">
+                <Sparkles className="h-4 w-4" />
+                <span className="hidden sm:inline">{t("plan.compose")}</span>
+              </Link>
             </Button>
             <Button asChild variant="secondary" size="sm">
               <Link to="/cart">

@@ -35,9 +35,11 @@ import { useCart } from "@/contexts/CartContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlan } from "@/contexts/PlanContext";
 import { useUnits } from "@/contexts/UnitsContext";
+import { useTranslatedCart } from "@/hooks/useTranslatedCart";
 import { api } from "@/lib/api";
 import {
   consolidate,
+  localizeQuantity,
   pickVersion,
   SECTION_ORDER,
   type ConsolidatedItem,
@@ -121,6 +123,8 @@ export default function Cart() {
   }, [recipes, activeProfiles, includeServeWith, units]);
 
   const display: ConsolidatedList = smart ?? local;
+  const { translations: itemTranslations } = useTranslatedCart(display, locale);
+  const tr = (s: string) => itemTranslations[s] ?? s;
 
   const exportOpts = useMemo(
     () => ({
@@ -376,7 +380,7 @@ export default function Cart() {
                             checked={bought}
                             onChange={() => toggleBought(key)}
                             aria-label={t("cart.markBought", {
-                              name: item.name,
+                              name: tr(item.name),
                             })}
                           />
                           <div className="min-w-0 flex-1">
@@ -387,11 +391,11 @@ export default function Cart() {
                                   bought && "line-through",
                                 )}
                               >
-                                {item.name}
+                                {tr(item.name)}
                               </span>
                               {item.quantity && (
                                 <span className="text-xs text-muted-foreground">
-                                  {item.quantity}
+                                  {localizeQuantity(item.quantity, locale)}
                                 </span>
                               )}
                               {item.forProfiles.length > 0 && (
@@ -407,7 +411,7 @@ export default function Cart() {
                             </div>
                             {item.notes.length > 0 && (
                               <div className="text-[11px] text-muted-foreground">
-                                {item.notes.join(" · ")}
+                                {item.notes.map(tr).join(" · ")}
                               </div>
                             )}
                             {item.sources.length > 1 && (

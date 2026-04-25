@@ -2,8 +2,14 @@ import { Router } from "express";
 import { z } from "zod";
 
 import { pool } from "../db.js";
-import { consolidateShoppingList } from "../llm.js";
+import {
+  composeMenu,
+  consolidateShoppingList,
+  expandDishToRecipe,
+  extractRecipeFromText,
+} from "../llm.js";
 import { requireAuth } from "../middleware/auth.js";
+import { saveUserRecipe } from "./recipes.js";
 
 const router = Router();
 
@@ -240,6 +246,147 @@ router.post("/shopping-list", requireAuth, async (req, res) => {
     console.error("[plans/shopping-list]", err);
     res.status(502).json({
       error: err instanceof Error ? err.message : "Consolidation failed",
+    });
+  }
+});
+
+// ---- Iterative menu composer ----
+
+const composeDishSchema = z.object({
+  id: z.string().min(1).max(80),
+  name: z.string().min(1).max(120),
+  cuisine: z.string().max(80).optional(),
+  base: z.string().max(400).optional(),
+  vegProtein: z.string().max(120).optional(),
+  meatProtein: z.string().max(120).optional(),
+  notes: z.string().max(400).optional(),
+  isBreakfast: z.boolean(),
+});
+
+const composeSchema = z.object({
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().min(1).max(4000),
+      }),
+    )
+    .min(1)
+    .max(40),
+  currentDraft: z.object({
+    dishes: z.array(composeDishSchema).max(10),
+  }),
+  locale: z.enum(["en", "es", "pt-BR"]).optional(),
+});
+
+/**
+ * POST /api/plans/compose — multi-turn menu planning chat. Caller passes the
+ * full conversation + current draft; we return a chatty reply and an updated
+ * draft. Stateless on the server (history lives in the client).
+ */
+router.post("/compose", requireAuth, async (req, res) => {
+  const parsed = composeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid payload" });
+    return;
+  }
+  try {
+    const result = await composeMenu(parsed.data);
+    res.json(result);
+  } catch (err) {
+    console.error("[plans/compose]", err);
+    res.status(502).json({
+      error: err instanceof Error ? err.message : "Compose failed",
+    });
+  }
+});
+
+const applySchema = z.object({
+  draft: z.object({
+    dishes: z.array(composeDishSchema).min(1).max(10),
+  }),
+  locale: z.enum(["en", "es", "pt-BR"]).optional(),
+});
+
+/**
+ * POST /api/plans/compose/apply — turn a draft into real recipes.
+ * For each dish we ask the LLM to expand the concept into FoodLab markdown,
+ * then persist it as a user-owned recipe. Returns the saved slugs (in the
+ * same order as the input dishes) so the client can drop them into the plan
+ * grid. The grid update itself stays client-side via PlanContext.
+ */
+router.post("/compose/apply", requireAuth, async (req, res) => {
+  const parsed = applySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid payload" });
+    return;
+  }
+  const { draft, locale } = parsed.data;
+  const userId = req.user!.sub;
+
+  const saved: Array<{
+    dishId: string;
+    slug: string;
+    title: string;
+    category: "mains" | "breakfast";
+    isBreakfast: boolean;
+  }> = [];
+  const errors: Array<{ dishId: string; name: string; error: string }> = [];
+
+  for (const dish of draft.dishes) {
+    try {
+      const markdown = await expandDishToRecipe({ dish, locale });
+      const category: "mains" | "breakfast" = dish.isBreakfast
+        ? "breakfast"
+        : "mains";
+      const recipe = await saveUserRecipe({
+        userId,
+        markdown,
+        modificationNote: `Generated from compose draft (${dish.id})`,
+        category,
+      });
+      saved.push({
+        dishId: dish.id,
+        slug: recipe.slug,
+        title: recipe.title,
+        category,
+        isBreakfast: dish.isBreakfast,
+      });
+    } catch (err: any) {
+      errors.push({
+        dishId: dish.id,
+        name: dish.name,
+        error: err?.message ?? "Unknown error",
+      });
+    }
+  }
+
+  res.json({ saved, errors });
+});
+
+const extractSchema = z.object({
+  text: z.string().min(40).max(20_000),
+  locale: z.enum(["en", "es", "pt-BR"]).optional(),
+});
+
+/**
+ * POST /api/plans/compose/extract — turn pasted recipe text into FoodLab
+ * markdown via Ollama. Doesn't persist; the client decides whether to attach
+ * the result to a draft dish or save it as a standalone recipe.
+ */
+router.post("/compose/extract", requireAuth, async (req, res) => {
+  const parsed = extractSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid payload" });
+    return;
+  }
+  try {
+    const markdown = await extractRecipeFromText(parsed.data);
+    res.json({ markdown });
+  } catch (err) {
+    console.error("[plans/compose/extract]", err);
+    res.status(502).json({
+      error: err instanceof Error ? err.message : "Extract failed",
     });
   }
 });

@@ -212,11 +212,38 @@ router.post("/", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Invalid recipe payload" });
     return;
   }
-  const { markdown, parentSlug, modificationNote } = parsed.data;
+  try {
+    const recipe = await saveUserRecipe({
+      userId: req.user!.sub,
+      ...parsed.data,
+    });
+    res.status(201).json({ recipe });
+  } catch (err: any) {
+    if (err?.code === "PARSE_ERROR") {
+      res.status(400).json({ error: "Could not parse recipe markdown" });
+      return;
+    }
+    console.error("recipe create error", err);
+    res.status(500).json({ error: "Could not save recipe" });
+  }
+});
 
-  // Inherit category from parent if present, otherwise default to mains.
-  let category: "mains" | "breakfast" = "mains";
-  if (parentSlug) {
+/**
+ * Shared helper: parse + persist a user-owned recipe. Used by the manual
+ * POST /api/recipes endpoint above and by the /plans/compose/apply endpoint
+ * which writes a batch of recipes in one shot.
+ */
+export async function saveUserRecipe(args: {
+  userId: string;
+  markdown: string;
+  parentSlug?: string;
+  modificationNote?: string;
+  category?: "mains" | "breakfast";
+}): Promise<{ id: string; slug: string; title: string }> {
+  const { userId, markdown, parentSlug, modificationNote } = args;
+
+  let category: "mains" | "breakfast" = args.category ?? "mains";
+  if (!args.category && parentSlug) {
     try {
       const { rows } = await pool.query(
         `SELECT category FROM recipes WHERE slug = $1`,
@@ -228,9 +255,6 @@ router.post("/", requireAuth, async (req, res) => {
     }
   }
 
-  // Generate a unique slug. Base off the parent (so URLs stay readable) and
-  // append a short hash. If the user happens to fork the same recipe twice,
-  // each gets a distinct slug.
   const baseSlug = parentSlug ?? `custom-recipe`;
   const suffix = crypto.randomBytes(3).toString("hex");
   const newSlug = `${baseSlug}-${suffix}`.slice(0, 120);
@@ -239,43 +263,40 @@ router.post("/", requireAuth, async (req, res) => {
   try {
     parsedRecipe = parseRecipe(markdown, category, newSlug);
   } catch (err) {
-    console.error("recipe parse error", err);
-    res.status(400).json({ error: "Could not parse recipe markdown" });
-    return;
+    const e = new Error(`parseRecipe failed: ${(err as Error).message}`) as Error & {
+      code?: string;
+    };
+    e.code = "PARSE_ERROR";
+    throw e;
   }
 
-  try {
-    const { rows } = await pool.query(
-      `INSERT INTO recipes (
-         slug, title, category, cuisine, freezer_friendly,
-         prep_minutes, cook_minutes, shared_ingredients, serve_with,
-         versions, raw_markdown, source_urls,
-         owner_user_id, parent_slug, modification_note, is_public
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,FALSE)
-       RETURNING id, slug, title`,
-      [
-        parsedRecipe.slug,
-        parsedRecipe.title,
-        parsedRecipe.category,
-        parsedRecipe.cuisine,
-        parsedRecipe.freezer_friendly,
-        parsedRecipe.prep_minutes,
-        parsedRecipe.cook_minutes,
-        parsedRecipe.shared_ingredients,
-        parsedRecipe.serve_with,
-        JSON.stringify(parsedRecipe.versions),
-        parsedRecipe.raw_markdown,
-        parsedRecipe.source_urls,
-        req.user!.sub,
-        parentSlug ?? null,
-        modificationNote ?? null,
-      ],
-    );
-    res.status(201).json({ recipe: rows[0] });
-  } catch (err) {
-    console.error("recipe create error", err);
-    res.status(500).json({ error: "Could not save recipe" });
-  }
-});
+  const { rows } = await pool.query(
+    `INSERT INTO recipes (
+       slug, title, category, cuisine, freezer_friendly,
+       prep_minutes, cook_minutes, shared_ingredients, serve_with,
+       versions, raw_markdown, source_urls,
+       owner_user_id, parent_slug, modification_note, is_public
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,FALSE)
+     RETURNING id, slug, title`,
+    [
+      parsedRecipe.slug,
+      parsedRecipe.title,
+      parsedRecipe.category,
+      parsedRecipe.cuisine,
+      parsedRecipe.freezer_friendly,
+      parsedRecipe.prep_minutes,
+      parsedRecipe.cook_minutes,
+      parsedRecipe.shared_ingredients,
+      parsedRecipe.serve_with,
+      JSON.stringify(parsedRecipe.versions),
+      parsedRecipe.raw_markdown,
+      parsedRecipe.source_urls,
+      userId,
+      parentSlug ?? null,
+      modificationNote ?? null,
+    ],
+  );
+  return rows[0];
+}
 
 export default router;

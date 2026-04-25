@@ -11,6 +11,7 @@ import { UnitsProvider } from "@/contexts/UnitsContext";
 import Cart from "@/pages/Cart";
 import IngredientMatcher from "@/pages/IngredientMatcher";
 import Plan from "@/pages/Plan";
+import PlanCompose from "@/pages/PlanCompose";
 import Profiles from "@/pages/Profiles";
 import RecipeDetail from "@/pages/RecipeDetail";
 import Recipes from "@/pages/Recipes";
@@ -35,6 +36,7 @@ export default function App() {
                     <Route path="recipes/:slug" element={<RecipeDetail />} />
                     <Route path="profiles" element={<Profiles />} />
                     <Route path="plan" element={<Plan />} />
+                    <Route path="plan/compose" element={<PlanCompose />} />
                     <Route path="cart" element={<Cart />} />
                   </Route>
                 </Route>

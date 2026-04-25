@@ -262,6 +262,45 @@ const en = {
   "cart.downloadHint": "Save as a Markdown file",
   "cart.downloaded": "Downloaded shopping list",
 
+  // compose (iterative menu chat)
+  "compose.title": "Compose a menu",
+  "compose.subtitle":
+    "Iterate on this week's menu in plain English. Swap dishes, change cuisines, add dietary swaps — the assistant updates the draft as you chat.",
+  "compose.backToPlan": "Back to plan",
+  "compose.intro":
+    "Tell me what kind of week you want — number of meals, cuisines you're craving, dietary swaps, etc.",
+  "compose.starter1": "Plan 4 mains + 1 breakfast, mix of cuisines, freezer-friendly",
+  "compose.starter2": "I want veg + meat versions on the same base, no soy or dairy on the meat side",
+  "compose.placeholder": "Ask for a menu, or refine the draft on the right…",
+  "compose.thinking": "Drafting…",
+  "compose.draftEmpty": "No draft yet",
+  "compose.draftEmptyHint": "Send a message and the proposed menu lands here.",
+  "compose.mainsLabel": "Mains ({n})",
+  "compose.breakfastLabel": "Breakfast",
+  "compose.vegLabel": "Vegetarian",
+  "compose.meatLabel": "Meat",
+  "compose.error": "Couldn't update the menu",
+  "compose.errorReply":
+    "I had trouble updating just now — try rephrasing or asking again?",
+  "compose.saveAndApply": "Save & apply to plan",
+  "compose.applying": "Saving recipes…",
+  "compose.appliedToPlan": "Saved {n} recipes and dropped them into your plan",
+  "compose.applyPartial": "Saved {saved}, {failed} failed — opening plan",
+  "compose.applyNoneSaved": "Couldn't save any recipes — try again",
+  "compose.applyFailed": "Save failed",
+  "compose.pasteRecipe": "Paste a recipe",
+  "compose.pasteHint":
+    "Paste a recipe (web copy is fine — extra prose gets stripped). The assistant turns it into FoodLab format and folds it into the draft.",
+  "compose.pastePlaceholder":
+    "Paste the recipe — ingredients, instructions, anything. Minimum 40 characters.",
+  "compose.pasteCancel": "Cancel",
+  "compose.pasteSubmit": "Use this recipe",
+  "compose.pasteExtracting": "Extracting…",
+  "compose.pastedRecipePrefix":
+    "I pasted this recipe — please use it as one of the dishes in the draft (replace a similar one if it fits, otherwise add it):",
+  "compose.pasteFailed": "Couldn't read that recipe — try pasting again",
+  "plan.compose": "Iterate on menu",
+
   // generic
   "common.backToRecipes": "Back to recipes",
   "common.generic.error": "Something went wrong",
@@ -510,6 +549,46 @@ const es: Partial<Record<StringKey, string>> = {
   "signup.signin": "Iniciar sesión",
   "signup.failed": "No se pudo crear la cuenta",
 
+  "compose.title": "Componer un menú",
+  "compose.subtitle":
+    "Itera el menú de la semana en lenguaje natural. Cambia platos, ajusta cocinas, agrega sustitutos dietéticos — el asistente actualiza el borrador a medida que chateas.",
+  "compose.backToPlan": "Volver al plan",
+  "compose.intro":
+    "Dime qué tipo de semana quieres — cuántas comidas, qué cocinas se te antojan, qué sustitutos dietéticos.",
+  "compose.starter1":
+    "Planifica 4 platos principales + 1 desayuno, variedad de cocinas, aptos para congelar",
+  "compose.starter2":
+    "Quiero versiones vegetariana y con carne sobre la misma base, sin soja ni lácteos en la carne",
+  "compose.placeholder": "Pide un menú o refina el borrador de la derecha…",
+  "compose.thinking": "Pensando…",
+  "compose.draftEmpty": "Aún no hay borrador",
+  "compose.draftEmptyHint": "Envía un mensaje y el menú propuesto aparece aquí.",
+  "compose.mainsLabel": "Principales ({n})",
+  "compose.breakfastLabel": "Desayuno",
+  "compose.vegLabel": "Vegetariana",
+  "compose.meatLabel": "Con carne",
+  "compose.error": "No se pudo actualizar el menú",
+  "compose.errorReply":
+    "Tuve un problema al actualizar — ¿puedes reformular o intentar de nuevo?",
+  "compose.saveAndApply": "Guardar y aplicar al plan",
+  "compose.applying": "Guardando recetas…",
+  "compose.appliedToPlan": "Guardé {n} recetas y las cargué en tu plan",
+  "compose.applyPartial": "Guardadas {saved}, fallaron {failed} — abriendo el plan",
+  "compose.applyNoneSaved": "No se pudo guardar ninguna receta — intenta de nuevo",
+  "compose.applyFailed": "Falló al guardar",
+  "compose.pasteRecipe": "Pegar receta",
+  "compose.pasteHint":
+    "Pega una receta (texto de la web está bien — se filtra lo extra). El asistente la convierte al formato FoodLab y la integra al borrador.",
+  "compose.pastePlaceholder":
+    "Pega la receta — ingredientes, instrucciones, lo que tengas. Mínimo 40 caracteres.",
+  "compose.pasteCancel": "Cancelar",
+  "compose.pasteSubmit": "Usar esta receta",
+  "compose.pasteExtracting": "Extrayendo…",
+  "compose.pastedRecipePrefix":
+    "Pegué esta receta — úsala como uno de los platos del borrador (reemplaza uno parecido si encaja, o agrégalo):",
+  "compose.pasteFailed": "No pude leer esa receta — intenta pegarla de nuevo",
+  "plan.compose": "Iterar el menú",
+
   "common.backToRecipes": "Volver a recetas",
   "common.generic.error": "Algo salió mal",
 };
@@ -754,6 +833,46 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "signup.haveAccount": "Já tem conta?",
   "signup.signin": "Entrar",
   "signup.failed": "Falha ao criar conta",
+
+  "compose.title": "Compor um menu",
+  "compose.subtitle":
+    "Itere o menu da semana em linguagem natural. Troque pratos, ajuste cozinhas, adicione versões dietéticas — o assistente atualiza o rascunho conforme você conversa.",
+  "compose.backToPlan": "Voltar ao plano",
+  "compose.intro":
+    "Me diga que tipo de semana você quer — quantas refeições, cozinhas que está afim, trocas dietéticas.",
+  "compose.starter1":
+    "Planeje 4 pratos principais + 1 café da manhã, variedade de cozinhas, ótimos para congelar",
+  "compose.starter2":
+    "Quero versões vegetariana e com carne sobre a mesma base, sem soja nem laticínios na versão com carne",
+  "compose.placeholder": "Peça um menu ou refine o rascunho à direita…",
+  "compose.thinking": "Pensando…",
+  "compose.draftEmpty": "Ainda não há rascunho",
+  "compose.draftEmptyHint": "Envie uma mensagem e o menu proposto aparece aqui.",
+  "compose.mainsLabel": "Principais ({n})",
+  "compose.breakfastLabel": "Café da manhã",
+  "compose.vegLabel": "Vegetariana",
+  "compose.meatLabel": "Com carne",
+  "compose.error": "Não foi possível atualizar o menu",
+  "compose.errorReply":
+    "Tive um problema agora — pode reformular ou tentar de novo?",
+  "compose.saveAndApply": "Salvar e aplicar ao plano",
+  "compose.applying": "Salvando receitas…",
+  "compose.appliedToPlan": "Salvei {n} receitas e adicionei ao seu plano",
+  "compose.applyPartial": "Salvas {saved}, falharam {failed} — abrindo o plano",
+  "compose.applyNoneSaved": "Não consegui salvar nenhuma receita — tente novamente",
+  "compose.applyFailed": "Falha ao salvar",
+  "compose.pasteRecipe": "Colar receita",
+  "compose.pasteHint":
+    "Cole uma receita (texto da web tudo bem — o resto é filtrado). O assistente converte para o formato FoodLab e integra ao rascunho.",
+  "compose.pastePlaceholder":
+    "Cole a receita — ingredientes, instruções, o que tiver. Mínimo de 40 caracteres.",
+  "compose.pasteCancel": "Cancelar",
+  "compose.pasteSubmit": "Usar essa receita",
+  "compose.pasteExtracting": "Extraindo…",
+  "compose.pastedRecipePrefix":
+    "Colei esta receita — use como um dos pratos do rascunho (substitua um parecido se couber, senão adicione):",
+  "compose.pasteFailed": "Não consegui ler essa receita — tente colar de novo",
+  "plan.compose": "Iterar o menu",
 
   "common.backToRecipes": "Voltar às receitas",
   "common.generic.error": "Algo deu errado",

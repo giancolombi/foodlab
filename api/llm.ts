@@ -526,17 +526,16 @@ export function renderRecipeMarkdown(
 
 // ---------- Translate ----------
 
-const TRANSLATE_SYSTEM_PROMPT = `You translate recipe text between languages.
+const TRANSLATE_SYSTEM_PROMPT = `You translate each input string literally into the target language. The inputs are cooking ingredients and recipe prose.
 
-Input: a JSON array of strings (ingredients, instructions, titles — English recipe prose).
-Output: ONLY a JSON object of shape {"translations": string[]} — one translation per input, SAME ORDER, SAME LENGTH.
+Output ONLY: {"translations": string[]} — one per input, SAME ORDER, SAME LENGTH.
 
 Rules:
-- Preserve all numbers, quantities, units, times, temperatures, and proper names exactly.
-- Keep the same structure (line breaks, lists, punctuation).
-- Do not add commentary, notes, or explanations.
-- If a string is already in the target language, return it unchanged.
-- Output JSON only. No prose, no markdown fences.
+- Every English word must map to its direct equivalent. Translate color words as colors (yellow = amarillo/amarela, red = rojo/vermelho, green = verde, white = blanco/branco). Do NOT replace an ingredient with a different one.
+- Keep all numbers, units, times, and proper names exactly as-is.
+- Use the locale's natural culinary term (EN "chicken thigh" → ES "muslo de pollo", PT "coxa de frango"; EN "garlic clove" → ES "diente de ajo").
+- If the string is already in the target language, return it unchanged.
+- JSON only. No prose, no markdown fences, no commentary.
 
 LANGUAGE: {LOCALE_DIRECTIVE}`;
 
@@ -767,6 +766,323 @@ export async function warmOllama(): Promise<void> {
   } catch {
     // non-fatal: translation will just cold-start on its first real call
   }
+}
+
+// ---------- Iterative menu composer ----------
+
+export interface ComposeDish {
+  id: string;
+  name: string;
+  cuisine?: string;
+  base?: string;
+  vegProtein?: string;
+  meatProtein?: string;
+  notes?: string;
+  isBreakfast: boolean;
+}
+
+export interface ComposeDraft {
+  dishes: ComposeDish[];
+}
+
+export interface ComposeMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ComposeResult {
+  reply: string;
+  draft: ComposeDraft;
+}
+
+const COMPOSE_SYSTEM_PROMPT = `You are FoodLab's weekly menu planning assistant. The user is planning a week of meal prep — they want around 4 mains + 1 breakfast, all high-protein, freezer-friendly, and ideally with both a vegetarian and a meat protein swap on the same shared base.
+
+Always respond with ONLY this JSON shape — no prose outside it, no markdown fences:
+{"reply": "<short chatty reply, 2-4 sentences>", "draft": {"dishes": [{"id": "<id>", "name": "<dish name>", "cuisine": "<cuisine or null>", "base": "<shared veggies + spices, one short sentence>", "vegProtein": "<veg protein or null>", "meatProtein": "<meat protein or null>", "isBreakfast": <true|false>}]}}
+
+Rules for draft.dishes:
+- ALWAYS return the COMPLETE updated menu (every dish the user wants), not a delta. The previous draft is provided for context.
+- Preserve dish ids across turns. Only mint a new id (a short slug-like string) for newly proposed dishes.
+- Keep the same dish structure: shared base + vegProtein + meatProtein. Variations on protein only.
+- Aim for diverse cuisines and methods (don't propose two stews; mix tagine + sheet-pan + bake + stir-fry).
+- High-protein and freezer-friendly preferred.
+- "base" is a single short sentence describing the shared veggies and spice profile.
+- Mark exactly one dish per week as isBreakfast=true (unless the user only asks for mains).
+- If the user mentions dietary restrictions (no soy/dairy/etc), respect them in the meatProtein/vegProtein swaps.
+
+Rules for reply:
+- Be conversational. Acknowledge what the user asked, briefly justify the picks, and end with a forward question (e.g. "want to swap any?", "ready to lock this in?").
+- Keep it tight — 2-4 sentences max.
+- If the user only chatted (didn't ask for menu changes), return the same draft and reply naturally.
+
+LANGUAGE: {LOCALE_DIRECTIVE}`;
+
+/**
+ * Multi-turn menu composition. The caller passes the full chat history plus
+ * the current draft; the model returns an updated draft and a chatty reply.
+ * Falls back to the previous draft if the model returns malformed JSON.
+ */
+export async function composeMenu(args: {
+  messages: ComposeMessage[];
+  currentDraft: ComposeDraft;
+  locale?: Locale;
+}): Promise<ComposeResult> {
+  const locale = normalizeLocale(args.locale);
+  const systemPrompt = COMPOSE_SYSTEM_PROMPT.replace(
+    "{LOCALE_DIRECTIVE}",
+    LOCALE_DIRECTIVE[locale],
+  );
+
+  // Embed the current draft as the first system-tagged user message so the
+  // model treats it as ground truth rather than something to chat about.
+  const draftContext: ComposeMessage = {
+    role: "user",
+    content: `[CURRENT_DRAFT]\n${JSON.stringify(args.currentDraft)}`,
+  };
+
+  const body = {
+    model: OLLAMA_MODEL,
+    stream: false,
+    format: "json",
+    keep_alive: "24h",
+    messages: [
+      { role: "system", content: systemPrompt },
+      draftContext,
+      ...args.messages,
+    ],
+    options: {
+      temperature: 0.4,
+      num_ctx: 4096,
+      num_predict: 1500,
+    },
+  };
+
+  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`Ollama compose ${res.status}`);
+  }
+  const data = (await res.json()) as { message?: { content?: string } };
+  const content = data?.message?.content ?? "";
+
+  let parsed: { reply?: unknown; draft?: { dishes?: unknown } } = {};
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    const m = content.match(/\{[\s\S]*\}/);
+    parsed = m ? JSON.parse(m[0]) : {};
+  }
+
+  const reply =
+    typeof parsed.reply === "string" && parsed.reply.trim().length > 0
+      ? parsed.reply.trim()
+      : "Updated.";
+
+  const rawDishes = Array.isArray(parsed.draft?.dishes) ? parsed.draft!.dishes : [];
+  const dishes: ComposeDish[] = rawDishes
+    .map((d, i) => coerceDish(d, i))
+    .filter((d): d is ComposeDish => d !== null);
+
+  // If parsing produced nothing, keep the previous draft so the user doesn't
+  // lose their work to a single bad turn.
+  return {
+    reply,
+    draft: { dishes: dishes.length > 0 ? dishes : args.currentDraft.dishes },
+  };
+}
+
+function coerceDish(raw: unknown, index: number): ComposeDish | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const name = typeof r.name === "string" ? r.name.trim() : "";
+  if (!name) return null;
+  const id = typeof r.id === "string" && r.id.trim().length > 0
+    ? r.id.trim()
+    : `dish-${Date.now().toString(36)}-${index}`;
+  return {
+    id,
+    name,
+    cuisine: optStr(r.cuisine),
+    base: optStr(r.base),
+    vegProtein: optStr(r.vegProtein),
+    meatProtein: optStr(r.meatProtein),
+    notes: optStr(r.notes),
+    isBreakfast: Boolean(r.isBreakfast),
+  };
+}
+
+function optStr(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined;
+  const t = v.trim();
+  if (!t || t.toLowerCase() === "null") return undefined;
+  return t;
+}
+
+// ---------- Expand a draft dish into a full recipe markdown ----------
+
+const EXPAND_DISH_SYSTEM_PROMPT = `You write a single recipe in FoodLab's markdown format. Given a dish concept (name, cuisine, shared base, optional veg + meat protein), produce ONE complete recipe document that the FoodLab parser can ingest.
+
+Output ONLY the markdown — no JSON, no fences, no commentary.
+
+Required structure (use these section headers EXACTLY):
+
+# <Dish Name>
+
+**Cuisine:** <cuisine> | **Freezer-friendly:** Yes | **Prep:** <N> min | **Cook:** <N> min
+
+## Shared Base
+- <ingredient with quantity, one per bullet>
+- ...
+
+## Serve With
+- <serving suggestion, one per bullet>
+- ...
+
+---
+
+## <Group Name> Version
+**Protein:** <protein with quantity>
+
+1. <step>
+2. <step>
+...
+
+(if a meat version was requested, repeat the "---" separator and a second "## Meat Version" block)
+
+Rules:
+- Quantities use common US units: tbsp, tsp, cup, cloves, oz, lb, can.
+- Shared Base contains EVERY ingredient that's the same across both versions (veggies, spices, oil, broth). Proteins go in each version block.
+- Each version block has 5–8 numbered instruction steps. Be specific but concise.
+- If only a vegProtein is given, write only one version (label it "Vegetarian").
+- If only a meatProtein is given, write one version (label it the protein, e.g. "Chicken").
+- Both proteins given → two version blocks separated by "---".
+- Use a freezer-friendly approach: one-pot or sheet-pan when possible.
+- Output the markdown ONLY.
+
+LANGUAGE: {LOCALE_DIRECTIVE}`;
+
+export async function expandDishToRecipe(args: {
+  dish: ComposeDish;
+  locale?: Locale;
+}): Promise<string> {
+  const locale = normalizeLocale(args.locale);
+  const systemPrompt = EXPAND_DISH_SYSTEM_PROMPT.replace(
+    "{LOCALE_DIRECTIVE}",
+    LOCALE_DIRECTIVE[locale],
+  );
+
+  const body = {
+    model: OLLAMA_MODEL,
+    stream: false,
+    keep_alive: "24h",
+    messages: [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: `Dish concept:\n${JSON.stringify(args.dish)}`,
+      },
+    ],
+    options: {
+      temperature: 0.4,
+      num_ctx: 4096,
+      num_predict: 1500,
+    },
+  };
+
+  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Ollama expand ${res.status}`);
+  const data = (await res.json()) as { message?: { content?: string } };
+  let md = (data?.message?.content ?? "").trim();
+  // Strip any accidental fenced blocks the model wraps around the markdown.
+  md = md.replace(/^```(?:markdown|md)?\s*\n/i, "").replace(/\n```\s*$/i, "");
+  return md;
+}
+
+// ---------- Extract a recipe from pasted text ----------
+
+const EXTRACT_RECIPE_SYSTEM_PROMPT = `You convert a pasted recipe (often messy web copy with ads, headers, comments) into FoodLab's markdown format.
+
+Output ONLY the markdown — no JSON, no fences, no commentary.
+
+Required structure (use these section headers EXACTLY):
+
+# <Dish Name>
+
+**Cuisine:** <cuisine if known> | **Freezer-friendly:** Yes | **Prep:** <N> min | **Cook:** <N> min
+
+## Shared Base
+- <ingredient with quantity, one per bullet>
+- ...
+
+## Serve With
+- <serving suggestion, one per bullet>
+- ...
+
+---
+
+## <Version Name> Version
+**Protein:** <protein with quantity>
+
+1. <step>
+2. <step>
+...
+
+Rules:
+- Strip all extraneous prose (intro paragraphs, ads, "tips" sections). Keep only ingredients + instructions.
+- Quantities use common US units (tbsp, tsp, cup, cloves, oz, lb, can). Convert metric only if needed.
+- "Shared Base" = every ingredient that's part of the dish independent of protein. The protein itself goes in the version block.
+- Write 5–10 numbered instruction steps, condensed.
+- If the source mentions a single protein only, output one version block named after that protein (or "Original").
+- If the source has multiple variants (veg + meat), output one version block per variant separated by "---".
+- Output the markdown ONLY.
+
+LANGUAGE: {LOCALE_DIRECTIVE}`;
+
+export async function extractRecipeFromText(args: {
+  text: string;
+  locale?: Locale;
+}): Promise<string> {
+  const locale = normalizeLocale(args.locale);
+  const systemPrompt = EXTRACT_RECIPE_SYSTEM_PROMPT.replace(
+    "{LOCALE_DIRECTIVE}",
+    LOCALE_DIRECTIVE[locale],
+  );
+
+  const body = {
+    model: OLLAMA_MODEL,
+    stream: false,
+    keep_alive: "24h",
+    messages: [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: `Pasted recipe:\n${args.text.slice(0, 12000)}`,
+      },
+    ],
+    options: {
+      temperature: 0.3,
+      num_ctx: 8192,
+      num_predict: 1800,
+    },
+  };
+
+  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Ollama extract ${res.status}`);
+  const data = (await res.json()) as { message?: { content?: string } };
+  let md = (data?.message?.content ?? "").trim();
+  md = md.replace(/^```(?:markdown|md)?\s*\n/i, "").replace(/\n```\s*$/i, "");
+  return md;
 }
 
 export async function checkOllama(): Promise<{

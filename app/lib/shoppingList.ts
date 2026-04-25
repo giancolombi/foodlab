@@ -231,6 +231,103 @@ function formatQuantity(qty: number, unit: string | null): string {
   return formatNum(qty);
 }
 
+// ---- locale-aware quantity rendering ----
+// The item.quantity string above is baked in English (e.g. "3 tbsp",
+// "1 cup + 2 tsp"). When the UI locale is es/pt-BR we deterministically
+// swap only the unit tokens — numbers and fractions stay untouched so we
+// don't introduce the hallucinations an LLM pass would. Returns the input
+// unchanged for "en" or if no tokens matched.
+
+type Locale = "en" | "es" | "pt-BR";
+
+// [singular, plural] for each unit token, keyed by lowercase English form.
+const QUANTITY_UNIT_I18N: Record<Exclude<Locale, "en">, Record<string, [string, string]>> = {
+  es: {
+    tsp: ["cdta.", "cdta."],
+    tbsp: ["cda.", "cda."],
+    cup: ["taza", "tazas"],
+    oz: ["oz", "oz"],
+    lb: ["lb", "lb"],
+    g: ["g", "g"],
+    kg: ["kg", "kg"],
+    ml: ["ml", "ml"],
+    l: ["L", "L"],
+    clove: ["diente", "dientes"],
+    can: ["lata", "latas"],
+    sprig: ["ramita", "ramitas"],
+    bunch: ["manojo", "manojos"],
+    piece: ["pieza", "piezas"],
+    slice: ["rebanada", "rebanadas"],
+    head: ["cabeza", "cabezas"],
+  },
+  "pt-BR": {
+    tsp: ["c. chá", "c. chá"],
+    tbsp: ["c. sopa", "c. sopa"],
+    cup: ["xícara", "xícaras"],
+    oz: ["oz", "oz"],
+    lb: ["lb", "lb"],
+    g: ["g", "g"],
+    kg: ["kg", "kg"],
+    ml: ["ml", "ml"],
+    l: ["L", "L"],
+    clove: ["dente", "dentes"],
+    can: ["lata", "latas"],
+    sprig: ["ramo", "ramos"],
+    bunch: ["maço", "maços"],
+    piece: ["peça", "peças"],
+    slice: ["fatia", "fatias"],
+    head: ["cabeça", "cabeças"],
+  },
+};
+
+// Tokens as rendered by UNIT_LABELS above (singular and plural forms).
+// Order matters: longer forms first so "cups" matches before "cup".
+const UNIT_TOKEN_TO_SINGULAR: Record<string, string> = {
+  tsp: "tsp",
+  tbsp: "tbsp",
+  cups: "cup",
+  cup: "cup",
+  oz: "oz",
+  lbs: "lb",
+  lb: "lb",
+  g: "g",
+  kg: "kg",
+  ml: "ml",
+  L: "l",
+  l: "l",
+  cloves: "clove",
+  clove: "clove",
+  cans: "can",
+  can: "can",
+  sprigs: "sprig",
+  sprig: "sprig",
+  bunches: "bunch",
+  bunch: "bunch",
+  pieces: "piece",
+  piece: "piece",
+  slices: "slice",
+  slice: "slice",
+  heads: "head",
+  head: "head",
+};
+
+export function localizeQuantity(rendered: string, locale: Locale): string {
+  if (locale === "en" || !rendered) return rendered;
+  const map = QUANTITY_UNIT_I18N[locale];
+  if (!map) return rendered;
+
+  // Match any unit-ish word (letters only). Replace if we know it; leave
+  // numbers, punctuation, and "+" separators alone.
+  return rendered.replace(/\b([A-Za-z]+)\b/g, (match) => {
+    const singular = UNIT_TOKEN_TO_SINGULAR[match] ?? UNIT_TOKEN_TO_SINGULAR[match.toLowerCase()];
+    if (!singular) return match;
+    const [sing, pl] = map[singular] ?? [match, match];
+    // Pluralize when the English token was plural (ended in "s" or "es").
+    const wasPlural = /s$/.test(match) && match !== "oz";
+    return wasPlural ? pl : sing;
+  });
+}
+
 // ---- categorization ----
 
 const SECTION_KEYWORDS: Record<Section, string[]> = {
