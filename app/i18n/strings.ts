@@ -317,8 +317,9 @@ const en = {
   "compose.docFailed": "Couldn't build the doc",
   "compose.baseLabel": "Base",
   "compose.recipesLabel": "Recipes",
+  "compose.shoppingListLabel": "Shopping list",
   "compose.notSavedHint":
-    "Recipes haven't been generated yet — hit Save & apply first to include full recipes in the doc.",
+    "Recipes haven't been generated yet — hit Save & apply first to include full recipes and a shopping list in the doc.",
   "plan.compose": "Iterate on menu",
 
   // generic
@@ -625,8 +626,9 @@ const es: Partial<Record<StringKey, string>> = {
   "compose.docFailed": "No se pudo crear el documento",
   "compose.baseLabel": "Base",
   "compose.recipesLabel": "Recetas",
+  "compose.shoppingListLabel": "Lista de compras",
   "compose.notSavedHint":
-    "Aún no se generaron las recetas — pulsa Guardar y aplicar primero para incluir las recetas completas en el documento.",
+    "Aún no se generaron las recetas — pulsa Guardar y aplicar primero para incluir las recetas completas y la lista de compras en el documento.",
   "plan.compose": "Iterar el menú",
 
   "common.backToRecipes": "Volver a recetas",
@@ -930,8 +932,9 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "compose.docFailed": "Não foi possível criar o documento",
   "compose.baseLabel": "Base",
   "compose.recipesLabel": "Receitas",
+  "compose.shoppingListLabel": "Lista de compras",
   "compose.notSavedHint":
-    "As receitas ainda não foram geradas — clique em Salvar e aplicar primeiro para incluir as receitas completas no documento.",
+    "As receitas ainda não foram geradas — clique em Salvar e aplicar primeiro para incluir as receitas completas e a lista de compras no documento.",
   "plan.compose": "Iterar o menu",
 
   "common.backToRecipes": "Voltar às receitas",

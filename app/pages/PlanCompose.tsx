@@ -36,8 +36,15 @@ import {
   type SlotAssignment,
 } from "@/contexts/PlanContext";
 import { api } from "@/lib/api";
-import { downloadTextFile } from "@/lib/exportShoppingList";
-import type { RecipeDetail } from "@/types";
+import { downloadTextFile, toMarkdown } from "@/lib/exportShoppingList";
+import {
+  consolidate,
+  SECTION_ORDER,
+  type RecipeForPlan,
+  type Section,
+} from "@/lib/shoppingList";
+import { useUnits } from "@/contexts/UnitsContext";
+import type { Profile, RecipeDetail } from "@/types";
 
 interface ComposeDish {
   id: string;
@@ -86,6 +93,7 @@ function loadJSON<T>(key: string, fallback: T): T {
 export default function PlanCompose() {
   const { t, locale } = useLanguage();
   const { mergeAssignments } = usePlan();
+  const { units } = useUnits();
   const navigate = useNavigate();
 
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
@@ -331,24 +339,71 @@ export default function PlanCompose() {
     setExporting(true);
     try {
       // If we have saved slugs, fetch each recipe's full markdown so the doc
-      // includes the LLM-expanded recipes. Otherwise just dump the draft.
+      // includes the LLM-expanded recipes + a consolidated shopping list.
+      // Otherwise just dump the draft summary.
       let recipes: RecipeDetail[] = [];
+      let profiles: Profile[] = [];
       if (savedRefs.length > 0) {
-        const fetched = await Promise.all(
-          savedRefs.map((r) =>
-            api<{ recipe: RecipeDetail }>(`/recipes/${r.slug}`)
-              .then(({ recipe }) => recipe)
-              .catch(() => null),
+        const [fetched, profileRes] = await Promise.all([
+          Promise.all(
+            savedRefs.map((r) =>
+              api<{ recipe: RecipeDetail }>(`/recipes/${r.slug}`)
+                .then(({ recipe }) => recipe)
+                .catch(() => null),
+            ),
           ),
-        );
+          api<{ profiles: Profile[] }>("/profiles").catch(() => ({
+            profiles: [] as Profile[],
+          })),
+        ]);
         recipes = fetched.filter((r): r is RecipeDetail => r !== null);
+        profiles = profileRes.profiles;
       }
+
+      // Consolidate ingredients deterministically from the saved recipes —
+      // same logic the Cart page uses, so the doc and the in-app cart match.
+      let shoppingMarkdown: string | undefined;
+      if (recipes.length > 0) {
+        const planForCart: RecipeForPlan[] = recipes.map((r) => ({
+          slug: r.slug,
+          title: r.title,
+          shared_ingredients: r.shared_ingredients,
+          serve_with: r.serve_with,
+          versions: r.versions,
+        }));
+        const list = consolidate(planForCart, profiles, {
+          includeServeWith: false,
+          unitSystem: units,
+        });
+        const sectionLabels: Record<Section, string> = {
+          produce: t("cart.section.produce"),
+          proteins: t("cart.section.proteins"),
+          dairy: t("cart.section.dairy"),
+          pantry: t("cart.section.pantry"),
+          other: t("cart.section.other"),
+        };
+        // Skip if everything's empty (no recipe parsed cleanly).
+        const hasItems = SECTION_ORDER.some(
+          (s) => list.sections[s].length > 0,
+        );
+        if (hasItems) {
+          shoppingMarkdown = toMarkdown(list, {
+            title: t("compose.shoppingListLabel"),
+            sectionLabel: sectionLabels,
+            forLabel: (names) => t("cart.forLabel", { names }),
+          });
+        }
+      }
+
       const md = buildMenuDoc({
         draft,
         recipes,
+        shoppingMarkdown,
         title: t("compose.docTitle"),
         sections: {
-          mainsLabel: t("compose.mainsLabel", { n: draft.dishes.filter((d) => !d.isBreakfast).length }),
+          mainsLabel: t("compose.mainsLabel", {
+            n: draft.dishes.filter((d) => !d.isBreakfast).length,
+          }),
           breakfastLabel: t("compose.breakfastLabel"),
           baseLabel: t("compose.baseLabel"),
           vegLabel: t("compose.vegLabel"),
@@ -663,10 +718,11 @@ interface DocSectionLabels {
 function buildMenuDoc(args: {
   draft: Draft;
   recipes: RecipeDetail[];
+  shoppingMarkdown?: string;
   title: string;
   sections: DocSectionLabels;
 }): string {
-  const { draft, recipes, title, sections } = args;
+  const { draft, recipes, shoppingMarkdown, title, sections } = args;
   const stamp = new Date().toISOString().slice(0, 10);
   const out: string[] = [];
   out.push(`# ${title}`);
@@ -709,6 +765,12 @@ function buildMenuDoc(args: {
     }
   } else {
     out.push(`_${sections.notSavedHint}_`);
+    out.push("");
+  }
+
+  if (shoppingMarkdown) {
+    // toMarkdown() already includes its own H1/H2 structure — append as-is.
+    out.push(shoppingMarkdown.trim());
     out.push("");
   }
 
