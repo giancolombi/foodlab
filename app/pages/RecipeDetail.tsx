@@ -36,7 +36,7 @@ export default function RecipeDetail() {
 
   if (error) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <p className="text-destructive">{error}</p>
         <Link to="/recipes" className="text-primary hover:underline">
           {t("common.backToRecipes")}
@@ -47,7 +47,7 @@ export default function RecipeDetail() {
 
   if (!recipe) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8 text-muted-foreground">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 text-muted-foreground">
         {t("detail.loading")}
       </div>
     );
@@ -59,7 +59,7 @@ export default function RecipeDetail() {
   const isCurated = !recipe.owner_user_id;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       <div>
         <Button variant="ghost" size="sm" asChild>
           <Link to="/recipes">

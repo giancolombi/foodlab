@@ -493,7 +493,7 @@ export default function PlanCompose() {
                 value={pasteUrl}
                 onChange={(e) => setPasteUrl(e.target.value)}
                 placeholder="https://…"
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-full rounded-md border bg-background px-3 py-2 text-base sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 disabled={pasting}
               />
             </div>
@@ -506,7 +506,7 @@ export default function PlanCompose() {
                 onChange={(e) => setPasteText(e.target.value)}
                 placeholder={t("compose.pastePlaceholder")}
                 rows={6}
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-full rounded-md border bg-background px-3 py-2 text-base sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 disabled={pasting || pasteUrl.trim().length > 0}
               />
             </div>
@@ -517,7 +517,7 @@ export default function PlanCompose() {
               <select
                 value={pasteTarget}
                 onChange={(e) => setPasteTarget(e.target.value)}
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-full rounded-md border bg-background px-3 py-2 text-base sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 disabled={pasting}
               >
                 <option value="new">{t("compose.pasteTargetNew")}</option>
@@ -561,9 +561,10 @@ export default function PlanCompose() {
         </Card>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Left: chat */}
-        <Card className="flex flex-col h-[70vh]">
+      <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+        {/* Left: chat. Capped lower on mobile so the input + soft keyboard
+            still leave room for the draft cards below. */}
+        <Card className="flex flex-col h-[60vh] md:h-[70vh]">
           <div
             ref={transcriptRef}
             className="flex-1 overflow-y-auto p-4 space-y-3"
@@ -598,8 +599,8 @@ export default function PlanCompose() {
                 key={i}
                 className={
                   m.role === "user"
-                    ? "ml-auto max-w-[85%] rounded-2xl bg-primary text-primary-foreground px-3 py-2 text-sm whitespace-pre-wrap"
-                    : "mr-auto max-w-[85%] rounded-2xl bg-muted px-3 py-2 text-sm whitespace-pre-wrap"
+                    ? "ml-auto max-w-[90%] sm:max-w-[80%] rounded-2xl bg-primary text-primary-foreground px-3 py-2 text-sm whitespace-pre-wrap"
+                    : "mr-auto max-w-[90%] sm:max-w-[80%] rounded-2xl bg-muted px-3 py-2 text-sm whitespace-pre-wrap"
                 }
               >
                 {m.content}
@@ -617,7 +618,7 @@ export default function PlanCompose() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={t("compose.placeholder")}
-              className="flex-1 rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex-1 rounded-md border bg-background px-3 py-2 text-base sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               disabled={loading}
             />
             <Button type="submit" disabled={loading || !input.trim()}>

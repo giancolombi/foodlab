@@ -21,10 +21,13 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-10 rounded-md px-6",
-        icon: "h-9 w-9",
+        // 36px (h-9) on mobile beats 32px (h-8) for thumb taps; sm screens
+        // and up still get the compact 32px so dense action bars on desktop
+        // don't grow.
+        default: "h-10 px-4 py-2 sm:h-9",
+        sm: "h-9 rounded-md px-3 text-xs sm:h-8",
+        lg: "h-11 rounded-md px-6 sm:h-10",
+        icon: "h-10 w-10 sm:h-9 sm:w-9",
       },
     },
     defaultVariants: {

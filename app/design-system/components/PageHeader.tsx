@@ -35,7 +35,13 @@ export function PageHeader({
           <p className="text-muted-foreground text-sm mt-1">{subtitle}</p>
         )}
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      {actions && (
+        // Wrap on narrow screens so a row of 4-6 buttons doesn't squeeze
+        // labels off-screen. Tighter gap on phones; standard gap from sm up.
+        <div className="flex items-center flex-wrap gap-1 sm:gap-2 justify-end">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

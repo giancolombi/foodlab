@@ -97,7 +97,7 @@ export default function AppLayout() {
           <div className="flex items-center gap-1 sm:gap-2">
             <Link
               to="/plan"
-              className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40"
+              className="relative inline-flex items-center justify-center h-10 w-10 sm:h-9 sm:w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40"
               aria-label={t("nav.plan")}
               title={t("nav.plan")}
             >
@@ -110,7 +110,7 @@ export default function AppLayout() {
             </Link>
             <Link
               to="/cart"
-              className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40"
+              className="relative inline-flex items-center justify-center h-10 w-10 sm:h-9 sm:w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40"
               aria-label={t("nav.cart")}
               title={t("nav.cart")}
             >

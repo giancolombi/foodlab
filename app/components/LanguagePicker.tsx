@@ -19,7 +19,7 @@ export function LanguagePicker({ className }: Props) {
       <select
         value={locale}
         onChange={(e) => setLocale(e.target.value as Locale)}
-        className="rounded-md border bg-background px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="rounded-md border bg-background px-2 py-1 text-base sm:text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label="Language"
       >
         {LOCALES.map((l) => (

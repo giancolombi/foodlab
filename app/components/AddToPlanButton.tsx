@@ -99,9 +99,10 @@ export function AddToPlanButton({
           aria-label={t("plan.assignRecipe")}
           className={cn(
             "absolute z-50 mt-1 p-3 rounded-md border bg-popover shadow-md",
-            // Right-align on desktop, but on mobile let it flow from the left
-            // of the button so it never clips off-screen on narrow viewports.
-            "right-0 left-0 sm:left-auto sm:w-[320px]",
+            // Right-align under the button on desktop. On mobile, anchor to
+            // the right edge of the button and grow leftward up to the
+            // viewport — never wider than 90vw so it can't clip on a phone.
+            "right-0 w-[min(90vw,20rem)] sm:w-80",
           )}
         >
           <p className="text-xs text-muted-foreground mb-2">
