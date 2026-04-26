@@ -438,7 +438,7 @@ export default function PlanCompose() {
               onClick={() => setPasteOpen((v) => !v)}
             >
               <ClipboardPaste className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("compose.pasteRecipe")}</span>
+              <span>{t("compose.pasteRecipe")}</span>
             </Button>
             <Button
               variant="outline"
@@ -447,7 +447,7 @@ export default function PlanCompose() {
               disabled={exporting || draft.dishes.length === 0}
             >
               <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">
+              <span>
                 {exporting ? t("compose.docExporting") : t("compose.docExport")}
               </span>
             </Button>
@@ -457,7 +457,7 @@ export default function PlanCompose() {
               disabled={applying || draft.dishes.length === 0}
             >
               <Save className="h-4 w-4" />
-              <span className="hidden sm:inline">
+              <span>
                 {applying ? t("compose.applying") : t("compose.saveAndApply")}
               </span>
             </Button>
@@ -469,7 +469,7 @@ export default function PlanCompose() {
               title={t("compose.startOver")}
             >
               <RotateCcw className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("compose.startOver")}</span>
+              <span>{t("compose.startOver")}</span>
             </Button>
             <Button asChild variant="ghost" size="sm">
               <Link to="/plan">{t("compose.backToPlan")}</Link>

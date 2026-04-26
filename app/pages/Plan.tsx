@@ -183,7 +183,7 @@ export default function Plan() {
               title={t("plan.generateHint")}
             >
               <Sparkles className="h-4 w-4" />
-              <span className="hidden sm:inline">
+              <span>
                 {generating ? t("plan.generating") : t("plan.generate")}
               </span>
             </Button>
@@ -196,7 +196,7 @@ export default function Plan() {
             >
               <Link to="/plan/compose">
                 <MessageSquare className="h-4 w-4" />
-                <span className="hidden sm:inline">{t("plan.compose")}</span>
+                <span>{t("plan.compose")}</span>
               </Link>
             </Button>
             <Button asChild variant="secondary" size="sm">

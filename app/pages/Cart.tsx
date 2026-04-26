@@ -272,7 +272,7 @@ export default function Cart() {
               disabled={smartLoading || recipes.length === 0}
             >
               <Sparkles className="h-4 w-4" />
-              <span className="hidden sm:inline">
+              <span>
                 {smartLoading
                   ? t("cart.smartLoading")
                   : smart
@@ -288,7 +288,7 @@ export default function Cart() {
               title={t("cart.shareHint")}
             >
               <Share2 className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("cart.share")}</span>
+              <span>{t("cart.share")}</span>
             </Button>
             <Button
               size="sm"
@@ -298,7 +298,7 @@ export default function Cart() {
               title={t("cart.downloadHint")}
             >
               <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("cart.download")}</span>
+              <span>{t("cart.download")}</span>
             </Button>
             {boughtCount > 0 && (
               <Button
@@ -308,7 +308,7 @@ export default function Cart() {
                 title={t("cart.clearBoughtHint")}
               >
                 <Trash2 className="h-4 w-4" />
-                <span className="hidden sm:inline">{t("cart.clearBought")}</span>
+                <span>{t("cart.clearBought")}</span>
               </Button>
             )}
           </>
