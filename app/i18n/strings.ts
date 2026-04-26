@@ -192,6 +192,10 @@ const en = {
   "plan.clear": "Clear week",
   "plan.confirmClear": "Clear every assignment from this week's plan?",
   "plan.generate": "Auto-fill",
+  "plan.generateHint":
+    "Pick recipes for the week from your existing library — favors high-rated, varies cuisines.",
+  "plan.composeHint":
+    "Plan a menu by chatting — propose, swap, paste recipes, save.",
   "plan.generating": "Picking recipes…",
   "plan.generated": "Plan filled with 4 mains + 1 breakfast!",
   "plan.generateFailed": "Couldn't generate a plan — try again later",
@@ -357,6 +361,10 @@ const es: Partial<Record<StringKey, string>> = {
   "plan.clear": "Vaciar semana",
   "plan.confirmClear": "¿Vaciar todas las asignaciones del plan de esta semana?",
   "plan.generate": "Auto-completar",
+  "plan.generateHint":
+    "Elige recetas de la semana desde tu biblioteca — prioriza las mejor valoradas y mezcla cocinas.",
+  "plan.composeHint":
+    "Planifica un menú conversando — propón, cambia, pega recetas y guarda.",
   "plan.generating": "Eligiendo recetas…",
   "plan.generated": "¡Plan llenado con 4 platos principales + 1 desayuno!",
   "plan.generateFailed": "No se pudo generar el plan — intenta de nuevo",
@@ -665,6 +673,10 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "plan.clear": "Limpar semana",
   "plan.confirmClear": "Limpar todas as atribuições do plano desta semana?",
   "plan.generate": "Preencher auto",
+  "plan.generateHint":
+    "Escolhe receitas da semana da sua biblioteca — prioriza as bem avaliadas e varia cozinhas.",
+  "plan.composeHint":
+    "Planeje um menu conversando — proponha, troque, cole receitas e salve.",
   "plan.generating": "Escolhendo receitas…",
   "plan.generated": "Plano preenchido com 4 pratos + 1 café da manhã!",
   "plan.generateFailed": "Não foi possível gerar o plano — tente novamente",

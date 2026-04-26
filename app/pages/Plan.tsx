@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   CalendarDays,
   ChefHat,
+  MessageSquare,
   ShoppingCart,
   Sparkles,
   Trash2,
@@ -147,7 +148,7 @@ export default function Plan() {
               </Button>
               <Button asChild variant="secondary">
                 <Link to="/plan/compose">
-                  <Sparkles className="h-4 w-4" /> {t("plan.compose")}
+                  <MessageSquare className="h-4 w-4" /> {t("plan.compose")}
                 </Link>
               </Button>
               <Button asChild variant="outline">
@@ -178,15 +179,23 @@ export default function Plan() {
               variant="outline"
               onClick={handleGenerate}
               disabled={generating}
+              aria-label={t("plan.generate")}
+              title={t("plan.generateHint")}
             >
               <Sparkles className="h-4 w-4" />
               <span className="hidden sm:inline">
                 {generating ? t("plan.generating") : t("plan.generate")}
               </span>
             </Button>
-            <Button asChild variant="ghost" size="sm">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              aria-label={t("plan.compose")}
+              title={t("plan.composeHint")}
+            >
               <Link to="/plan/compose">
-                <Sparkles className="h-4 w-4" />
+                <MessageSquare className="h-4 w-4" />
                 <span className="hidden sm:inline">{t("plan.compose")}</span>
               </Link>
             </Button>
