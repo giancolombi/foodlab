@@ -1,3 +1,6 @@
+import dns from "node:dns/promises";
+import net from "node:net";
+
 import { Router } from "express";
 import { z } from "zod";
 
@@ -385,6 +388,172 @@ router.post("/compose/extract", requireAuth, async (req, res) => {
     res.json({ markdown });
   } catch (err) {
     console.error("[plans/compose/extract]", err);
+    res.status(502).json({
+      error: err instanceof Error ? err.message : "Extract failed",
+    });
+  }
+});
+
+const extractUrlSchema = z.object({
+  url: z.string().url().max(2000),
+  locale: z.enum(["en", "es", "pt-BR"]).optional(),
+});
+
+const URL_FETCH_TIMEOUT_MS = 10_000;
+const URL_MAX_BYTES = 2_000_000;
+
+/**
+ * Reject URLs that point at the host's loopback or RFC1918/CGNAT ranges so a
+ * malicious user can't pivot the API into the internal network. We resolve
+ * the hostname to an IP and check that it is publicly routable.
+ */
+function isPrivateIp(addr: string): boolean {
+  const family = net.isIP(addr);
+  if (family === 4) {
+    const [a, b] = addr.split(".").map(Number);
+    if (a === 10) return true;
+    if (a === 127) return true;
+    if (a === 0) return true;
+    if (a === 169 && b === 254) return true; // link-local
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+    return false;
+  }
+  if (family === 6) {
+    const lower = addr.toLowerCase();
+    if (lower === "::1") return true;
+    if (lower.startsWith("fc") || lower.startsWith("fd")) return true; // ULA
+    if (lower.startsWith("fe80")) return true; // link-local
+    if (lower.startsWith("::ffff:")) return isPrivateIp(lower.slice(7));
+    return false;
+  }
+  return true; // unknown family — refuse
+}
+
+async function safeUrl(input: string): Promise<URL> {
+  const u = new URL(input);
+  if (u.protocol !== "http:" && u.protocol !== "https:") {
+    throw new Error("Only http(s) URLs are allowed");
+  }
+  const host = u.hostname;
+  if (!host) throw new Error("URL has no host");
+  if (host === "localhost") throw new Error("Refusing to fetch localhost");
+  // Resolve every A/AAAA record and refuse if any of them is private.
+  const addrs = await dns.lookup(host, { all: true });
+  for (const a of addrs) {
+    if (isPrivateIp(a.address)) {
+      throw new Error("Refusing to fetch private IP");
+    }
+  }
+  return u;
+}
+
+function htmlToText(html: string): string {
+  // Strip script/style blocks then collapse all tags to whitespace. Cheap
+  // but good enough — the LLM extractor is forgiving about extra noise.
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * POST /api/plans/compose/extract-url — fetch a recipe URL, strip HTML to
+ * plain text, then run extractRecipeFromText. Guards against SSRF by
+ * resolving the hostname and refusing private IPs.
+ */
+router.post("/compose/extract-url", requireAuth, async (req, res) => {
+  const parsed = extractUrlSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid payload" });
+    return;
+  }
+  const { url, locale } = parsed.data;
+
+  let target: URL;
+  try {
+    target = await safeUrl(url);
+  } catch (err: any) {
+    res.status(400).json({ error: err?.message ?? "URL not allowed" });
+    return;
+  }
+
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), URL_FETCH_TIMEOUT_MS);
+  let html: string;
+  try {
+    const response = await fetch(target.toString(), {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+      signal: ac.signal,
+      redirect: "follow",
+    });
+    if (!response.ok) {
+      res.status(502).json({ error: `Fetch returned ${response.status}` });
+      return;
+    }
+    const reader = response.body?.getReader();
+    if (!reader) {
+      res.status(502).json({ error: "Empty response body" });
+      return;
+    }
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > URL_MAX_BYTES) {
+        try {
+          await reader.cancel();
+        } catch {
+          // ignore
+        }
+        res.status(413).json({ error: "Page too large" });
+        return;
+      }
+      chunks.push(value);
+    }
+    html = Buffer.concat(chunks).toString("utf-8");
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      res.status(504).json({ error: "Fetch timed out" });
+      return;
+    }
+    console.error("[plans/compose/extract-url] fetch", err);
+    res.status(502).json({
+      error: err instanceof Error ? err.message : "Fetch failed",
+    });
+    return;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  const text = htmlToText(html).slice(0, 18_000);
+  if (text.length < 80) {
+    res.status(422).json({ error: "Page didn't contain enough text" });
+    return;
+  }
+
+  try {
+    const markdown = await extractRecipeFromText({ text, locale });
+    res.json({ markdown });
+  } catch (err) {
+    console.error("[plans/compose/extract-url] extract", err);
     res.status(502).json({
       error: err instanceof Error ? err.message : "Extract failed",
     });

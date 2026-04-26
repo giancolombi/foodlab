@@ -290,15 +290,35 @@ const en = {
   "compose.applyFailed": "Save failed",
   "compose.pasteRecipe": "Paste a recipe",
   "compose.pasteHint":
-    "Paste a recipe (web copy is fine — extra prose gets stripped). The assistant turns it into FoodLab format and folds it into the draft.",
+    "Paste a recipe URL or the raw text. The assistant turns it into FoodLab format and folds it into the draft.",
+  "compose.pasteUrlLabel": "Recipe URL",
+  "compose.pasteTextLabel": "…or paste text",
   "compose.pastePlaceholder":
     "Paste the recipe — ingredients, instructions, anything. Minimum 40 characters.",
+  "compose.pasteTargetLabel": "Where does this go?",
+  "compose.pasteTargetNew": "Add as a new dish",
+  "compose.pasteTargetReplace": "Replace: {name}",
   "compose.pasteCancel": "Cancel",
   "compose.pasteSubmit": "Use this recipe",
   "compose.pasteExtracting": "Extracting…",
-  "compose.pastedRecipePrefix":
-    "I pasted this recipe — please use it as one of the dishes in the draft (replace a similar one if it fits, otherwise add it):",
+  "compose.pasteFetching": "Fetching URL…",
+  "compose.pastedAddNew":
+    "I pasted this recipe — add it as a new dish in the draft:",
+  "compose.pastedReplace":
+    "Replace dish '{name}' (id: {id}) with this pasted recipe:",
   "compose.pasteFailed": "Couldn't read that recipe — try pasting again",
+  "compose.startOver": "Start over",
+  "compose.startOverConfirm":
+    "Clear the chat and draft? Saved recipes (if any) stay in your library.",
+  "compose.docExport": "Download menu",
+  "compose.docExporting": "Exporting…",
+  "compose.docTitle": "Weekly menu",
+  "compose.docDownloaded": "Downloaded menu doc",
+  "compose.docFailed": "Couldn't build the doc",
+  "compose.baseLabel": "Base",
+  "compose.recipesLabel": "Recipes",
+  "compose.notSavedHint":
+    "Recipes haven't been generated yet — hit Save & apply first to include full recipes in the doc.",
   "plan.compose": "Iterate on menu",
 
   // generic
@@ -578,15 +598,35 @@ const es: Partial<Record<StringKey, string>> = {
   "compose.applyFailed": "Falló al guardar",
   "compose.pasteRecipe": "Pegar receta",
   "compose.pasteHint":
-    "Pega una receta (texto de la web está bien — se filtra lo extra). El asistente la convierte al formato FoodLab y la integra al borrador.",
+    "Pega una URL de receta o el texto. El asistente lo convierte al formato FoodLab y lo integra al borrador.",
+  "compose.pasteUrlLabel": "URL de la receta",
+  "compose.pasteTextLabel": "…o pega texto",
   "compose.pastePlaceholder":
     "Pega la receta — ingredientes, instrucciones, lo que tengas. Mínimo 40 caracteres.",
+  "compose.pasteTargetLabel": "¿Dónde va esto?",
+  "compose.pasteTargetNew": "Agregar como plato nuevo",
+  "compose.pasteTargetReplace": "Reemplazar: {name}",
   "compose.pasteCancel": "Cancelar",
   "compose.pasteSubmit": "Usar esta receta",
   "compose.pasteExtracting": "Extrayendo…",
-  "compose.pastedRecipePrefix":
-    "Pegué esta receta — úsala como uno de los platos del borrador (reemplaza uno parecido si encaja, o agrégalo):",
+  "compose.pasteFetching": "Cargando URL…",
+  "compose.pastedAddNew":
+    "Pegué esta receta — agrégala como un plato nuevo al borrador:",
+  "compose.pastedReplace":
+    "Reemplaza el plato '{name}' (id: {id}) con esta receta pegada:",
   "compose.pasteFailed": "No pude leer esa receta — intenta pegarla de nuevo",
+  "compose.startOver": "Empezar de nuevo",
+  "compose.startOverConfirm":
+    "¿Limpiar el chat y el borrador? Las recetas guardadas (si las hay) permanecen en tu biblioteca.",
+  "compose.docExport": "Descargar menú",
+  "compose.docExporting": "Exportando…",
+  "compose.docTitle": "Menú semanal",
+  "compose.docDownloaded": "Documento del menú descargado",
+  "compose.docFailed": "No se pudo crear el documento",
+  "compose.baseLabel": "Base",
+  "compose.recipesLabel": "Recetas",
+  "compose.notSavedHint":
+    "Aún no se generaron las recetas — pulsa Guardar y aplicar primero para incluir las recetas completas en el documento.",
   "plan.compose": "Iterar el menú",
 
   "common.backToRecipes": "Volver a recetas",
@@ -863,15 +903,35 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "compose.applyFailed": "Falha ao salvar",
   "compose.pasteRecipe": "Colar receita",
   "compose.pasteHint":
-    "Cole uma receita (texto da web tudo bem — o resto é filtrado). O assistente converte para o formato FoodLab e integra ao rascunho.",
+    "Cole uma URL de receita ou o texto. O assistente converte para o formato FoodLab e integra ao rascunho.",
+  "compose.pasteUrlLabel": "URL da receita",
+  "compose.pasteTextLabel": "…ou cole o texto",
   "compose.pastePlaceholder":
     "Cole a receita — ingredientes, instruções, o que tiver. Mínimo de 40 caracteres.",
+  "compose.pasteTargetLabel": "Onde vai isso?",
+  "compose.pasteTargetNew": "Adicionar como prato novo",
+  "compose.pasteTargetReplace": "Substituir: {name}",
   "compose.pasteCancel": "Cancelar",
   "compose.pasteSubmit": "Usar essa receita",
   "compose.pasteExtracting": "Extraindo…",
-  "compose.pastedRecipePrefix":
-    "Colei esta receita — use como um dos pratos do rascunho (substitua um parecido se couber, senão adicione):",
+  "compose.pasteFetching": "Carregando URL…",
+  "compose.pastedAddNew":
+    "Colei esta receita — adicione como um prato novo ao rascunho:",
+  "compose.pastedReplace":
+    "Substitua o prato '{name}' (id: {id}) por esta receita colada:",
   "compose.pasteFailed": "Não consegui ler essa receita — tente colar de novo",
+  "compose.startOver": "Começar de novo",
+  "compose.startOverConfirm":
+    "Limpar o chat e o rascunho? Receitas salvas (se houver) ficam na sua biblioteca.",
+  "compose.docExport": "Baixar menu",
+  "compose.docExporting": "Exportando…",
+  "compose.docTitle": "Menu semanal",
+  "compose.docDownloaded": "Documento do menu baixado",
+  "compose.docFailed": "Não foi possível criar o documento",
+  "compose.baseLabel": "Base",
+  "compose.recipesLabel": "Receitas",
+  "compose.notSavedHint":
+    "As receitas ainda não foram geradas — clique em Salvar e aplicar primeiro para incluir as receitas completas no documento.",
   "plan.compose": "Iterar o menu",
 
   "common.backToRecipes": "Voltar às receitas",

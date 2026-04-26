@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LanguagePicker } from "@/components/LanguagePicker";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -43,7 +44,10 @@ export default function SignUp() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 relative">
+      <div className="absolute top-4 right-4">
+        <LanguagePicker />
+      </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>{t("signup.title")}</CardTitle>
