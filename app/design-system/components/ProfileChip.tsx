@@ -32,7 +32,9 @@ export function ProfileChip({
       disabled={disabled}
       aria-pressed={active}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+        // py-2 on phone gets the chip to ~36px tall; sm+ keeps the original
+        // dense layout where multiple chips share a header row on desktop.
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-2 sm:py-1.5 text-xs font-medium transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         active
           ? "bg-primary text-primary-foreground border-primary"

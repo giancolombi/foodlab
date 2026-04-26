@@ -19,6 +19,7 @@ export const LOCALE_LLM_DIRECTIVE: Record<Locale, string> = {
 const en = {
   // nav + layout
   "nav.match": "What can I make?",
+  "nav.matchShort": "Discover",
   "nav.recipes": "Recipes",
   "nav.plan": "Plan",
   "nav.cart": "Cart",
@@ -27,6 +28,7 @@ const en = {
   "nav.cartHasItemsHint": "You have recipes planned — review your shopping list",
   "nav.cartPartialHint": "{n} items already bought",
   "layout.footer": "FoodLab · open-source",
+  "layout.primaryNav": "Primary navigation",
   "layout.language": "Language",
   "layout.units": "Measurement units",
   "layout.unitsHint": "Toggle between imperial (cups, oz, °F) and metric (ml, g, °C)",
@@ -331,6 +333,8 @@ export type StringKey = keyof typeof en;
 
 const es: Partial<Record<StringKey, string>> = {
   "nav.match": "¿Qué puedo hacer?",
+  "nav.matchShort": "Descubrir",
+  "layout.primaryNav": "Navegación principal",
   "nav.recipes": "Recetas",
   "nav.plan": "Plan",
   "nav.cart": "Compras",
@@ -637,6 +641,8 @@ const es: Partial<Record<StringKey, string>> = {
 
 const ptBR: Partial<Record<StringKey, string>> = {
   "nav.match": "O que posso fazer?",
+  "nav.matchShort": "Descobrir",
+  "layout.primaryNav": "Navegação principal",
   "nav.recipes": "Receitas",
   "nav.plan": "Plano",
   "nav.cart": "Compras",

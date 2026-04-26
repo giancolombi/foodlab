@@ -1,6 +1,15 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { CalendarDays, ChefHat, Globe, LogOut, Ruler, ShoppingCart } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import {
+  CalendarDays,
+  ChefHat,
+  Globe,
+  LogOut,
+  Ruler,
+  ShoppingCart,
+  Sparkles,
+  Users,
+} from "lucide-react";
+import { useState, useRef, useEffect, type ComponentType } from "react";
 
 import { Button } from "@/design-system";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,12 +53,48 @@ export default function AppLayout() {
     return () => document.removeEventListener("mousedown", handler);
   }, [langOpen]);
 
-  const NAV = [
-    { to: "/", label: t("nav.match") },
-    { to: "/recipes", label: t("nav.recipes") },
-    { to: "/plan", label: t("nav.plan") },
-    { to: "/cart", label: t("nav.cart") },
-    { to: "/profiles", label: t("nav.profiles") },
+  // Each entry drives both the desktop top nav (full label) and the mobile
+  // bottom tab bar (icon + short label + optional badge).
+  const NAV: Array<{
+    to: string;
+    label: string;
+    shortLabel: string;
+    icon: ComponentType<{ className?: string }>;
+    badge?: number;
+    dot?: boolean;
+  }> = [
+    {
+      to: "/",
+      label: t("nav.match"),
+      shortLabel: t("nav.matchShort"),
+      icon: Sparkles,
+    },
+    {
+      to: "/recipes",
+      label: t("nav.recipes"),
+      shortLabel: t("nav.recipes"),
+      icon: ChefHat,
+    },
+    {
+      to: "/plan",
+      label: t("nav.plan"),
+      shortLabel: t("nav.plan"),
+      icon: CalendarDays,
+      badge: planCount > 0 ? planCount : undefined,
+    },
+    {
+      to: "/cart",
+      label: t("nav.cart"),
+      shortLabel: t("nav.cart"),
+      icon: ShoppingCart,
+      dot: hasSomethingToShop,
+    },
+    {
+      to: "/profiles",
+      label: t("nav.profiles"),
+      shortLabel: t("nav.profiles"),
+      icon: Users,
+    },
   ];
 
   const handleSignOut = () => {
@@ -95,9 +140,12 @@ export default function AppLayout() {
             ))}
           </nav>
           <div className="flex items-center gap-1 sm:gap-2">
+            {/* Plan + Cart shortcuts also live in the mobile bottom tab bar
+                with the same badges, so keep these visible only from sm up
+                to avoid duplicate affordances on phone. */}
             <Link
               to="/plan"
-              className="relative inline-flex items-center justify-center h-10 w-10 sm:h-9 sm:w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40"
+              className="hidden sm:inline-flex relative items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40"
               aria-label={t("nav.plan")}
               title={t("nav.plan")}
             >
@@ -110,7 +158,7 @@ export default function AppLayout() {
             </Link>
             <Link
               to="/cart"
-              className="relative inline-flex items-center justify-center h-10 w-10 sm:h-9 sm:w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40"
+              className="hidden sm:inline-flex relative items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40"
               aria-label={t("nav.cart")}
               title={t("nav.cart")}
             >
@@ -192,32 +240,60 @@ export default function AppLayout() {
             </Button>
           </div>
         </div>
-        <nav className="sm:hidden border-t flex">
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === "/"}
-              className={({ isActive }) =>
-                cn(
-                  "flex-1 text-center py-2 text-xs truncate",
-                  isActive
-                    ? "text-primary font-medium"
-                    : "text-muted-foreground",
-                )
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
       </header>
-      <main className="flex-1">
+      <main className="flex-1 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] sm:pb-0">
         <Outlet />
       </main>
-      <footer className="border-t py-4 text-center text-xs text-muted-foreground">
+      <footer className="hidden sm:block border-t py-4 text-center text-xs text-muted-foreground">
         {t("layout.footer")}
       </footer>
+
+      {/* Mobile bottom tab bar — fixed to the viewport so the primary nav
+          stays in the thumb zone. Hidden from sm up since the desktop top
+          nav covers the same routes. Honors safe-area-inset-bottom so it
+          clears the iOS home indicator. */}
+      <nav
+        className="sm:hidden fixed inset-x-0 bottom-0 z-40 border-t bg-card"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        aria-label={t("layout.primaryNav")}
+      >
+        <div className="flex">
+          {NAV.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === "/"}
+                className={({ isActive }) =>
+                  cn(
+                    "flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] leading-none truncate relative",
+                    isActive
+                      ? "text-primary font-medium"
+                      : "text-muted-foreground",
+                  )
+                }
+              >
+                <span className="relative inline-flex">
+                  <Icon className="h-5 w-5" />
+                  {item.badge !== undefined && (
+                    <span className="absolute -top-1 -right-2 min-w-[1.1rem] h-[1.1rem] rounded-full bg-primary text-primary-foreground text-[10px] font-medium inline-flex items-center justify-center px-1">
+                      {item.badge}
+                    </span>
+                  )}
+                  {item.dot && !item.badge && (
+                    <span
+                      className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary"
+                      aria-hidden
+                    />
+                  )}
+                </span>
+                <span className="truncate max-w-full">{item.shortLabel}</span>
+              </NavLink>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
