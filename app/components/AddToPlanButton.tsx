@@ -97,6 +97,9 @@ export function AddToPlanButton({
         <div
           role="dialog"
           aria-label={t("plan.assignRecipe")}
+          // The button is often rendered inside a card-level <Link>, so any
+          // click inside the popover would bubble up and navigate. Stop it.
+          onClick={(e) => e.stopPropagation()}
           className={cn(
             "absolute z-50 mt-1 p-3 rounded-md border bg-popover shadow-md",
             // Right-align under the button on desktop. On mobile, anchor to
@@ -159,7 +162,8 @@ function Row({ day, label, slug, assignments, onToggle }: RowProps) {
             key={m}
             onClick={() => onToggle(day, m)}
             className={cn(
-              "h-8 rounded border text-[10px] font-medium transition-colors",
+              // Bigger thumb target on phone; sm+ keeps the dense desktop grid.
+              "h-10 sm:h-8 rounded border text-[11px] sm:text-[10px] font-medium transition-colors",
               mine
                 ? "bg-primary text-primary-foreground border-primary"
                 : occupiedByOther

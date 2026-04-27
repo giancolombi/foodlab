@@ -43,7 +43,13 @@ When(/^I click the "(.+)" button$/, async ({ page }, name) => {
 });
 
 When("I click the sign-out button", async ({ page }) => {
-  await page.getByRole("button", { name: /sign out|log out/i }).click();
+  // Below sm the sign-out lives inside the header overflow ("More options")
+  // menu, so we open that first if the button isn't already visible.
+  const signOut = page.getByRole("button", { name: /sign out|log out/i });
+  if (!(await signOut.isVisible())) {
+    await page.getByRole("button", { name: /more options/i }).click();
+  }
+  await signOut.click();
 });
 
 Then("I should be on the home page", async ({ page }) => {

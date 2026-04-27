@@ -4,6 +4,7 @@ import {
   ChefHat,
   Globe,
   LogOut,
+  MoreHorizontal,
   Ruler,
   ShoppingCart,
   Sparkles,
@@ -34,6 +35,8 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   // Preload the translation model whenever a non-English locale is active.
   // Fire-and-forget; debounced inside warmTranslator().
@@ -52,6 +55,15 @@ export default function AppLayout() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [langOpen]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (!moreRef.current?.contains(e.target as Node)) setMoreOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [moreOpen]);
 
   // Each entry drives both the desktop top nav (full label) and the mobile
   // bottom tab bar (icon + short label + optional badge).
@@ -174,70 +186,155 @@ export default function AppLayout() {
                 />
               )}
             </Link>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                setUnits(units === "imperial" ? "metric" : "imperial")
-              }
-              aria-label={t("layout.units")}
-              title={t("layout.unitsHint")}
-              className="gap-1.5"
-            >
-              <Ruler className="h-4 w-4" />
-              <span className="text-xs uppercase">
-                {units === "imperial" ? "US" : "SI"}
-              </span>
-            </Button>
-            <div className="relative" ref={langRef}>
+            {/* Inline cluster: Units · Language · (name) · Sign out — only
+                from sm up. On mobile these collapse into the overflow menu
+                below. */}
+            <div className="hidden sm:flex items-center gap-1 sm:gap-2">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setLangOpen((v) => !v)}
-                aria-label={t("layout.language")}
-                aria-expanded={langOpen}
+                onClick={() =>
+                  setUnits(units === "imperial" ? "metric" : "imperial")
+                }
+                aria-label={t("layout.units")}
+                title={t("layout.unitsHint")}
                 className="gap-1.5"
               >
-                <Globe className="h-4 w-4" />
+                <Ruler className="h-4 w-4" />
                 <span className="text-xs uppercase">
-                  {currentLocale.value === "pt-BR" ? "PT" : currentLocale.value}
+                  {units === "imperial" ? "US" : "SI"}
                 </span>
               </Button>
-              {langOpen && (
+              <div className="relative" ref={langRef}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLangOpen((v) => !v)}
+                  aria-label={t("layout.language")}
+                  aria-expanded={langOpen}
+                  className="gap-1.5"
+                >
+                  <Globe className="h-4 w-4" />
+                  <span className="text-xs uppercase">
+                    {currentLocale.value === "pt-BR"
+                      ? "PT"
+                      : currentLocale.value}
+                  </span>
+                </Button>
+                {langOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 mt-1 w-40 rounded-md border bg-popover shadow-md z-50 py-1"
+                  >
+                    {LOCALES.map((l) => (
+                      <button
+                        key={l.value}
+                        role="menuitem"
+                        type="button"
+                        onClick={() => pickLocale(l.value)}
+                        className={cn(
+                          "w-full text-left px-3 py-1.5 text-sm hover:bg-accent",
+                          l.value === locale && "font-medium text-primary",
+                        )}
+                      >
+                        {l.native}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {user && (
+                <span className="text-sm text-muted-foreground hidden md:block">
+                  {user.displayName ?? user.email}
+                </span>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSignOut}
+                aria-label={t("nav.signOut")}
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Mobile overflow: a single "..." button that opens a sheet with
+                Units toggle, Language picker, and Sign out. Keeps the phone
+                header to logo + overflow only. */}
+            <div className="relative sm:hidden" ref={moreRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMoreOpen((v) => !v)}
+                aria-label={t("layout.more")}
+                aria-expanded={moreOpen}
+                className="h-10 w-10 px-0"
+              >
+                <MoreHorizontal className="h-5 w-5" />
+              </Button>
+              {moreOpen && (
                 <div
                   role="menu"
-                  className="absolute right-0 mt-1 w-40 rounded-md border bg-popover shadow-md z-50 py-1"
+                  className="absolute right-0 mt-1 w-56 rounded-md border bg-popover shadow-md z-50 py-1"
                 >
+                  {user && (
+                    <div className="px-3 py-2 text-xs text-muted-foreground border-b mb-1 truncate">
+                      {user.displayName ?? user.email}
+                    </div>
+                  )}
+                  <button
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      setUnits(units === "imperial" ? "metric" : "imperial");
+                      setMoreOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                  >
+                    <Ruler className="h-4 w-4" />
+                    <span>{t("layout.units")}</span>
+                    <span className="ml-auto text-xs uppercase text-muted-foreground">
+                      {units === "imperial" ? "US" : "SI"}
+                    </span>
+                  </button>
+                  <div className="border-t my-1" />
+                  <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {t("layout.language")}
+                  </div>
                   {LOCALES.map((l) => (
                     <button
                       key={l.value}
                       role="menuitem"
                       type="button"
-                      onClick={() => pickLocale(l.value)}
+                      onClick={() => {
+                        pickLocale(l.value);
+                        setMoreOpen(false);
+                      }}
                       className={cn(
-                        "w-full text-left px-3 py-1.5 text-sm hover:bg-accent",
+                        "w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2",
                         l.value === locale && "font-medium text-primary",
                       )}
                     >
+                      <Globe className="h-4 w-4" />
                       {l.native}
                     </button>
                   ))}
+                  <div className="border-t my-1" />
+                  <button
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      setMoreOpen(false);
+                      handleSignOut();
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 text-destructive"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    {t("nav.signOut")}
+                  </button>
                 </div>
               )}
             </div>
-            {user && (
-              <span className="text-sm text-muted-foreground hidden md:block">
-                {user.displayName ?? user.email}
-              </span>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSignOut}
-              aria-label={t("nav.signOut")}
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
           </div>
         </div>
       </header>

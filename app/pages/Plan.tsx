@@ -434,7 +434,9 @@ function SlotCard({
         className={cn(
           "block rounded border border-dashed border-input bg-background/50",
           "text-xs text-muted-foreground hover:bg-accent/30 hover:border-primary/40 transition-colors",
-          compact ? "px-2 py-1.5" : "px-3 py-2",
+          // Roomier hit-area on phones; the compact (md+) week-grid view
+          // keeps the dense layout so 7 columns still fit horizontally.
+          compact ? "px-2 py-1.5" : "px-3 py-3 sm:py-2",
         )}
       >
         <div className="font-medium text-foreground/70 capitalize">
@@ -449,7 +451,7 @@ function SlotCard({
     <div
       className={cn(
         "rounded border bg-card text-card-foreground",
-        compact ? "px-2 py-1.5" : "px-3 py-2",
+        compact ? "px-2 py-1.5" : "px-3 py-3 sm:py-2",
       )}
     >
       <div className="flex items-start justify-between gap-1">
@@ -459,7 +461,7 @@ function SlotCard({
           </div>
           <Link
             to={`/recipes/${recipe.slug}`}
-            className="block text-sm font-medium leading-tight hover:underline truncate"
+            className="block text-sm font-medium leading-tight hover:underline truncate py-0.5"
             title={recipe.title}
           >
             {recipe.title}
@@ -468,10 +470,15 @@ function SlotCard({
         <button
           type="button"
           onClick={() => onUnassign(day, meal)}
-          className="h-5 w-5 rounded text-muted-foreground hover:text-foreground hover:bg-accent/40 inline-flex items-center justify-center flex-shrink-0"
+          className={cn(
+            "rounded text-muted-foreground hover:text-foreground hover:bg-accent/40 inline-flex items-center justify-center flex-shrink-0",
+            // Bigger thumb target on mobile slot cards; compact week-grid
+            // (md+) keeps the original tight footprint.
+            compact ? "h-5 w-5" : "h-8 w-8 sm:h-5 sm:w-5",
+          )}
           aria-label={t("plan.remove")}
         >
-          <X className="h-3 w-3" />
+          <X className={cn(compact ? "h-3 w-3" : "h-4 w-4 sm:h-3 sm:w-3")} />
         </button>
       </div>
       {activeProfiles.length > 0 && (
