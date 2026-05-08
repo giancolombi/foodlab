@@ -232,11 +232,13 @@ export default function Profiles() {
                     </p>
                   )}
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-2 sm:gap-1 flex-shrink-0">
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setEditing(fromProfile(p))}
+                    aria-label={t("profiles.editTitle")}
+                    className="h-11 w-11 sm:h-9 sm:w-9"
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -244,6 +246,8 @@ export default function Profiles() {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleDelete(p.id)}
+                    aria-label={t("profiles.confirmDelete")}
+                    className="h-11 w-11 sm:h-9 sm:w-9"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

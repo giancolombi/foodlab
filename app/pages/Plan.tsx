@@ -143,17 +143,21 @@ export default function Plan() {
           title={t("plan.empty")}
           description={t("plan.emptyHint")}
           action={
-            <div className="flex gap-2 flex-wrap justify-center">
-              <Button onClick={handleGenerate} disabled={generating}>
+            <div className="flex flex-col sm:flex-row gap-2 sm:flex-wrap sm:justify-center w-full sm:w-auto">
+              <Button
+                onClick={handleGenerate}
+                disabled={generating}
+                className="w-full sm:w-auto"
+              >
                 <Sparkles className="h-4 w-4" />
                 {generating ? t("plan.generating") : t("plan.generate")}
               </Button>
-              <Button asChild variant="secondary">
+              <Button asChild variant="secondary" className="w-full sm:w-auto">
                 <Link to="/plan/compose">
                   <MessageSquare className="h-4 w-4" /> {t("plan.compose")}
                 </Link>
               </Button>
-              <Button asChild variant="outline">
+              <Button asChild variant="outline" className="w-full sm:w-auto">
                 <Link to="/recipes">
                   <ChefHat className="h-4 w-4" /> {t("plan.browse")}
                 </Link>

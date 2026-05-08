@@ -362,7 +362,7 @@ export default function Cart() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <ul className="space-y-1.5">
+                <ul className="divide-y divide-border/40 sm:divide-y-0 sm:space-y-1.5">
                   {items.map((item, i) => {
                     const key = `${section}:${item.name}:${i}`;
                     const bought = isBought(key);
@@ -370,14 +370,14 @@ export default function Cart() {
                       <li key={key}>
                         <label
                           className={cn(
-                            "flex items-start gap-2 rounded px-2 py-1.5 -mx-2 cursor-pointer transition-colors",
+                            "flex items-start gap-3 sm:gap-2 rounded px-2 py-2.5 sm:py-1.5 -mx-2 cursor-pointer transition-colors",
                             "hover:bg-accent/30",
                             bought && "text-muted-foreground",
                           )}
                         >
                           <input
                             type="checkbox"
-                            className="mt-1 h-4 w-4 rounded border-input accent-primary cursor-pointer flex-shrink-0"
+                            className="mt-0.5 sm:mt-1 h-5 w-5 sm:h-4 sm:w-4 rounded border-input accent-primary cursor-pointer flex-shrink-0"
                             checked={bought}
                             onChange={() => toggleBought(key)}
                             aria-label={t("cart.markBought", {
@@ -388,21 +388,21 @@ export default function Cart() {
                             <div className="flex items-baseline gap-2 flex-wrap">
                               <span
                                 className={cn(
-                                  "capitalize text-sm",
+                                  "capitalize text-base sm:text-sm break-words",
                                   bought && "line-through",
                                 )}
                               >
                                 {tr(item.name)}
                               </span>
                               {item.quantity && (
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-sm sm:text-xs text-muted-foreground">
                                   {localizeQuantity(item.quantity, locale)}
                                 </span>
                               )}
                               {item.forProfiles.length > 0 && (
                                 <Badge
                                   variant="outline"
-                                  className="text-[10px] py-0 px-1.5"
+                                  className="text-xs sm:text-[10px] py-0.5 sm:py-0 px-1.5"
                                 >
                                   {t("cart.forLabel", {
                                     names: item.forProfiles.join(", "),
@@ -411,12 +411,12 @@ export default function Cart() {
                               )}
                             </div>
                             {item.notes.length > 0 && (
-                              <div className="text-[11px] text-muted-foreground">
+                              <div className="text-xs sm:text-[11px] text-muted-foreground mt-0.5">
                                 {item.notes.map(tr).join(" · ")}
                               </div>
                             )}
                             {item.sources.length > 1 && (
-                              <div className="text-[10px] text-muted-foreground/70">
+                              <div className="text-xs sm:text-[10px] text-muted-foreground/70 mt-0.5">
                                 {t("cart.forDishes", {
                                   names: item.sources.join(", "),
                                 })}

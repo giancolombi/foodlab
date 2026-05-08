@@ -67,13 +67,19 @@ export default function RecipeDetail() {
       </div>
 
       <div className="space-y-2">
-        <div className="flex items-start gap-2 flex-wrap">
-          <h1 className="text-3xl font-semibold">{recipe.title}</h1>
-          {isMine && <Badge variant="accent">{t("detail.savedByYou")}</Badge>}
-          {!isCurated && !isMine && (
-            <Badge variant="outline">{t("detail.community")}</Badge>
-          )}
-          <div className="ml-auto">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:gap-2 gap-3">
+          <div className="flex items-start gap-2 flex-wrap min-w-0 flex-1">
+            <h1 className="text-2xl sm:text-3xl font-semibold break-words [overflow-wrap:anywhere]">
+              {recipe.title}
+            </h1>
+            {isMine && (
+              <Badge variant="accent">{t("detail.savedByYou")}</Badge>
+            )}
+            {!isCurated && !isMine && (
+              <Badge variant="outline">{t("detail.community")}</Badge>
+            )}
+          </div>
+          <div className="sm:ml-auto flex-shrink-0">
             <AddToPlanButton slug={recipe.slug} title={recipe.title} />
           </div>
         </div>

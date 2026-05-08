@@ -600,8 +600,8 @@ export default function PlanCompose() {
                 key={i}
                 className={
                   m.role === "user"
-                    ? "ml-auto max-w-[90%] sm:max-w-[80%] rounded-2xl bg-primary text-primary-foreground px-3 py-2 text-sm whitespace-pre-wrap"
-                    : "mr-auto max-w-[90%] sm:max-w-[80%] rounded-2xl bg-muted px-3 py-2 text-sm whitespace-pre-wrap"
+                    ? "ml-auto max-w-[90%] sm:max-w-[80%] rounded-2xl bg-primary text-primary-foreground px-3 py-2 text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                    : "mr-auto max-w-[90%] sm:max-w-[80%] rounded-2xl bg-muted px-3 py-2 text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
                 }
               >
                 {m.content}

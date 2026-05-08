@@ -123,8 +123,14 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b bg-card">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+      <header className="border-b bg-card pt-[env(safe-area-inset-top)]">
+        <div
+          className="max-w-6xl mx-auto h-14 flex items-center justify-between px-4"
+          style={{
+            paddingLeft: "max(1rem, env(safe-area-inset-left))",
+            paddingRight: "max(1rem, env(safe-area-inset-right))",
+          }}
+        >
           <Link
             to="/"
             className="flex items-center gap-2 font-semibold text-lg"

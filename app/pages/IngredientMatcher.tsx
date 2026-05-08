@@ -245,32 +245,18 @@ export default function IngredientMatcher() {
                 </CardHeader>
                 <CardContent className="pt-0 space-y-3 text-sm">
                   {r.matched_ingredients?.length > 0 && (
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">
-                        {t("match.youHave")}
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {r.matched_ingredients.map((ing) => (
-                          <Badge key={ing} variant="secondary">
-                            {ing}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
+                    <BadgeList
+                      label={t("match.youHave")}
+                      items={r.matched_ingredients}
+                      variant="secondary"
+                    />
                   )}
                   {r.missing_ingredients?.length > 0 && (
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">
-                        {t("match.youllNeed")}
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {r.missing_ingredients.map((ing) => (
-                          <Badge key={ing} variant="outline">
-                            {ing}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
+                    <BadgeList
+                      label={t("match.youllNeed")}
+                      items={r.missing_ingredients}
+                      variant="outline"
+                    />
                   )}
 
                   <div className="flex flex-wrap gap-2 pt-1">
@@ -319,6 +305,42 @@ export default function IngredientMatcher() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+interface BadgeListProps {
+  label: string;
+  items: string[];
+  variant: "secondary" | "outline";
+}
+
+// Caps visible badges so a recipe with 12 missing ingredients doesn't blow
+// the card height up on phones. Tap "+N more" to expand inline.
+function BadgeList({ label, items, variant }: BadgeListProps) {
+  const [expanded, setExpanded] = useState(false);
+  const VISIBLE = 6;
+  const overflowCount = items.length - VISIBLE;
+  const visibleItems = expanded ? items : items.slice(0, VISIBLE);
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground mb-1">{label}</div>
+      <div className="flex flex-wrap gap-1">
+        {visibleItems.map((ing) => (
+          <Badge key={ing} variant={variant}>
+            {ing}
+          </Badge>
+        ))}
+        {!expanded && overflowCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground rounded-md border border-dashed px-2 py-0.5"
+          >
+            +{overflowCount}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

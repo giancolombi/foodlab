@@ -280,7 +280,7 @@ function StructuredPreview({ recipe, compact, t }: PreviewProps) {
           <div className="text-xs text-muted-foreground mb-1">
             {t("detail.sharedIngredients")}
           </div>
-          <ul className="list-disc pl-5 text-xs space-y-0.5">
+          <ul className="list-disc pl-5 text-sm sm:text-xs space-y-0.5">
             {sharedIngredients.map((i, idx) => (
               <li key={idx}>{i}</li>
             ))}
@@ -292,7 +292,7 @@ function StructuredPreview({ recipe, compact, t }: PreviewProps) {
           <div className="text-xs text-muted-foreground mb-1">
             {t("detail.serveWith")}
           </div>
-          <ul className="list-disc pl-5 text-xs space-y-0.5">
+          <ul className="list-disc pl-5 text-sm sm:text-xs space-y-0.5">
             {serveWith.map((i, idx) => (
               <li key={idx}>{i}</li>
             ))}
@@ -303,7 +303,7 @@ function StructuredPreview({ recipe, compact, t }: PreviewProps) {
         const instructions = v?.instructions ?? [];
         return (
           <div key={i} className="border-t pt-2">
-            <div className="font-medium text-xs">
+            <div className="font-medium text-sm sm:text-xs">
               {v?.name}
               {v?.group_label && (
                 <span className="text-muted-foreground font-normal">
@@ -313,7 +313,7 @@ function StructuredPreview({ recipe, compact, t }: PreviewProps) {
               )}
             </div>
             {v?.protein && (
-              <div className="text-xs">
+              <div className="text-sm sm:text-xs">
                 <span className="text-muted-foreground">
                   {t("detail.protein")}
                 </span>{" "}
@@ -321,7 +321,7 @@ function StructuredPreview({ recipe, compact, t }: PreviewProps) {
               </div>
             )}
             {instructions.length > 0 && (
-              <ol className="list-decimal pl-5 text-xs space-y-0.5 mt-1">
+              <ol className="list-decimal pl-5 text-sm sm:text-xs space-y-1 sm:space-y-0.5 mt-1">
                 {instructions.map((s, idx) => (
                   <li key={idx}>{s}</li>
                 ))}
@@ -335,7 +335,9 @@ function StructuredPreview({ recipe, compact, t }: PreviewProps) {
           <div className="text-xs text-muted-foreground mb-0.5">
             {t("modify.summary")}
           </div>
-          <div className="text-xs italic">{recipe.modification_summary}</div>
+          <div className="text-sm sm:text-xs italic">
+            {recipe.modification_summary}
+          </div>
         </div>
       )}
     </div>

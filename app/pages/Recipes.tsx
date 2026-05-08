@@ -134,7 +134,9 @@ export default function Recipes() {
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="leading-tight">{r.title}</CardTitle>
+                      <CardTitle className="leading-tight break-words [overflow-wrap:anywhere] min-w-0">
+                        {r.title}
+                      </CardTitle>
                       <div className="flex flex-wrap justify-end gap-1 shrink-0">
                         {inPlan && (
                           <Badge
