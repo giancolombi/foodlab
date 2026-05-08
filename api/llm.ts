@@ -178,6 +178,8 @@ export async function streamRecommendations(
     model: OLLAMA_MODEL,
     stream: true,
     format: "json",
+    // Keep the model resident so the next call doesn't pay cold-start.
+    keep_alive: "24h",
     messages: [
       { role: "system", content: systemPrompt },
       {
@@ -364,6 +366,7 @@ export async function streamModifyRecipe(
     model: OLLAMA_MODEL,
     stream: true,
     format: "json",
+    keep_alive: "24h",
     messages: [
       { role: "system", content: systemPrompt },
       {
@@ -373,8 +376,10 @@ export async function streamModifyRecipe(
     ],
     options: {
       temperature: 0.2,
-      num_ctx: 4096,
-      num_predict: 1500,
+      // Tighter ceilings for faster prompt-eval and so the model can't
+      // ramble past the JSON close. Recipes serialize to ~600-900 tokens.
+      num_ctx: 2048,
+      num_predict: 1024,
     },
   };
 

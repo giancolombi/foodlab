@@ -12,7 +12,9 @@ import { api } from "@/lib/api";
 import {
   streamModify,
   type ModifiedRecipe,
+  type PartialRecipe,
 } from "@/lib/streamModify";
+import { warmTranslator } from "@/lib/translator";
 
 interface Props {
   slug: string;
@@ -33,13 +35,23 @@ export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
   const { locale, t } = useLanguage();
   const [instruction, setInstruction] = useState("");
   const [preview, setPreview] = useState<ModifiedRecipe | null>(null);
+  const [partial, setPartial] = useState<PartialRecipe | null>(null);
   const [previewMarkdown, setPreviewMarkdown] = useState("");
-  const [rawStreamed, setRawStreamed] = useState(0);
   const [streaming, setStreaming] = useState(false);
   const [saving, setSaving] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const warmedRef = useRef(false);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Pre-warm Ollama as soon as the user shows intent. Fire-and-forget; the
+  // server-side warm endpoint is already debounced. We only do this once per
+  // mount of the panel so opening many recipes doesn't spam the warm call.
+  const handleWarm = () => {
+    if (warmedRef.current) return;
+    warmedRef.current = true;
+    warmTranslator();
+  };
 
   const handleModify = async (e: FormEvent) => {
     e.preventDefault();
@@ -58,16 +70,18 @@ export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
 
     setStreaming(true);
     setPreview(null);
+    setPartial(null);
     setPreviewMarkdown("");
-    setRawStreamed(0);
 
     try {
       await streamModify(
         { slug, instruction: trimmed, locale, signal: controller.signal },
         {
-          onChunk: (total) => setRawStreamed(total.length),
+          onChunk: () => {},
+          onPartial: (p) => setPartial(p),
           onComplete: ({ recipe, markdown }) => {
             setPreview(recipe);
+            setPartial(null);
             setPreviewMarkdown(markdown);
           },
           onError: (msg) => toast.error(msg),
@@ -89,6 +103,7 @@ export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
 
   const handleDiscard = () => {
     setPreview(null);
+    setPartial(null);
     setPreviewMarkdown("");
     setInstruction("");
   };
@@ -131,6 +146,7 @@ export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
           placeholder={t("modify.instructionPlaceholder")}
           value={instruction}
           onChange={(e) => setInstruction(e.target.value)}
+          onFocus={handleWarm}
           disabled={streaming}
         />
         <div className="flex gap-2">
@@ -157,24 +173,37 @@ export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
             {t("modify.signinSuffix")}
           </p>
         )}
-        {streaming && rawStreamed > 0 && !preview && (
+        {streaming && !preview && !partial && (
           <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
             </span>
-            {t("modify.streaming")} · {rawStreamed} chars
+            {t("modify.streaming")}
           </p>
         )}
       </form>
 
-      {preview && (
+      {(preview || partial) && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium">{t("modify.preview")}</h4>
+            {streaming && partial && !preview && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                </span>
+                {t("modify.streaming")}
+              </span>
+            )}
           </div>
-          <StructuredPreview recipe={preview} compact={compact} t={t} />
-          {!streaming && (
+          <StructuredPreview
+            recipe={preview ?? (partial as PartialRecipe)}
+            compact={compact}
+            t={t}
+          />
+          {!streaming && preview && (
             <>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" onClick={handleSave} disabled={saving}>
@@ -206,22 +235,29 @@ export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
 }
 
 interface PreviewProps {
-  recipe: ModifiedRecipe;
+  recipe: PartialRecipe;
   compact: boolean;
   t: (k: any, p?: Record<string, string | number>) => string;
 }
 
 function StructuredPreview({ recipe, compact, t }: PreviewProps) {
+  const sharedIngredients = recipe.shared_ingredients ?? [];
+  const serveWith = recipe.serve_with ?? [];
+  const versions = recipe.versions ?? [];
   return (
     <div
       className={`bg-muted/50 border rounded-md p-3 text-sm space-y-3 overflow-auto ${
         compact ? "max-h-80" : "max-h-[28rem]"
       }`}
     >
-      <div>
-        <div className="text-xs text-muted-foreground">{t("modify.title")}</div>
-        <div className="font-semibold">{recipe.title}</div>
-      </div>
+      {recipe.title && (
+        <div>
+          <div className="text-xs text-muted-foreground">
+            {t("modify.title")}
+          </div>
+          <div className="font-semibold">{recipe.title}</div>
+        </div>
+      )}
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         {recipe.cuisine && (
           <span>
@@ -239,56 +275,61 @@ function StructuredPreview({ recipe, compact, t }: PreviewProps) {
           </span>
         )}
       </div>
-      {recipe.shared_ingredients.length > 0 && (
+      {sharedIngredients.length > 0 && (
         <div>
           <div className="text-xs text-muted-foreground mb-1">
             {t("detail.sharedIngredients")}
           </div>
           <ul className="list-disc pl-5 text-xs space-y-0.5">
-            {recipe.shared_ingredients.map((i, idx) => (
+            {sharedIngredients.map((i, idx) => (
               <li key={idx}>{i}</li>
             ))}
           </ul>
         </div>
       )}
-      {recipe.serve_with.length > 0 && (
+      {serveWith.length > 0 && (
         <div>
           <div className="text-xs text-muted-foreground mb-1">
             {t("detail.serveWith")}
           </div>
           <ul className="list-disc pl-5 text-xs space-y-0.5">
-            {recipe.serve_with.map((i, idx) => (
+            {serveWith.map((i, idx) => (
               <li key={idx}>{i}</li>
             ))}
           </ul>
         </div>
       )}
-      {recipe.versions.map((v, i) => (
-        <div key={i} className="border-t pt-2">
-          <div className="font-medium text-xs">
-            {v.name}
-            {v.group_label && (
-              <span className="text-muted-foreground font-normal">
-                {" "}
-                — {v.group_label}
-              </span>
+      {versions.map((v, i) => {
+        const instructions = v?.instructions ?? [];
+        return (
+          <div key={i} className="border-t pt-2">
+            <div className="font-medium text-xs">
+              {v?.name}
+              {v?.group_label && (
+                <span className="text-muted-foreground font-normal">
+                  {" "}
+                  — {v.group_label}
+                </span>
+              )}
+            </div>
+            {v?.protein && (
+              <div className="text-xs">
+                <span className="text-muted-foreground">
+                  {t("detail.protein")}
+                </span>{" "}
+                {v.protein}
+              </div>
+            )}
+            {instructions.length > 0 && (
+              <ol className="list-decimal pl-5 text-xs space-y-0.5 mt-1">
+                {instructions.map((s, idx) => (
+                  <li key={idx}>{s}</li>
+                ))}
+              </ol>
             )}
           </div>
-          {v.protein && (
-            <div className="text-xs">
-              <span className="text-muted-foreground">
-                {t("detail.protein")}
-              </span>{" "}
-              {v.protein}
-            </div>
-          )}
-          <ol className="list-decimal pl-5 text-xs space-y-0.5 mt-1">
-            {v.instructions.map((s, idx) => (
-              <li key={idx}>{s}</li>
-            ))}
-          </ol>
-        </div>
-      ))}
+        );
+      })}
       {recipe.modification_summary && (
         <div className="border-t pt-2">
           <div className="text-xs text-muted-foreground mb-0.5">
