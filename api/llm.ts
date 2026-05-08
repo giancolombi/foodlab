@@ -1091,7 +1091,9 @@ export async function checkOllama(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(`${OLLAMA_URL}/api/tags`);
+    const res = await fetch(`${OLLAMA_URL}/api/tags`, {
+      signal: AbortSignal.timeout(2000),
+    });
     if (!res.ok) {
       return {
         ok: false,
