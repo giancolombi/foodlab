@@ -7,6 +7,11 @@ import type { Locale } from "@/i18n/strings";
 export interface StreamCallbacks {
   onChunk: (totalText: string, deltaText: string) => void;
   onPartial: (recommendation: Recommendation) => void;
+  /**
+   * Reasoning tokens from thinking-capable models. Only emitted when
+   * server-side OLLAMA_THINKING=true.
+   */
+  onThinking?: (totalThinking: string, delta: string) => void;
   onComplete: (final: Recommendation[]) => void;
   onError: (message: string) => void;
 }
@@ -58,6 +63,7 @@ export async function streamMatch(
   const decoder = new TextDecoder();
   let sseBuffer = "";
   let llmText = "";
+  let thinking = "";
   const seenSlugs = new Set<string>();
 
   while (true) {
@@ -92,6 +98,12 @@ export async function streamMatch(
             cb.onPartial(rec);
           }
         }
+      } else if (
+        payload.type === "thinking" &&
+        typeof payload.content === "string"
+      ) {
+        thinking += payload.content;
+        cb.onThinking?.(thinking, payload.content);
       } else if (payload.type === "complete") {
         cb.onComplete(payload.recommendations ?? []);
       } else if (payload.type === "error") {

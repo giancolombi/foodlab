@@ -99,6 +99,10 @@ router.post("/", requireAuth, async (req, res) => {
           if (aborted) return;
           send({ type: "chunk", content: chunk });
         },
+        onThinking: (chunk) => {
+          if (aborted) return;
+          send({ type: "thinking", content: chunk });
+        },
         onDone: ({ recommendations }) => {
           if (aborted) return;
           send({ type: "complete", recommendations });

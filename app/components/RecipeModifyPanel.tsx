@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ThinkingTrace } from "@/components/ThinkingTrace";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { api } from "@/lib/api";
@@ -37,6 +38,7 @@ export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
   const [preview, setPreview] = useState<ModifiedRecipe | null>(null);
   const [partial, setPartial] = useState<PartialRecipe | null>(null);
   const [previewMarkdown, setPreviewMarkdown] = useState("");
+  const [thinking, setThinking] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [saving, setSaving] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -71,6 +73,7 @@ export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
     setStreaming(true);
     setPreview(null);
     setPartial(null);
+    setThinking("");
     setPreviewMarkdown("");
 
     try {
@@ -79,6 +82,7 @@ export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
         {
           onChunk: () => {},
           onPartial: (p) => setPartial(p),
+          onThinking: (total) => setThinking(total),
           onComplete: ({ recipe, markdown }) => {
             setPreview(recipe);
             setPartial(null);
@@ -104,6 +108,7 @@ export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
   const handleDiscard = () => {
     setPreview(null);
     setPartial(null);
+    setThinking("");
     setPreviewMarkdown("");
     setInstruction("");
   };
@@ -183,6 +188,8 @@ export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
           </p>
         )}
       </form>
+
+      {thinking && <ThinkingTrace text={thinking} streaming={streaming} />}
 
       {(preview || partial) && (
         <div className="space-y-3">

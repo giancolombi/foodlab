@@ -10,10 +10,13 @@ export const LOCALES: { value: Locale; label: string; native: string }[] = [
   { value: "pt-BR", label: "Portuguese", native: "Português" },
 ];
 
+// Mirror of api/llm.ts LOCALE_DIRECTIVE — covers both the model's output
+// AND its internal reasoning trace, so a Spanish user never sees English
+// "thinking" tokens while the answer is in Spanish.
 export const LOCALE_LLM_DIRECTIVE: Record<Locale, string> = {
-  en: "Respond in English.",
-  es: "Respond in Latin American Spanish — neutral for Cuban, Peruvian, Colombian, Dominican, Venezuelan, Mexican readers. Use: frijoles, aguacate, taza, cucharada, cucharadita, cebolla, ajo, res. Avoid Spain-specific terms (judías, patata, zumo).",
-  "pt-BR": "Respond in Brazilian Portuguese. Use: xícara, colher de sopa, colher de chá, feijão, abacate, mandioca, geladeira, cebola, alho, carne. Avoid European Portuguese (chávena, frigorífico, ananás).",
+  en: "Write BOTH your internal reasoning (any thinking / scratchpad) AND your final answer in English.",
+  es: "Write BOTH your internal reasoning (any thinking / scratchpad) AND your final answer in Latin American Spanish — neutral for Cuban, Peruvian, Colombian, Dominican, Venezuelan, Mexican readers. Use: frijoles, aguacate, taza, cucharada, cucharadita, cebolla, ajo, res. Avoid Spain-specific terms (judías, patata, zumo). Do not switch to English at any point.",
+  "pt-BR": "Write BOTH your internal reasoning (any thinking / scratchpad) AND your final answer in Brazilian Portuguese. Use: xícara, colher de sopa, colher de chá, feijão, abacate, mandioca, geladeira, cebola, alho, carne. Avoid European Portuguese (chávena, frigorífico, ananás). Do not switch to English at any point.",
 };
 
 const en = {
@@ -328,6 +331,9 @@ const en = {
   "compose.notSavedHint":
     "Recipes haven't been generated yet — hit Save & apply first to include full recipes and a shopping list in the doc.",
   "plan.compose": "Iterate on menu",
+
+  // ai / model output
+  "ai.thinking": "Thinking",
 
   // generic
   "common.backToRecipes": "Back to recipes",
@@ -645,6 +651,8 @@ const es: Partial<Record<StringKey, string>> = {
     "Aún no se generaron las recetas — pulsa Guardar y aplicar primero para incluir las recetas completas y la lista de compras en el documento.",
   "plan.compose": "Iterar el menú",
 
+  "ai.thinking": "Pensando",
+
   "common.backToRecipes": "Volver a recetas",
   "common.generic.error": "Algo salió mal",
 };
@@ -957,6 +965,8 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "compose.notSavedHint":
     "As receitas ainda não foram geradas — clique em Salvar e aplicar primeiro para incluir as receitas completas e a lista de compras no documento.",
   "plan.compose": "Iterar o menu",
+
+  "ai.thinking": "Pensando",
 
   "common.backToRecipes": "Voltar às receitas",
   "common.generic.error": "Algo deu errado",

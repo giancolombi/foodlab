@@ -5,14 +5,27 @@
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:3b";
 
+// Reasoning-capable models (qwen3, deepseek-r1, gpt-oss, magistral) emit a
+// separate `message.thinking` field on each streamed event when called with
+// `think: true`. Non-reasoning models ignore the option but newer Ollama
+// builds may surface it as a 400, so we leave it OFF by default and let
+// operators opt in via env when they swap the model. Set to "true" to turn
+// on; the streaming pipeline will forward thinking tokens regardless.
+const OLLAMA_THINKING = process.env.OLLAMA_THINKING === "true";
+
 export type Locale = "en" | "es" | "pt-BR";
 
 // Keep in sync with web/app/i18n/strings.ts LOCALE_LLM_DIRECTIVE.
+//
+// Important: this covers BOTH the model's user-visible output AND any
+// internal reasoning / "thinking" trace on reasoning-capable models. The
+// frontend may surface the reasoning live, so it has to match the user's
+// chosen language — English thinking under Spanish output is jarring.
 const LOCALE_DIRECTIVE: Record<Locale, string> = {
-  en: "Respond in English.",
-  es: "Respond in Latin American Spanish — neutral for Cuban, Peruvian, Colombian, Dominican, Venezuelan, Mexican readers. Use: frijoles, aguacate, taza, cucharada, cucharadita, cebolla, ajo, res. Avoid Spain-specific terms (judías, patata, zumo).",
+  en: "Write BOTH your internal reasoning (any thinking / scratchpad) AND your final answer in English.",
+  es: "Write BOTH your internal reasoning (any thinking / scratchpad) AND your final answer in Latin American Spanish — neutral for Cuban, Peruvian, Colombian, Dominican, Venezuelan, Mexican readers. Use: frijoles, aguacate, taza, cucharada, cucharadita, cebolla, ajo, res. Avoid Spain-specific terms (judías, patata, zumo). Do not switch to English at any point.",
   "pt-BR":
-    "Respond in Brazilian Portuguese. Use: xícara, colher de sopa, colher de chá, feijão, abacate, mandioca, geladeira, cebola, alho, carne. Avoid European Portuguese (chávena, frigorífico, ananás).",
+    "Write BOTH your internal reasoning (any thinking / scratchpad) AND your final answer in Brazilian Portuguese. Use: xícara, colher de sopa, colher de chá, feijão, abacate, mandioca, geladeira, cebola, alho, carne. Avoid European Portuguese (chávena, frigorífico, ananás). Do not switch to English at any point.",
 };
 
 function normalizeLocale(input: unknown): Locale {
@@ -150,6 +163,8 @@ function buildUserPrompt(args: {
 
 export interface StreamHandlers {
   onContent: (chunk: string) => void;
+  /** Reasoning tokens from thinking-capable models (qwen3, deepseek-r1, …). */
+  onThinking?: (chunk: string) => void;
   onDone: (final: { recommendations: Recommendation[]; raw: string }) => void;
 }
 
@@ -174,7 +189,7 @@ export async function streamRecommendations(
     "{LOCALE_DIRECTIVE}",
     LOCALE_DIRECTIVE[locale],
   );
-  const body = {
+  const body: Record<string, unknown> = {
     model: OLLAMA_MODEL,
     stream: true,
     format: "json",
@@ -196,6 +211,7 @@ export async function streamRecommendations(
       num_predict: 512,
     },
   };
+  if (OLLAMA_THINKING) body.think = true;
 
   const res = await fetch(`${OLLAMA_URL}/api/chat`, {
     method: "POST",
@@ -224,13 +240,17 @@ export async function streamRecommendations(
       if (!trimmed) continue;
       try {
         const event = JSON.parse(trimmed) as {
-          message?: { content?: string };
+          message?: { content?: string; thinking?: string };
           done?: boolean;
         };
         const piece = event.message?.content;
         if (piece) {
           full += piece;
           handlers.onContent(piece);
+        }
+        const thought = event.message?.thinking;
+        if (thought && handlers.onThinking) {
+          handlers.onThinking(thought);
         }
       } catch {
         // ignore malformed line — Ollama is generally well-behaved
@@ -345,6 +365,7 @@ Translate all human-readable strings (title, cuisine, group_label, protein, shar
 
 export interface ModifyHandlers {
   onContent: (chunk: string) => void;
+  onThinking?: (chunk: string) => void;
   onDone: (final: { recipe: ModifiedRecipe; raw: string }) => void;
 }
 
@@ -362,7 +383,7 @@ export async function streamModifyRecipe(
     "{LOCALE_DIRECTIVE}",
     LOCALE_DIRECTIVE[locale],
   );
-  const body = {
+  const body: Record<string, unknown> = {
     model: OLLAMA_MODEL,
     stream: true,
     format: "json",
@@ -382,6 +403,7 @@ export async function streamModifyRecipe(
       num_predict: 1024,
     },
   };
+  if (OLLAMA_THINKING) body.think = true;
 
   const res = await fetch(`${OLLAMA_URL}/api/chat`, {
     method: "POST",
@@ -408,13 +430,17 @@ export async function streamModifyRecipe(
       if (!trimmed) continue;
       try {
         const event = JSON.parse(trimmed) as {
-          message?: { content?: string };
+          message?: { content?: string; thinking?: string };
           done?: boolean;
         };
         const piece = event.message?.content;
         if (piece) {
           full += piece;
           handlers.onContent(piece);
+        }
+        const thought = event.message?.thinking;
+        if (thought && handlers.onThinking) {
+          handlers.onThinking(thought);
         }
       } catch {
         // ignore malformed line

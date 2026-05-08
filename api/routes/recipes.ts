@@ -218,6 +218,10 @@ router.post("/:slug/modify", requireAuth, async (req, res) => {
           if (aborted) return;
           send({ type: "chunk", content: chunk });
         },
+        onThinking: (chunk) => {
+          if (aborted) return;
+          send({ type: "thinking", content: chunk });
+        },
         onDone: ({ recipe }) => {
           if (aborted) return;
           const markdown = renderRecipeMarkdown(recipe, original.title);
