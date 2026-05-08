@@ -38,12 +38,20 @@ router.post("/", requireAuth, async (req, res) => {
     preferences: string[];
   }> = [];
   try {
-    // Match against curated recipes plus the caller's own saved/modified ones.
+    // Match against curated recipes plus the caller's own saved/modified
+    // ones. Recipes are stored per-locale (one row per (slug, locale)) so
+    // we collapse to one row per slug, preferring the requested locale and
+    // falling back to English so the matcher's text + the recommendations
+    // it produces stay in the user's language.
+    const matchLocale =
+      locale === "es" ? "es" : locale === "pt-BR" ? "pt" : "en";
     const recipesResult = await pool.query(
-      `SELECT id, slug, title, cuisine, shared_ingredients, versions
+      `SELECT DISTINCT ON (slug) id, slug, title, cuisine, shared_ingredients, versions
        FROM recipes
-       WHERE owner_user_id IS NULL OR owner_user_id = $1::uuid`,
-      [req.user!.sub],
+       WHERE (owner_user_id IS NULL OR owner_user_id = $1::uuid)
+         AND (locale = $2 OR locale = 'en')
+       ORDER BY slug, CASE WHEN locale = $2 THEN 0 ELSE 1 END`,
+      [req.user!.sub, matchLocale],
     );
     recipes = recipesResult.rows;
 

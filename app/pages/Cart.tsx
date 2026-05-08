@@ -78,10 +78,11 @@ export default function Cart() {
   useEffect(() => {
     setLoading(true);
     const slugs = [...planSlugs];
+    const localeParam = encodeURIComponent(locale);
     Promise.all([
       Promise.all(
         slugs.map((slug) =>
-          api<{ recipe: RecipeDetail }>(`/recipes/${slug}`)
+          api<{ recipe: RecipeDetail }>(`/recipes/${slug}?locale=${localeParam}`)
             .then(({ recipe }) => recipe)
             .catch(() => null),
         ),
@@ -99,7 +100,7 @@ export default function Cart() {
       })
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [planSlugs.size]);
+  }, [planSlugs.size, locale]);
 
   // Smart result is invalidated by plan / profile / serve-with changes.
   useEffect(() => {

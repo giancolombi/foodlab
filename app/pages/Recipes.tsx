@@ -24,7 +24,7 @@ type OwnerFilter = "all" | "curated" | "mine";
 
 export default function Recipes() {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const { isInPlan, slotsForSlug } = usePlan();
   const [recipes, setRecipes] = useState<RecipeListItem[]>([]);
   const [search, setSearch] = useState("");
@@ -32,10 +32,12 @@ export default function Recipes() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api<{ recipes: RecipeListItem[] }>("/recipes")
+    setLoading(true);
+    const localeParam = encodeURIComponent(locale);
+    api<{ recipes: RecipeListItem[] }>(`/recipes?locale=${localeParam}`)
       .then(({ recipes }) => setRecipes(recipes))
       .finally(() => setLoading(false));
-  }, []);
+  }, [locale]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

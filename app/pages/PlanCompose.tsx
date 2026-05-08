@@ -344,10 +344,11 @@ export default function PlanCompose() {
       let recipes: RecipeDetail[] = [];
       let profiles: Profile[] = [];
       if (savedRefs.length > 0) {
+        const localeParam = encodeURIComponent(locale);
         const [fetched, profileRes] = await Promise.all([
           Promise.all(
             savedRefs.map((r) =>
-              api<{ recipe: RecipeDetail }>(`/recipes/${r.slug}`)
+              api<{ recipe: RecipeDetail }>(`/recipes/${r.slug}?locale=${localeParam}`)
                 .then(({ recipe }) => recipe)
                 .catch(() => null),
             ),

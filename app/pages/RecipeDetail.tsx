@@ -6,12 +6,10 @@ import { AddToPlanButton } from "@/components/AddToPlanButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
 import { RecipeModifyPanel } from "@/components/RecipeModifyPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUnits, convertTemperatures } from "@/contexts/UnitsContext";
-import { useTranslatedRecipe } from "@/hooks/useTranslatedRecipe";
 import { api } from "@/lib/api";
 import type { RecipeDetail as RecipeDetailT } from "@/types";
 
@@ -21,18 +19,18 @@ export default function RecipeDetail() {
   const { user } = useAuth();
   const { t, locale } = useLanguage();
   const { units } = useUnits();
-  const [raw, setRaw] = useState<RecipeDetailT | null>(null);
-  const { recipe, translating } = useTranslatedRecipe(raw, locale);
+  const [recipe, setRecipe] = useState<RecipeDetailT | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slug) return;
-    setRaw(null);
+    setRecipe(null);
     setError(null);
-    api<{ recipe: RecipeDetailT }>(`/recipes/${slug}`)
-      .then(({ recipe }) => setRaw(recipe))
+    const localeParam = encodeURIComponent(locale);
+    api<{ recipe: RecipeDetailT }>(`/recipes/${slug}?locale=${localeParam}`)
+      .then(({ recipe }) => setRecipe(recipe))
       .catch((e) => setError(e.message));
-  }, [slug]);
+  }, [slug, locale]);
 
   if (error) {
     return (
@@ -79,12 +77,6 @@ export default function RecipeDetail() {
             <AddToPlanButton slug={recipe.slug} title={recipe.title} />
           </div>
         </div>
-        {translating && (
-          <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Spinner size="xs" label={t("detail.translating")} />
-            {t("detail.translating")}
-          </div>
-        )}
         <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
           {recipe.cuisine && <Badge variant="secondary">{recipe.cuisine}</Badge>}
           {totalMin > 0 && (

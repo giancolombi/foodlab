@@ -6,9 +6,26 @@ import { z } from "zod";
 import { pool } from "../db.js";
 import { renderRecipeMarkdown, streamModifyRecipe } from "../llm.js";
 import { requireAuth, verifyToken } from "../middleware/auth.js";
-import { parseRecipe } from "../recipeParser.js";
+import { parseRecipe, type Locale } from "../recipeParser.js";
 
 const router = Router();
+
+const SUPPORTED_LOCALES: readonly Locale[] = ["en", "es", "pt"] as const;
+
+// The frontend uses BCP-47 locale codes ("pt-BR") in i18n strings, but
+// recipes are stored under shorter ISO 639-1 codes ("pt") so the filename
+// suffix is clean. Normalize at the API edge.
+function normalizeLocale(raw: string | undefined | null): Locale {
+  if (!raw) return "en";
+  const lower = raw.toLowerCase();
+  if (lower === "es" || lower.startsWith("es-")) return "es";
+  if (lower === "pt" || lower.startsWith("pt-")) return "pt";
+  return "en";
+}
+
+function readLocaleParam(req: any): Locale {
+  return normalizeLocale(typeof req.query.locale === "string" ? req.query.locale : null);
+}
 
 /**
  * Optional auth — if a token is present we attach req.user, otherwise we
@@ -53,6 +70,7 @@ router.get("/", optionalAuth, async (req, res) => {
     typeof req.query.search === "string" ? req.query.search.trim() : "";
   const ownerFilter =
     typeof req.query.owner === "string" ? req.query.owner : null; // "mine" | "curated" | null
+  const locale = readLocaleParam(req);
 
   const vis = buildVisibilityClause(req.user?.sub);
   const params: any[] = [...vis.params];
@@ -75,12 +93,23 @@ router.get("/", optionalAuth, async (req, res) => {
     where.push(`owner_user_id IS NULL`);
   }
 
+  // Pre-translated recipes: pick the row in the caller's locale, fall back
+  // to English when a translation hasn't been written yet. DISTINCT ON
+  // collapses the (en, es, pt) triple per slug into one row.
+  params.push(locale);
+  const localeIdx = params.length;
+  where.push(`(locale = $${localeIdx} OR locale = 'en')`);
+
   const { rows } = await pool.query(
-    `SELECT id, slug, title, category, cuisine, freezer_friendly,
-            prep_minutes, cook_minutes, shared_ingredients, serve_with, versions,
-            owner_user_id, parent_slug, is_public, modification_note
-     FROM recipes
-     WHERE ${where.join(" AND ")}
+    `SELECT * FROM (
+       SELECT DISTINCT ON (slug)
+         id, slug, locale, title, category, cuisine, freezer_friendly,
+         prep_minutes, cook_minutes, shared_ingredients, serve_with, versions,
+         owner_user_id, parent_slug, is_public, modification_note
+       FROM recipes
+       WHERE ${where.join(" AND ")}
+       ORDER BY slug, CASE WHEN locale = $${localeIdx} THEN 0 ELSE 1 END
+     ) r
      ORDER BY title ASC`,
     params,
   );
@@ -90,9 +119,16 @@ router.get("/", optionalAuth, async (req, res) => {
 router.get("/:slug", optionalAuth, async (req, res) => {
   // slug is $1, so visibility params start at $2.
   const vis = buildVisibilityClause(req.user?.sub, 1);
+  const locale = readLocaleParam(req);
+  const params = [req.params.slug, ...vis.params, locale];
+  const localeIdx = params.length;
   const { rows } = await pool.query(
-    `SELECT * FROM recipes WHERE slug = $1 AND ${vis.clause}`,
-    [req.params.slug, ...vis.params],
+    `SELECT * FROM recipes
+     WHERE slug = $1 AND ${vis.clause}
+       AND (locale = $${localeIdx} OR locale = 'en')
+     ORDER BY CASE WHEN locale = $${localeIdx} THEN 0 ELSE 1 END
+     LIMIT 1`,
+    params,
   );
   if (!rows[0]) {
     res.status(404).json({ error: "Recipe not found" });
@@ -124,15 +160,22 @@ router.post("/:slug/modify", requireAuth, async (req, res) => {
     return;
   }
 
-  // Load the source recipe (must be visible to the caller).
+  // Load the source recipe (must be visible to the caller). Prefer the row
+  // matching the requested locale so the LLM starts from a localized
+  // source, falling back to English when no translation exists yet.
   let original: { raw_markdown: string; title: string; slug: string };
   try {
-    // slug is $1, so visibility params start at $2.
     const vis = buildVisibilityClause(req.user!.sub, 1);
+    const sourceLocale = normalizeLocale(parsed.data.locale);
+    const params = [req.params.slug, ...vis.params, sourceLocale];
+    const localeIdx = params.length;
     const { rows } = await pool.query(
       `SELECT raw_markdown, title, slug FROM recipes
-       WHERE slug = $1 AND ${vis.clause}`,
-      [req.params.slug, ...vis.params],
+       WHERE slug = $1 AND ${vis.clause}
+         AND (locale = $${localeIdx} OR locale = 'en')
+       ORDER BY CASE WHEN locale = $${localeIdx} THEN 0 ELSE 1 END
+       LIMIT 1`,
+      params,
     );
     if (!rows[0]) {
       res.status(404).json({ error: "Recipe not found" });
@@ -198,12 +241,13 @@ router.post("/:slug/modify", requireAuth, async (req, res) => {
 
 /**
  * POST /api/recipes — save a user-owned recipe (typically a modification).
- * Body: { markdown: string, parentSlug?: string, modificationNote?: string }
+ * Body: { markdown: string, parentSlug?: string, modificationNote?: string, locale?: "en"|"es"|"pt-BR" }
  */
 const createSchema = z.object({
   markdown: z.string().min(50).max(50_000),
   parentSlug: z.string().min(1).max(120).optional(),
   modificationNote: z.string().max(400).optional(),
+  locale: z.enum(["en", "es", "pt-BR", "pt"]).optional(),
 });
 
 router.post("/", requireAuth, async (req, res) => {
@@ -215,7 +259,10 @@ router.post("/", requireAuth, async (req, res) => {
   try {
     const recipe = await saveUserRecipe({
       userId: req.user!.sub,
-      ...parsed.data,
+      markdown: parsed.data.markdown,
+      parentSlug: parsed.data.parentSlug,
+      modificationNote: parsed.data.modificationNote,
+      locale: parsed.data.locale,
     });
     res.status(201).json({ recipe });
   } catch (err: any) {
@@ -239,14 +286,16 @@ export async function saveUserRecipe(args: {
   parentSlug?: string;
   modificationNote?: string;
   category?: "mains" | "breakfast";
+  locale?: string;
 }): Promise<{ id: string; slug: string; title: string }> {
   const { userId, markdown, parentSlug, modificationNote } = args;
+  const locale = normalizeLocale(args.locale);
 
   let category: "mains" | "breakfast" = args.category ?? "mains";
   if (!args.category && parentSlug) {
     try {
       const { rows } = await pool.query(
-        `SELECT category FROM recipes WHERE slug = $1`,
+        `SELECT category FROM recipes WHERE slug = $1 LIMIT 1`,
         [parentSlug],
       );
       if (rows[0]?.category === "breakfast") category = "breakfast";
@@ -261,7 +310,7 @@ export async function saveUserRecipe(args: {
 
   let parsedRecipe;
   try {
-    parsedRecipe = parseRecipe(markdown, category, newSlug);
+    parsedRecipe = parseRecipe(markdown, category, newSlug, locale);
   } catch (err) {
     const e = new Error(`parseRecipe failed: ${(err as Error).message}`) as Error & {
       code?: string;
@@ -272,14 +321,15 @@ export async function saveUserRecipe(args: {
 
   const { rows } = await pool.query(
     `INSERT INTO recipes (
-       slug, title, category, cuisine, freezer_friendly,
+       slug, locale, title, category, cuisine, freezer_friendly,
        prep_minutes, cook_minutes, shared_ingredients, serve_with,
        versions, raw_markdown, source_urls,
        owner_user_id, parent_slug, modification_note, is_public
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,FALSE)
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,FALSE)
      RETURNING id, slug, title`,
     [
       parsedRecipe.slug,
+      parsedRecipe.locale,
       parsedRecipe.title,
       parsedRecipe.category,
       parsedRecipe.cuisine,

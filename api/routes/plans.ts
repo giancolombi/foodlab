@@ -94,6 +94,7 @@ router.put("/", requireAuth, async (req, res) => {
 const generateSchema = z.object({
   profileIds: z.array(z.string().uuid()).default([]),
   excludeSlugs: z.array(z.string().max(200)).default([]),
+  locale: z.enum(["en", "es", "pt-BR", "pt"]).optional(),
 });
 
 interface RecipeRow {
@@ -110,15 +111,21 @@ router.post("/generate", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Invalid payload" });
     return;
   }
-  const { profileIds, excludeSlugs } = parsed.data;
+  const { profileIds, excludeSlugs, locale } = parsed.data;
+  const planLocale =
+    locale === "es" ? "es" : locale === "pt-BR" || locale === "pt" ? "pt" : "en";
 
-  // Load visible recipes.
+  // Load visible recipes — one row per slug, preferring the user's locale.
   const { rows: recipes } = await pool.query<RecipeRow>(
-    `SELECT slug, title, category, cuisine, versions
-     FROM recipes
-     WHERE owner_user_id IS NULL OR owner_user_id = $1
+    `SELECT * FROM (
+       SELECT DISTINCT ON (slug) slug, title, category, cuisine, versions, locale
+       FROM recipes
+       WHERE (owner_user_id IS NULL OR owner_user_id = $1)
+         AND (locale = $2 OR locale = 'en')
+       ORDER BY slug, CASE WHEN locale = $2 THEN 0 ELSE 1 END
+     ) r
      ORDER BY random()`,
-    [req.user!.sub],
+    [req.user!.sub, planLocale],
   );
 
   // Load average ratings.
@@ -347,6 +354,7 @@ router.post("/compose/apply", requireAuth, async (req, res) => {
         markdown,
         modificationNote: `Generated from compose draft (${dish.id})`,
         category,
+        locale,
       });
       saved.push({
         dishId: dish.id,

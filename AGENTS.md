@@ -11,12 +11,18 @@ There are two interaction surfaces:
 
 **Always respond in the language the user writes in.** Detect their language and respond entirely in it — recipe names, ingredients, instructions, shopping lists, everything.
 
-Supported languages:
-- **English**
-- **Spanish** — Latin American variants (Cuban, Peruvian, Colombian, Dominican, Venezuelan, Mexican). Use "frijoles", "aguacate", "taza", "cucharada".
-- **Brazilian Portuguese** — Use "xícara", "colher de sopa", "feijão", "abacate", "mandioca".
+Supported languages and file suffixes:
+- **English** — `.en.md` — canonical version, always required
+- **Spanish (`es`)** — `.es.md` — Latin American variants (Cuban, Peruvian, Colombian, Dominican, Venezuelan, Mexican). Use "frijoles", "aguacate", "taza", "cucharada", "cucharadita".
+- **Brazilian Portuguese (`pt`)** — `.pt.md` — Use "xícara", "colher de sopa", "colher de chá", "feijão", "abacate", "mandioca", "geladeira".
 
-Recipe files in the repo stay in English (for consistency), but all user-facing output (menus, shopping lists, instructions, help text) should match the user's language. If unsure, ask.
+**Recipes are stored pre-translated in all three languages, not translated at runtime** — runtime translation drifts on measurements and ingredient names and breaks the dish. Each recipe lives as three files sharing the same kebab-case slug: `west-african-peanut-stew.en.md`, `.es.md`, `.pt.md`.
+
+When you create or modify a recipe, **always write all three language files in the same commit**. The English version is canonical; the others are translations that preserve the structure (metadata block, shared base, version splits, numbered steps, source URLs) and only swap the human-readable text. Numeric quantities and units stay the same — translate only the words around them ("1 cup onion" → "1 taza de cebolla" / "1 xícara de cebola"). Slug stays identical across languages.
+
+When reading recipes (matcher, planner, "what's tonight"), prefer the file in the user's language and fall back to `.en.md` if the translation hasn't been written yet — and write the missing translation as part of completing the task.
+
+Plans, shopping lists, and ratings notes are written directly in the user's language at creation time — there is no separate translation pass.
 
 ## Communication Style
 
@@ -108,11 +114,12 @@ Welcome to FoodLab! Here's what you can ask me:
 
 📖 BROWSE
    Check test-kitchen/recipes/mains/ and test-kitchen/recipes/breakfast/ for dishes
+   (each dish has .en.md / .es.md / .pt.md — same slug, three languages)
    Check test-kitchen/plans/ for past meal plans + shopping lists
    Check test-kitchen/reviews/ratings.md for ratings
    Check test-kitchen/profiles/ for dietary profiles
 
-Each recipe has a version for every dietary group in your household.
+Each recipe has a version for every dietary group in your household, pre-translated into English, Spanish, and Portuguese.
 ```
 
 ### "Add a profile" / "I'm vegetarian" / "My partner can't eat X"
@@ -131,21 +138,21 @@ When a user requests a specific type of recipe:
 
 1. **Read all profiles in `test-kitchen/profiles/`**
 2. Search the web for recipes matching their request
-3. Check `test-kitchen/recipes/mains/` and `test-kitchen/recipes/breakfast/` to avoid duplicates
-4. Write the recipe file with one version per dietary group, following the Recipe File Format below
-5. Commit and push
-6. Show the user the recipe summary — dish name, all versions, key ingredients
+3. Check `test-kitchen/recipes/mains/` and `test-kitchen/recipes/breakfast/` to avoid duplicates (slug exists in any language counts as a duplicate)
+4. Write **three** recipe files — `<slug>.en.md`, `<slug>.es.md`, `<slug>.pt.md` — each with one version per dietary group, following the Recipe File Format below
+5. Commit and push (all three in the same commit)
+6. Show the user the recipe summary in their language — dish name, all versions, key ingredients
 
 ### "What can I make with [ingredients]?"
 
 When a user tells you what ingredients they have:
 
-1. Read all recipes in `test-kitchen/recipes/mains/` and `test-kitchen/recipes/breakfast/`
+1. Read recipes in `test-kitchen/recipes/mains/` and `test-kitchen/recipes/breakfast/` — pick the file in the user's language (`.en.md` / `.es.md` / `.pt.md`), falling back to `.en.md` when a translation is missing
 2. **Read all profiles in `test-kitchen/profiles/`** to filter out recipes with restricted ingredients
 3. Find recipes where the user's ingredients cover most of the base
 4. Rank matches: best match = fewest missing ingredients
 5. Show top 3 matches with: recipe name, cuisine, matched/missing ingredients, quick method
-6. If no good matches, search the web for a recipe using their ingredients
+6. If no good matches, search the web for a recipe using their ingredients (and write it in all three languages)
 
 ### "Give me a weekly menu" / "Generate a meal plan"
 
@@ -186,17 +193,19 @@ When a user gives feedback:
 ## Recipe File Format
 
 - Location: `test-kitchen/recipes/mains/` or `test-kitchen/recipes/breakfast/`
-- Filename: kebab-case (e.g., `west-african-peanut-stew.md`)
-- Structure:
-  1. Dish name as H1
-  2. Metadata: Cuisine, Freezer-friendly status, Prep time, Cook time
-  3. Shared base ingredients and spice mix (safe for ALL dietary groups)
-  4. Serving suggestions
+- Filename: `<kebab-case-slug>.<lang>.md` — three files per dish, one per supported language (e.g., `west-african-peanut-stew.en.md`, `.es.md`, `.pt.md`). Slug is identical across languages.
+- Structure (same in every language file):
+  1. Dish name as H1, translated
+  2. Metadata line — translated label + value: `**Cuisine:** ... | **Freezer-friendly:** ... | **Prep:** ... | **Cook:** ...` in English, or the localized labels (`**Cocina:** / **Apta para congelar:** / **Preparación:** / **Cocción:**` in Spanish; `**Cozinha:** / **Vai ao freezer:** / **Preparo:** / **Cozimento:**` in Portuguese)
+  3. Shared base ingredients and spice mix (safe for ALL dietary groups), bullets translated
+  4. Serving suggestions, bullets translated
   5. `---` separator
-  6. **For each dietary group:** version header with group name(s), protein, and full numbered instructions, separated by `---`
-  7. Source URLs at the bottom
+  6. **For each dietary group:** version header (translated, e.g. `## Vegetarian Version` / `## Versión Vegetariana` / `## Versão Vegetariana`) with the dietary group label in parentheses if present, `**Protein:**` line (or `**Proteína:**`), and full numbered instructions, separated by `---`
+  7. Source URLs at the bottom (`*Source:* / *Fuente:* / *Fonte:*`)
 
 If there's only one dietary group (or no profiles), write a single version with no group labels.
+
+Numeric quantities and units stay the same across languages — translate only the words ("1 tsp cumin" → "1 cucharadita de comino" / "1 colher de chá de cominho"). Translate measurement-unit *words* but never convert magnitudes between systems.
 
 ---
 
@@ -230,7 +239,7 @@ User feedback lives in `test-kitchen/reviews/ratings.md`. Anyone can add a row.
 
 | Column | Description |
 |--------|-------------|
-| Dish | Recipe slug (filename without `.md`) |
+| Dish | Recipe slug (filename without the `.<lang>.md` suffix) |
 | Rating | 1-5 stars using ★ and ☆ characters |
 | Person | Who rated it |
 | Version | Which dietary version they ate |
@@ -251,9 +260,9 @@ These run in the background when the agent session is active:
 
 ### Recipe Hunter (every other day)
 1. **Read all profiles in `test-kitchen/profiles/`**
-2. Check existing recipes to avoid duplicates
+2. Check existing recipes (any language file) to avoid duplicate slugs
 3. Search the web for trending/seasonal recipes
-4. Write 1-2 new recipes with versions for each dietary group
+4. Write 1-2 new recipes with versions for each dietary group, each in **all three languages** (`.en.md`, `.es.md`, `.pt.md`)
 5. Commit and push to main
 
 ### Meal Planner (1st and 15th of each month)

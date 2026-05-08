@@ -50,7 +50,7 @@ import { cn } from "@/lib/utils";
 import type { Profile, RecipeDetail } from "@/types";
 
 export default function Plan() {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const {
     assignments,
     planSlugs,
@@ -76,10 +76,11 @@ export default function Plan() {
   useEffect(() => {
     setLoading(true);
     const slugs = [...planSlugs];
+    const localeParam = encodeURIComponent(locale);
     Promise.all([
       Promise.all(
         slugs.map((slug) =>
-          api<{ recipe: RecipeDetail }>(`/recipes/${slug}`)
+          api<{ recipe: RecipeDetail }>(`/recipes/${slug}?locale=${localeParam}`)
             .then(({ recipe }) => recipe)
             .catch(() => null),
         ),
@@ -101,7 +102,7 @@ export default function Plan() {
       })
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [planSlugs.size]);
+  }, [planSlugs.size, locale]);
 
   const activeProfiles = useMemo(
     () => profiles.filter((p) => activeProfileIds.includes(p.id)),
@@ -118,6 +119,7 @@ export default function Plan() {
         body: {
           profileIds: activeProfileIds,
           excludeSlugs: [...planSlugs],
+          locale,
         },
       });
       mergeAssignments(incoming as any);
@@ -127,7 +129,7 @@ export default function Plan() {
     } finally {
       setGenerating(false);
     }
-  }, [activeProfileIds, planSlugs, mergeAssignments, t]);
+  }, [activeProfileIds, planSlugs, mergeAssignments, t, locale]);
 
   if (filledCount === 0) {
     return (

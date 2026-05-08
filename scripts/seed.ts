@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { pool } from "../api/db.js";
-import { parseRecipe } from "../api/recipeParser.js";
+import { parseRecipe, type Locale } from "../api/recipeParser.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -15,6 +15,8 @@ const RECIPES_DIR = path.resolve(
   process.env.RECIPES_DIR || "../test-kitchen/recipes",
 );
 
+const SUPPORTED_LOCALES: readonly Locale[] = ["en", "es", "pt"] as const;
+
 async function exists(p: string): Promise<boolean> {
   try {
     await stat(p);
@@ -24,20 +26,47 @@ async function exists(p: string): Promise<boolean> {
   }
 }
 
+interface RecipeFile {
+  slug: string;
+  locale: Locale;
+  markdown: string;
+}
+
+// Filenames are <slug>.<locale>.md. Anything that doesn't end in a known
+// locale suffix is skipped with a warning so legacy or in-progress files
+// don't silently corrupt the catalog.
+function parseFilename(file: string): { slug: string; locale: Locale } | null {
+  if (!file.endsWith(".md")) return null;
+  const base = file.replace(/\.md$/, "");
+  const dot = base.lastIndexOf(".");
+  if (dot < 0) return null;
+  const locale = base.slice(dot + 1) as Locale;
+  if (!SUPPORTED_LOCALES.includes(locale)) return null;
+  return { slug: base.slice(0, dot), locale };
+}
+
 async function readCategory(
   category: "mains" | "breakfast",
-): Promise<Array<{ slug: string; markdown: string }>> {
+): Promise<RecipeFile[]> {
   const dir = path.join(RECIPES_DIR, category);
   if (!(await exists(dir))) {
     console.warn(`[seed] skipping missing dir: ${dir}`);
     return [];
   }
-  const files = (await readdir(dir)).filter((f) => f.endsWith(".md"));
-  const out: Array<{ slug: string; markdown: string }> = [];
+  const files = await readdir(dir);
+  const out: RecipeFile[] = [];
   for (const file of files) {
-    const slug = file.replace(/\.md$/, "");
+    const parsed = parseFilename(file);
+    if (!parsed) {
+      if (file.endsWith(".md")) {
+        console.warn(
+          `[seed] skipping ${file} — expected <slug>.<en|es|pt>.md`,
+        );
+      }
+      continue;
+    }
     const markdown = await readFile(path.join(dir, file), "utf8");
-    out.push({ slug, markdown });
+    out.push({ slug: parsed.slug, locale: parsed.locale, markdown });
   }
   return out;
 }
@@ -45,16 +74,17 @@ async function readCategory(
 async function upsertRecipe(
   category: "mains" | "breakfast",
   slug: string,
+  locale: Locale,
   markdown: string,
 ) {
-  const recipe = parseRecipe(markdown, category, slug);
+  const recipe = parseRecipe(markdown, category, slug, locale);
   await pool.query(
     `INSERT INTO recipes (
-       slug, title, category, cuisine, freezer_friendly,
+       slug, locale, title, category, cuisine, freezer_friendly,
        prep_minutes, cook_minutes, shared_ingredients, serve_with,
        versions, raw_markdown, source_urls, updated_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, now())
-     ON CONFLICT (slug) DO UPDATE SET
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13, now())
+     ON CONFLICT (slug, locale) DO UPDATE SET
        title = EXCLUDED.title,
        category = EXCLUDED.category,
        cuisine = EXCLUDED.cuisine,
@@ -69,6 +99,7 @@ async function upsertRecipe(
        updated_at = now()`,
     [
       recipe.slug,
+      recipe.locale,
       recipe.title,
       recipe.category,
       recipe.cuisine,
@@ -87,14 +118,19 @@ async function upsertRecipe(
 async function main() {
   console.log(`[seed] reading recipes from ${RECIPES_DIR}`);
   let count = 0;
+  const localeCounts: Record<string, number> = {};
   for (const category of ["mains", "breakfast"] as const) {
     const files = await readCategory(category);
-    for (const { slug, markdown } of files) {
-      await upsertRecipe(category, slug, markdown);
+    for (const { slug, locale, markdown } of files) {
+      await upsertRecipe(category, slug, locale, markdown);
       count++;
+      localeCounts[locale] = (localeCounts[locale] ?? 0) + 1;
     }
   }
-  console.log(`[seed] upserted ${count} recipe(s).`);
+  const breakdown = Object.entries(localeCounts)
+    .map(([loc, n]) => `${loc}=${n}`)
+    .join(", ");
+  console.log(`[seed] upserted ${count} recipe(s) [${breakdown}].`);
   await pool.end();
 }
 
