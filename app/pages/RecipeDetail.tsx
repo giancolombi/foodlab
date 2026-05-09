@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RecipeModifyPanel } from "@/components/RecipeModifyPanel";
+import { StarRating } from "@/components/StarRating";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUnits, convertTemperatures } from "@/contexts/UnitsContext";
@@ -97,6 +98,34 @@ export default function RecipeDetail() {
             </span>
           )}
         </div>
+        <StarRating
+          slug={recipe.slug}
+          myStars={recipe.my_rating?.stars ?? null}
+          avgStars={recipe.avg_rating ?? null}
+          ratingCount={recipe.rating_count ?? 0}
+          onChange={(stars) => {
+            // Update both the caller's rating and the average locally so
+            // the badge reflects the change without a full refetch. Rough
+            // approximation of the new avg — close enough for UX.
+            setRecipe((prev) => {
+              if (!prev) return prev;
+              const oldCount = prev.rating_count ?? 0;
+              const oldAvg = prev.avg_rating ?? stars;
+              const oldMine = prev.my_rating?.stars ?? null;
+              const isNew = oldMine === null;
+              const newCount = isNew ? oldCount + 1 : oldCount;
+              const sumWithoutMine = oldAvg * oldCount - (oldMine ?? 0);
+              const newAvg =
+                newCount === 0 ? stars : (sumWithoutMine + stars) / newCount;
+              return {
+                ...prev,
+                my_rating: { stars, notes: null },
+                avg_rating: Math.round(newAvg * 10) / 10,
+                rating_count: newCount,
+              };
+            });
+          }}
+        />
         {recipe.parent_slug && (
           <p className="text-xs text-muted-foreground">
             {t("detail.modifiedFrom")}{" "}

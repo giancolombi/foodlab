@@ -332,6 +332,15 @@ const en = {
     "Recipes haven't been generated yet — hit Save & apply first to include full recipes and a shopping list in the doc.",
   "plan.compose": "Iterate on menu",
 
+  // ratings
+  "rating.label": "Rate this recipe",
+  "rating.starN": "{n} stars",
+  "rating.avg": "{avg} ({n})",
+  "rating.unrated": "Not yet rated",
+  "rating.saved": "Rated {n} stars",
+  "rating.saveFailed": "Couldn't save rating",
+  "rating.signinRequired": "Sign in to rate",
+
   // ai / model output
   "ai.thinking": "Thinking",
 
@@ -659,6 +668,14 @@ const es: Partial<Record<StringKey, string>> = {
     "Aún no se generaron las recetas — pulsa Guardar y aplicar primero para incluir las recetas completas y la lista de compras en el documento.",
   "plan.compose": "Iterar el menú",
 
+  "rating.label": "Calificar esta receta",
+  "rating.starN": "{n} estrellas",
+  "rating.avg": "{avg} ({n})",
+  "rating.unrated": "Sin calificar aún",
+  "rating.saved": "Calificada con {n} estrellas",
+  "rating.saveFailed": "No se pudo guardar la calificación",
+  "rating.signinRequired": "Inicia sesión para calificar",
+
   "ai.thinking": "Pensando",
 
   "modify.chip.halve": "A la mitad",
@@ -980,6 +997,14 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "compose.notSavedHint":
     "As receitas ainda não foram geradas — clique em Salvar e aplicar primeiro para incluir as receitas completas e a lista de compras no documento.",
   "plan.compose": "Iterar o menu",
+
+  "rating.label": "Avaliar esta receita",
+  "rating.starN": "{n} estrelas",
+  "rating.avg": "{avg} ({n})",
+  "rating.unrated": "Ainda sem avaliações",
+  "rating.saved": "Avaliada com {n} estrelas",
+  "rating.saveFailed": "Não foi possível salvar a avaliação",
+  "rating.signinRequired": "Entre para avaliar",
 
   "ai.thinking": "Pensando",
 

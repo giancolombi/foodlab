@@ -6,6 +6,7 @@ import authRoutes from "./routes/auth.js";
 import matchRoutes from "./routes/match.js";
 import planRoutes from "./routes/plans.js";
 import profileRoutes from "./routes/profiles.js";
+import ratingRoutes from "./routes/ratings.js";
 import recipeRoutes from "./routes/recipes.js";
 import translateRoutes from "./routes/translate.js";
 
@@ -29,6 +30,7 @@ app.use("/api/profiles", profileRoutes);
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/match", matchRoutes);
 app.use("/api/plans", planRoutes);
+app.use("/api/ratings", ratingRoutes);
 app.use("/api/translate", translateRoutes);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

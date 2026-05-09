@@ -38,11 +38,16 @@ export interface RecipeListItem {
   parent_slug?: string | null;
   is_public?: boolean;
   modification_note?: string | null;
+  /** 1-decimal average across all users' ratings; null if nobody's rated yet. */
+  avg_rating?: number | null;
+  rating_count?: number;
 }
 
 export interface RecipeDetail extends RecipeListItem {
   raw_markdown: string;
   source_urls: string[];
+  /** The signed-in caller's own rating, if any. Null when anonymous or unrated. */
+  my_rating?: { stars: number; notes: string | null } | null;
 }
 
 export interface Recommendation {

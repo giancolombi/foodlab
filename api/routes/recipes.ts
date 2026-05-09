@@ -95,13 +95,17 @@ router.get("/", optionalAuth, async (req, res) => {
 
   // Pre-translated recipes: pick the row in the caller's locale, fall back
   // to English when a translation hasn't been written yet. DISTINCT ON
-  // collapses the (en, es, pt) triple per slug into one row.
+  // collapses the (en, es, pt) triple per slug into one row. Average
+  // ratings + count are joined on the slug-keyed agg table so the list
+  // can show "★ 4.3" badges without a per-card fetch.
   params.push(locale);
   const localeIdx = params.length;
   where.push(`(locale = $${localeIdx} OR locale = 'en')`);
 
   const { rows } = await pool.query(
-    `SELECT * FROM (
+    `SELECT r.*, COALESCE(agg.avg_rating, NULL) AS avg_rating,
+            COALESCE(agg.rating_count, 0) AS rating_count
+     FROM (
        SELECT DISTINCT ON (slug)
          id, slug, locale, title, category, cuisine, freezer_friendly,
          prep_minutes, cook_minutes, shared_ingredients, serve_with, versions,
@@ -110,7 +114,14 @@ router.get("/", optionalAuth, async (req, res) => {
        WHERE ${where.join(" AND ")}
        ORDER BY slug, CASE WHEN locale = $${localeIdx} THEN 0 ELSE 1 END
      ) r
-     ORDER BY title ASC`,
+     LEFT JOIN (
+       SELECT rec.slug,
+              ROUND(AVG(rt.stars)::numeric, 1)::float AS avg_rating,
+              COUNT(*)::int AS rating_count
+       FROM ratings rt JOIN recipes rec ON rt.recipe_id = rec.id
+       GROUP BY rec.slug
+     ) agg ON agg.slug = r.slug
+     ORDER BY r.title ASC`,
     params,
   );
   res.json({ recipes: rows });
@@ -120,7 +131,7 @@ router.get("/:slug", optionalAuth, async (req, res) => {
   // slug is $1, so visibility params start at $2.
   const vis = buildVisibilityClause(req.user?.sub, 1);
   const locale = readLocaleParam(req);
-  const params = [req.params.slug, ...vis.params, locale];
+  const params: any[] = [req.params.slug, ...vis.params, locale];
   const localeIdx = params.length;
   const { rows } = await pool.query(
     `SELECT * FROM recipes
@@ -134,7 +145,35 @@ router.get("/:slug", optionalAuth, async (req, res) => {
     res.status(404).json({ error: "Recipe not found" });
     return;
   }
-  res.json({ recipe: rows[0] });
+  // Attach rating aggregates + the caller's own rating so the detail
+  // page can render the star widget in one round-trip.
+  const ratingAgg = await pool.query<{ avg: string | null; count: string }>(
+    `SELECT AVG(rt.stars)::text AS avg, COUNT(*)::text AS count
+     FROM ratings rt JOIN recipes rec ON rt.recipe_id = rec.id
+     WHERE rec.slug = $1`,
+    [req.params.slug],
+  );
+  const avgRaw = ratingAgg.rows[0]?.avg;
+  const avg_rating = avgRaw === null || avgRaw === undefined
+    ? null
+    : Math.round(parseFloat(avgRaw) * 10) / 10;
+  const rating_count = parseInt(ratingAgg.rows[0]?.count ?? "0", 10);
+
+  let my_rating: { stars: number; notes: string | null } | null = null;
+  if (req.user?.sub) {
+    const mine = await pool.query<{ stars: number; notes: string | null }>(
+      `SELECT rt.stars, rt.notes
+       FROM ratings rt JOIN recipes rec ON rt.recipe_id = rec.id
+       WHERE rec.slug = $1 AND rt.user_id = $2 AND rt.profile_id IS NULL
+       LIMIT 1`,
+      [req.params.slug, req.user.sub],
+    );
+    if (mine.rows[0]) my_rating = mine.rows[0];
+  }
+
+  res.json({
+    recipe: { ...rows[0], avg_rating, rating_count, my_rating },
+  });
 });
 
 /**

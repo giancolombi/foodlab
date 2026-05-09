@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarCheck, Clock, Snowflake } from "lucide-react";
+import { CalendarCheck, Clock, Snowflake, Star } from "lucide-react";
 
 import { AddToPlanButton } from "@/components/AddToPlanButton";
 import {
@@ -171,6 +171,17 @@ export default function Recipes() {
                         <span className="inline-flex items-center gap-1">
                           <Snowflake className="h-3 w-3" />{" "}
                           {t("recipes.freezer")}
+                        </span>
+                      )}
+                      {r.avg_rating != null && (
+                        <span className="inline-flex items-center gap-1 text-amber-500">
+                          <Star className="h-3 w-3 fill-current" />{" "}
+                          {r.avg_rating.toFixed(1)}
+                          {r.rating_count ? (
+                            <span className="text-muted-foreground">
+                              ({r.rating_count})
+                            </span>
+                          ) : null}
                         </span>
                       )}
                     </div>
