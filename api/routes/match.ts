@@ -46,7 +46,8 @@ router.post("/", requireAuth, async (req, res) => {
     const matchLocale =
       locale === "es" ? "es" : locale === "pt-BR" ? "pt" : "en";
     const recipesResult = await pool.query(
-      `SELECT DISTINCT ON (slug) id, slug, title, cuisine, shared_ingredients, versions
+      `SELECT DISTINCT ON (slug)
+         id, slug, title, cuisine, shared_ingredients, serve_with, versions
        FROM recipes
        WHERE (owner_user_id IS NULL OR owner_user_id = $1::uuid)
          AND (locale = $2 OR locale = 'en')

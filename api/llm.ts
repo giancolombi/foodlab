@@ -39,6 +39,7 @@ interface RecipeRow {
   title: string;
   cuisine: string | null;
   shared_ingredients: string[];
+  serve_with?: string[];
   versions: Array<{
     name: string;
     protein?: string | null;
@@ -92,6 +93,12 @@ function tokenize(s: string): string[] {
  * Cheap pre-filter: rank catalog recipes by token overlap with the user's
  * ingredient list, then keep the top N. Sending fewer rows to the LLM means
  * shorter prompt processing and fewer tokens to attend to per generated token.
+ *
+ * The token set per recipe pulls from title, shared base ingredients,
+ * per-version protein options, AND serve-with toppings — so a user with
+ * "chicken" in the fridge matches a dish whose meat version uses chicken
+ * even though the shared base is meatless, and a user with "mango" matches
+ * the Caribbean bowls whose mango lives only in the serve-with.
  */
 function shortlistRecipes(
   recipes: RecipeRow[],
@@ -102,9 +109,15 @@ function shortlistRecipes(
   if (wanted.size === 0) return recipes.slice(0, limit);
 
   const scored = recipes.map((r) => {
+    const proteinTokens = (r.versions ?? []).flatMap((v) =>
+      v.protein ? tokenize(v.protein) : [],
+    );
+    const serveTokens = (r.serve_with ?? []).flatMap(tokenize);
     const tokens = new Set([
       ...tokenize(r.title),
       ...r.shared_ingredients.flatMap(tokenize),
+      ...proteinTokens,
+      ...serveTokens,
     ]);
     let overlap = 0;
     for (const w of wanted) if (tokens.has(w)) overlap++;
@@ -124,7 +137,12 @@ function buildUserPrompt(args: {
   const catalog = args.recipes
     .map((r) => {
       const base = r.shared_ingredients.slice(0, 8).join(", ");
-      return `- ${r.slug} | ${r.title}${r.cuisine ? ` (${r.cuisine})` : ""} | base: ${base}`;
+      const proteins = (r.versions ?? [])
+        .map((v) => v.protein)
+        .filter((p): p is string => Boolean(p))
+        .join(" | ");
+      const proteinPart = proteins ? ` | proteins: ${proteins}` : "";
+      return `- ${r.slug} | ${r.title}${r.cuisine ? ` (${r.cuisine})` : ""} | base: ${base}${proteinPart}`;
     })
     .join("\n");
 
@@ -373,9 +391,35 @@ export interface ModifyHandlers {
  * Stream a recipe modification through Ollama using structured JSON output.
  * Frontend can render a structured preview from the parsed object; the server
  * converts it to canonical markdown when saving.
+ *
+ * The user message ships the original recipe as a JSON object rather than
+ * raw markdown when `originalStructured` is provided — JSON is ~30% fewer
+ * tokens than the markdown form (no section headers, no bullets, no
+ * separators) and gets us closer to the response shape so the model has
+ * less translation work to do. Falls back to the markdown form when
+ * structured isn't available (e.g. older callers).
  */
 export async function streamModifyRecipe(
-  args: { originalMarkdown: string; instruction: string; locale?: Locale },
+  args: {
+    originalMarkdown: string;
+    originalStructured?: {
+      title: string;
+      cuisine: string | null;
+      freezer_friendly: boolean | null;
+      prep_minutes: number | null;
+      cook_minutes: number | null;
+      shared_ingredients: string[];
+      serve_with: string[];
+      versions: Array<{
+        name: string;
+        group_label: string | null;
+        protein: string | null;
+        instructions: string[];
+      }>;
+    };
+    instruction: string;
+    locale?: Locale;
+  },
   handlers: ModifyHandlers,
 ): Promise<void> {
   const locale = normalizeLocale(args.locale);
@@ -383,6 +427,9 @@ export async function streamModifyRecipe(
     "{LOCALE_DIRECTIVE}",
     LOCALE_DIRECTIVE[locale],
   );
+  const userContent = args.originalStructured
+    ? `Modification: ${args.instruction}\n\nOriginal recipe (JSON):\n\n${JSON.stringify(args.originalStructured)}`
+    : `Modification: ${args.instruction}\n\nOriginal recipe:\n\n${args.originalMarkdown}`;
   const body: Record<string, unknown> = {
     model: OLLAMA_MODEL,
     stream: true,
@@ -390,15 +437,13 @@ export async function streamModifyRecipe(
     keep_alive: "24h",
     messages: [
       { role: "system", content: systemPrompt },
-      {
-        role: "user",
-        content: `Modification: ${args.instruction}\n\nOriginal recipe:\n\n${args.originalMarkdown}`,
-      },
+      { role: "user", content: userContent },
     ],
     options: {
       temperature: 0.2,
       // Tighter ceilings for faster prompt-eval and so the model can't
-      // ramble past the JSON close. Recipes serialize to ~600-900 tokens.
+      // ramble past the JSON close. Recipes serialize to ~400-700 tokens
+      // as JSON (vs ~600-900 as markdown).
       num_ctx: 2048,
       num_predict: 1024,
     },

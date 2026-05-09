@@ -162,15 +162,36 @@ router.post("/:slug/modify", requireAuth, async (req, res) => {
 
   // Load the source recipe (must be visible to the caller). Prefer the row
   // matching the requested locale so the LLM starts from a localized
-  // source, falling back to English when no translation exists yet.
-  let original: { raw_markdown: string; title: string; slug: string };
+  // source, falling back to English when no translation exists yet. We
+  // load the structured columns alongside raw_markdown so streamModifyRecipe
+  // can hand the model JSON instead of verbose markdown.
+  let original: {
+    raw_markdown: string;
+    title: string;
+    slug: string;
+    cuisine: string | null;
+    freezer_friendly: boolean | null;
+    prep_minutes: number | null;
+    cook_minutes: number | null;
+    shared_ingredients: string[];
+    serve_with: string[];
+    versions: Array<{
+      name: string;
+      group_label: string | null;
+      protein: string | null;
+      instructions: string[];
+    }>;
+  };
   try {
     const vis = buildVisibilityClause(req.user!.sub, 1);
     const sourceLocale = normalizeLocale(parsed.data.locale);
     const params = [req.params.slug, ...vis.params, sourceLocale];
     const localeIdx = params.length;
     const { rows } = await pool.query(
-      `SELECT raw_markdown, title, slug FROM recipes
+      `SELECT raw_markdown, title, slug, cuisine, freezer_friendly,
+              prep_minutes, cook_minutes, shared_ingredients, serve_with,
+              versions
+       FROM recipes
        WHERE slug = $1 AND ${vis.clause}
          AND (locale = $${localeIdx} OR locale = 'en')
        ORDER BY CASE WHEN locale = $${localeIdx} THEN 0 ELSE 1 END
@@ -210,6 +231,16 @@ router.post("/:slug/modify", requireAuth, async (req, res) => {
     await streamModifyRecipe(
       {
         originalMarkdown: original.raw_markdown,
+        originalStructured: {
+          title: original.title,
+          cuisine: original.cuisine,
+          freezer_friendly: original.freezer_friendly,
+          prep_minutes: original.prep_minutes,
+          cook_minutes: original.cook_minutes,
+          shared_ingredients: original.shared_ingredients,
+          serve_with: original.serve_with,
+          versions: original.versions,
+        },
         instruction: parsed.data.instruction,
         locale: parsed.data.locale,
       },
