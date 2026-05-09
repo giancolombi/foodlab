@@ -35,7 +35,6 @@ import { useCart } from "@/contexts/CartContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePlan } from "@/contexts/PlanContext";
 import { useUnits } from "@/contexts/UnitsContext";
-import { useTranslatedCart } from "@/hooks/useTranslatedCart";
 import { api } from "@/lib/api";
 import {
   consolidate,
@@ -123,8 +122,6 @@ export default function Cart() {
   }, [recipes, activeProfiles, includeServeWith, units]);
 
   const display: ConsolidatedList = smart ?? local;
-  const { translations: itemTranslations } = useTranslatedCart(display, locale);
-  const tr = (s: string) => itemTranslations[s] ?? s;
 
   const exportOpts = useMemo(
     () => ({
@@ -382,7 +379,7 @@ export default function Cart() {
                             checked={bought}
                             onChange={() => toggleBought(key)}
                             aria-label={t("cart.markBought", {
-                              name: tr(item.name),
+                              name: item.name,
                             })}
                           />
                           <div className="min-w-0 flex-1">
@@ -393,7 +390,7 @@ export default function Cart() {
                                   bought && "line-through",
                                 )}
                               >
-                                {tr(item.name)}
+                                {item.name}
                               </span>
                               {item.quantity && (
                                 <span className="text-sm sm:text-xs text-muted-foreground">
@@ -413,7 +410,7 @@ export default function Cart() {
                             </div>
                             {item.notes.length > 0 && (
                               <div className="text-xs sm:text-[11px] text-muted-foreground mt-0.5">
-                                {item.notes.map(tr).join(" · ")}
+                                {item.notes.join(" · ")}
                               </div>
                             )}
                             {item.sources.length > 1 && (

@@ -574,7 +574,7 @@ export default function PlanCompose() {
       <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
         {/* Left: chat. Capped lower on mobile so the input + soft keyboard
             still leave room for the draft cards below. */}
-        <Card className="flex flex-col h-[60vh] md:h-[70vh]">
+        <Card className="flex flex-col h-[65vh] md:h-[70vh]">
           <div
             ref={transcriptRef}
             className="flex-1 overflow-y-auto p-4 space-y-3"
