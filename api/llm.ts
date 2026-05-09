@@ -498,6 +498,64 @@ export async function streamModifyRecipe(
   handlers.onDone({ recipe, raw: full });
 }
 
+// Per-locale markdown labels for the canonical recipe format. Keeping these
+// in sync across locales matters because the file gets parsed back via
+// recipeParser.ts when the user later views or modifies it — and the parser
+// recognises localized headers, but storing them in the user's language
+// keeps the saved file readable.
+const RENDER_LABELS: Record<
+  Locale,
+  {
+    cuisine: string;
+    freezer: string;
+    prep: string;
+    cook: string;
+    yes: string;
+    no: string;
+    sharedIngredients: string;
+    serveWith: string;
+    protein: string;
+    modifiedFrom: (parent: string, summary: string) => string;
+  }
+> = {
+  en: {
+    cuisine: "Cuisine",
+    freezer: "Freezer-friendly",
+    prep: "Prep",
+    cook: "Cook",
+    yes: "Yes",
+    no: "No",
+    sharedIngredients: "Shared ingredients",
+    serveWith: "Serve with",
+    protein: "Protein",
+    modifiedFrom: (parent, summary) => `Modified from ${parent}: ${summary}`,
+  },
+  es: {
+    cuisine: "Cocina",
+    freezer: "Apta para congelar",
+    prep: "Preparación",
+    cook: "Cocción",
+    yes: "Sí",
+    no: "No",
+    sharedIngredients: "Ingredientes compartidos",
+    serveWith: "Para servir",
+    protein: "Proteína",
+    modifiedFrom: (parent, summary) => `Modificada de ${parent}: ${summary}`,
+  },
+  "pt-BR": {
+    cuisine: "Cozinha",
+    freezer: "Vai ao freezer",
+    prep: "Preparo",
+    cook: "Cozimento",
+    yes: "Sim",
+    no: "Não",
+    sharedIngredients: "Ingredientes compartilhados",
+    serveWith: "Para servir",
+    protein: "Proteína",
+    modifiedFrom: (parent, summary) => `Modificada de ${parent}: ${summary}`,
+  },
+};
+
 /**
  * Render a structured ModifiedRecipe to canonical FoodLab markdown. Keeping
  * this server-side (rather than asking the LLM to produce markdown) means the
@@ -506,29 +564,33 @@ export async function streamModifyRecipe(
 export function renderRecipeMarkdown(
   r: ModifiedRecipe,
   parentTitle: string,
+  locale: Locale = "en",
 ): string {
+  const L = RENDER_LABELS[locale] ?? RENDER_LABELS.en;
   const lines: string[] = [];
   lines.push(`# ${r.title}`);
   lines.push("");
 
   const meta: string[] = [];
-  if (r.cuisine) meta.push(`**Cuisine:** ${r.cuisine}`);
+  if (r.cuisine) meta.push(`**${L.cuisine}:** ${r.cuisine}`);
   if (r.freezer_friendly !== null)
-    meta.push(`**Freezer-friendly:** ${r.freezer_friendly ? "Yes" : "No"}`);
-  if (r.prep_minutes != null) meta.push(`**Prep:** ${r.prep_minutes} min`);
-  if (r.cook_minutes != null) meta.push(`**Cook:** ${r.cook_minutes} min`);
+    meta.push(
+      `**${L.freezer}:** ${r.freezer_friendly ? L.yes : L.no}`,
+    );
+  if (r.prep_minutes != null) meta.push(`**${L.prep}:** ${r.prep_minutes} min`);
+  if (r.cook_minutes != null) meta.push(`**${L.cook}:** ${r.cook_minutes} min`);
   if (meta.length) {
     lines.push(meta.join(" | "));
     lines.push("");
   }
 
   if (r.shared_ingredients.length) {
-    lines.push("## Shared ingredients");
+    lines.push(`## ${L.sharedIngredients}`);
     for (const ing of r.shared_ingredients) lines.push(`- ${ing}`);
     lines.push("");
   }
   if (r.serve_with.length) {
-    lines.push("## Serve with");
+    lines.push(`## ${L.serveWith}`);
     for (const ing of r.serve_with) lines.push(`- ${ing}`);
     lines.push("");
   }
@@ -540,7 +602,7 @@ export function renderRecipeMarkdown(
       ? `## ${v.name} (${v.group_label})`
       : `## ${v.name}`;
     lines.push(heading);
-    if (v.protein) lines.push(`**Protein:** ${v.protein}`);
+    if (v.protein) lines.push(`**${L.protein}:** ${v.protein}`);
     lines.push("");
     v.instructions.forEach((step, i) => lines.push(`${i + 1}. ${step}`));
     lines.push("");
@@ -549,7 +611,7 @@ export function renderRecipeMarkdown(
   if (r.modification_summary) {
     lines.push("---");
     lines.push("");
-    lines.push(`*Modified from ${parentTitle}: ${r.modification_summary}*`);
+    lines.push(`*${L.modifiedFrom(parentTitle, r.modification_summary)}*`);
   }
 
   return lines.join("\n").trim() + "\n";

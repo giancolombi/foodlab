@@ -7,12 +7,15 @@ import { parseRecipe, type Locale } from "../api/recipeParser.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// RECIPES_DIR can be absolute or relative to scripts/. Defaults to
-// ../test-kitchen/recipes (the markdown recipe folder at the root of the foodlab repo).
+// RECIPES_DIR can be absolute or relative to the repo root. Defaults to
+// test-kitchen/recipes (the markdown recipe folder at the root of the
+// foodlab repo). Note we resolve from `__dirname/..` (the repo root) so
+// the relative path "test-kitchen/recipes" lands inside the repo, not one
+// level above it.
 const RECIPES_DIR = path.resolve(
   __dirname,
   "..",
-  process.env.RECIPES_DIR || "../test-kitchen/recipes",
+  process.env.RECIPES_DIR || "test-kitchen/recipes",
 );
 
 const SUPPORTED_LOCALES: readonly Locale[] = ["en", "es", "pt"] as const;

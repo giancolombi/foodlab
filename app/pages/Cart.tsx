@@ -48,11 +48,10 @@ import {
   type Section,
 } from "@/lib/shoppingList";
 import {
-  downloadTextFile,
   shareOrCopy,
-  toMarkdown,
   toPlainText,
 } from "@/lib/exportShoppingList";
+import { exportShoppingListPdf } from "@/lib/exportPdf";
 import { cn } from "@/lib/utils";
 import type { Profile, RecipeDetail } from "@/types";
 
@@ -154,12 +153,14 @@ export default function Cart() {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (display.total === 0) return;
-    const md = toMarkdown(display, exportOpts);
-    const stamp = new Date().toISOString().slice(0, 10);
-    downloadTextFile(`shopping-list-${stamp}.md`, md, "text/markdown;charset=utf-8");
-    toast.success(t("cart.downloaded"));
+    try {
+      await exportShoppingListPdf(display, exportOpts);
+      toast.success(t("cart.downloaded"));
+    } catch (err: any) {
+      toast.error(err?.message ?? t("common.generic.error"));
+    }
   };
 
   const smartConsolidate = async () => {

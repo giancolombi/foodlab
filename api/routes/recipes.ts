@@ -224,7 +224,11 @@ router.post("/:slug/modify", requireAuth, async (req, res) => {
         },
         onDone: ({ recipe }) => {
           if (aborted) return;
-          const markdown = renderRecipeMarkdown(recipe, original.title);
+          const markdown = renderRecipeMarkdown(
+            recipe,
+            original.title,
+            parsed.data.locale,
+          );
           send({ type: "complete", recipe, markdown });
         },
       },

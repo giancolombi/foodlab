@@ -269,7 +269,7 @@ const en = {
   "cart.copied": "Copied to clipboard",
   "cart.shareFailed": "Couldn't share — check permissions",
   "cart.download": "Download",
-  "cart.downloadHint": "Save as a Markdown file",
+  "cart.downloadHint": "Save as a PDF",
   "cart.downloaded": "Downloaded shopping list",
 
   // compose (iterative menu chat)
@@ -442,7 +442,7 @@ const es: Partial<Record<StringKey, string>> = {
   "cart.copied": "Copiado al portapapeles",
   "cart.shareFailed": "No se pudo compartir — revisa los permisos",
   "cart.download": "Descargar",
-  "cart.downloadHint": "Guardar como archivo Markdown",
+  "cart.downloadHint": "Guardar como PDF",
   "cart.downloaded": "Lista descargada",
   "layout.footer": "FoodLab · código abierto",
   "layout.language": "Idioma",
@@ -757,7 +757,7 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "cart.copied": "Copiado para a área de transferência",
   "cart.shareFailed": "Não foi possível compartilhar — verifique as permissões",
   "cart.download": "Baixar",
-  "cart.downloadHint": "Salvar como arquivo Markdown",
+  "cart.downloadHint": "Salvar como PDF",
   "cart.downloaded": "Lista baixada",
   "layout.footer": "FoodLab · código aberto",
   "layout.language": "Idioma",

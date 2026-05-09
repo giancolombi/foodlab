@@ -36,10 +36,11 @@ import {
   type SlotAssignment,
 } from "@/contexts/PlanContext";
 import { api } from "@/lib/api";
-import { downloadTextFile, toMarkdown } from "@/lib/exportShoppingList";
+import { exportMenuPdf } from "@/lib/exportPdf";
 import {
   consolidate,
   SECTION_ORDER,
+  type ConsolidatedList,
   type RecipeForPlan,
   type Section,
 } from "@/lib/shoppingList";
@@ -363,7 +364,7 @@ export default function PlanCompose() {
 
       // Consolidate ingredients deterministically from the saved recipes —
       // same logic the Cart page uses, so the doc and the in-app cart match.
-      let shoppingMarkdown: string | undefined;
+      let shoppingList: { list: ConsolidatedList; labels: { sectionLabel: Record<Section, string>; forLabel: (n: string) => string } } | undefined;
       if (recipes.length > 0) {
         const planForCart: RecipeForPlan[] = recipes.map((r) => ({
           slug: r.slug,
@@ -388,20 +389,22 @@ export default function PlanCompose() {
           (s) => list.sections[s].length > 0,
         );
         if (hasItems) {
-          shoppingMarkdown = toMarkdown(list, {
-            title: t("compose.shoppingListLabel"),
-            sectionLabel: sectionLabels,
-            forLabel: (names) => t("cart.forLabel", { names }),
-          });
+          shoppingList = {
+            list,
+            labels: {
+              sectionLabel: sectionLabels,
+              forLabel: (names) => t("cart.forLabel", { names }),
+            },
+          };
         }
       }
 
-      const md = buildMenuDoc({
-        draft,
-        recipes,
-        shoppingMarkdown,
+      await exportMenuPdf({
         title: t("compose.docTitle"),
-        sections: {
+        dishes: draft.dishes,
+        recipes,
+        shoppingList,
+        labels: {
           mainsLabel: t("compose.mainsLabel", {
             n: draft.dishes.filter((d) => !d.isBreakfast).length,
           }),
@@ -411,10 +414,16 @@ export default function PlanCompose() {
           meatLabel: t("compose.meatLabel"),
           recipesLabel: t("compose.recipesLabel"),
           notSavedHint: t("compose.notSavedHint"),
+          sharedIngredientsLabel: t("detail.sharedIngredients"),
+          serveWithLabel: t("detail.serveWith"),
+          proteinLabel: t("detail.protein"),
+          instructionsLabel: t("modify.summary"),
+          prepLabel: t("modify.prep"),
+          cookLabel: t("modify.cook"),
+          cuisineLabel: t("modify.cuisine"),
+          shoppingListLabel: t("compose.shoppingListLabel"),
         },
       });
-      const stamp = new Date().toISOString().slice(0, 10);
-      downloadTextFile(`menu-${stamp}.md`, md, "text/markdown;charset=utf-8");
       toast.success(t("compose.docDownloaded"));
     } catch (err: any) {
       toast.error(err?.message ?? t("compose.docFailed"));
@@ -707,74 +716,3 @@ function DishGroup({ label, dishes }: { label: string; dishes: ComposeDish[] }) 
   );
 }
 
-interface DocSectionLabels {
-  mainsLabel: string;
-  breakfastLabel: string;
-  baseLabel: string;
-  vegLabel: string;
-  meatLabel: string;
-  recipesLabel: string;
-  notSavedHint: string;
-}
-
-function buildMenuDoc(args: {
-  draft: Draft;
-  recipes: RecipeDetail[];
-  shoppingMarkdown?: string;
-  title: string;
-  sections: DocSectionLabels;
-}): string {
-  const { draft, recipes, shoppingMarkdown, title, sections } = args;
-  const stamp = new Date().toISOString().slice(0, 10);
-  const out: string[] = [];
-  out.push(`# ${title}`);
-  out.push("");
-  out.push(`_${stamp}_`);
-  out.push("");
-
-  const mains = draft.dishes.filter((d) => !d.isBreakfast);
-  const breakfasts = draft.dishes.filter((d) => d.isBreakfast);
-
-  const renderDish = (d: ComposeDish) => {
-    out.push(`### ${d.name}`);
-    if (d.cuisine) out.push(`_${d.cuisine}_`);
-    if (d.base) out.push(`**${sections.baseLabel}:** ${d.base}`);
-    if (d.vegProtein) out.push(`**${sections.vegLabel}:** ${d.vegProtein}`);
-    if (d.meatProtein) out.push(`**${sections.meatLabel}:** ${d.meatProtein}`);
-    if (d.notes) out.push(d.notes);
-    out.push("");
-  };
-
-  if (mains.length > 0) {
-    out.push(`## ${sections.mainsLabel}`);
-    out.push("");
-    mains.forEach(renderDish);
-  }
-  if (breakfasts.length > 0) {
-    out.push(`## ${sections.breakfastLabel}`);
-    out.push("");
-    breakfasts.forEach(renderDish);
-  }
-
-  if (recipes.length > 0) {
-    out.push(`## ${sections.recipesLabel}`);
-    out.push("");
-    for (const recipe of recipes) {
-      out.push(recipe.raw_markdown.trim());
-      out.push("");
-      out.push("---");
-      out.push("");
-    }
-  } else {
-    out.push(`_${sections.notSavedHint}_`);
-    out.push("");
-  }
-
-  if (shoppingMarkdown) {
-    // toMarkdown() already includes its own H1/H2 structure — append as-is.
-    out.push(shoppingMarkdown.trim());
-    out.push("");
-  }
-
-  return out.join("\n");
-}
