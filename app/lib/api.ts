@@ -1,6 +1,13 @@
 // Lightweight fetch wrapper. Same-origin in prod (/api), proxied in dev.
 const TOKEN_KEY = "foodlab_token";
 
+/**
+ * Dispatched whenever the server rejects our token (401/403). AuthContext
+ * listens for this and clears the in-memory user so the UI flips back to
+ * a signed-out state without needing a page reload.
+ */
+export const SESSION_EXPIRED_EVENT = "foodlab:session-expired";
+
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -45,6 +52,13 @@ export async function api<T = any>(
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    // Token expired or revoked mid-session. Drop the token and let
+    // AuthContext flip the UI back to signed-out so the user isn't
+    // left clicking through endless error toasts.
+    if (auth && (res.status === 401 || res.status === 403) && getToken()) {
+      setToken(null);
+      window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
+    }
     throw new ApiError(data?.error ?? `Request failed (${res.status})`, res.status);
   }
   return data as T;

@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { api, ApiError, setToken } from "@/lib/api";
+import { api, ApiError, SESSION_EXPIRED_EVENT, setToken } from "@/lib/api";
 import type { User } from "@/types";
 
 interface AuthContextValue {
@@ -47,6 +47,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     })();
+  }, []);
+
+  // If any in-flight request hits 401/403, the api wrapper drops the token
+  // and fires SESSION_EXPIRED_EVENT. Listen for it and flip the UI back to
+  // signed-out without making the user reload the page.
+  useEffect(() => {
+    const onExpired = () => setUser(null);
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
