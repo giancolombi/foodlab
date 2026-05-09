@@ -139,15 +139,16 @@ const PHRASINGS: Record<Locale, Phrasings> = {
   },
 };
 
-// Default base serving count when scaling "to N servings". Most recipes in
-// the catalog target ~4 servings; we assume that as the denominator. This
-// is a heuristic — the LLM path is the right call when the user has a
-// specific source serving count in mind.
-const ASSUMED_BASE_SERVINGS = 4;
+// Default base serving count when the recipe doesn't specify one. Most
+// dishes in the catalog target ~4 servings; we use that as the fallback.
+// Pass `baseServings` to the matcher to override with the recipe's
+// actual count from metadata.
+const DEFAULT_BASE_SERVINGS = 4;
 
 export function quickEditFromInstruction(
   instruction: string,
   locale: Locale,
+  baseServings?: number | null,
 ): QuickEditAction | null {
   const text = instruction.trim();
   if (!text) return null;
@@ -190,9 +191,13 @@ export function quickEditFromInstruction(
     if (m && m[1]) {
       const n = parseInt(m[1], 10);
       if (Number.isFinite(n) && n > 0 && n <= 99) {
+        const base =
+          baseServings && baseServings > 0
+            ? baseServings
+            : DEFAULT_BASE_SERVINGS;
         return {
           type: "scale",
-          factor: n / ASSUMED_BASE_SERVINGS,
+          factor: n / base,
           summary: p.summary.scaleTo(n),
           toastLabel: p.toast.scaleTo(n),
         };

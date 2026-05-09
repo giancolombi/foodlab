@@ -121,6 +121,7 @@ export function RecipeModifyPanel({
       freezer_friendly: scaled.freezer_friendly,
       prep_minutes: scaled.prep_minutes,
       cook_minutes: scaled.cook_minutes,
+      servings: scaled.servings ?? null,
       shared_ingredients: scaled.shared_ingredients,
       serve_with: scaled.serve_with,
       versions: scaled.versions.map((v) => ({
@@ -155,7 +156,7 @@ export function RecipeModifyPanel({
     // Cheap path: if the instruction matches a known scale operation and
     // we have the recipe loaded, apply it locally and skip the LLM
     // entirely. Halve / double / "scale to N" land instantly this way.
-    const quick = quickEditFromInstruction(trimmed, locale);
+    const quick = quickEditFromInstruction(trimmed, locale, recipe?.servings);
     if (quick && applyQuickEdit(quick)) return;
 
     abortRef.current?.abort();

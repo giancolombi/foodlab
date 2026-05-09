@@ -15,6 +15,7 @@ export interface ModifiedRecipe {
   freezer_friendly: boolean | null;
   prep_minutes: number | null;
   cook_minutes: number | null;
+  servings: number | null;
   shared_ingredients: string[];
   serve_with: string[];
   versions: ModifiedVersion[];

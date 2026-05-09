@@ -84,9 +84,10 @@ async function upsertRecipe(
   await pool.query(
     `INSERT INTO recipes (
        slug, locale, title, category, cuisine, freezer_friendly,
-       prep_minutes, cook_minutes, shared_ingredients, serve_with,
+       prep_minutes, cook_minutes, servings,
+       shared_ingredients, serve_with,
        versions, raw_markdown, source_urls, updated_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13, now())
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, now())
      ON CONFLICT (slug, locale) DO UPDATE SET
        title = EXCLUDED.title,
        category = EXCLUDED.category,
@@ -94,6 +95,7 @@ async function upsertRecipe(
        freezer_friendly = EXCLUDED.freezer_friendly,
        prep_minutes = EXCLUDED.prep_minutes,
        cook_minutes = EXCLUDED.cook_minutes,
+       servings = EXCLUDED.servings,
        shared_ingredients = EXCLUDED.shared_ingredients,
        serve_with = EXCLUDED.serve_with,
        versions = EXCLUDED.versions,
@@ -109,6 +111,7 @@ async function upsertRecipe(
       recipe.freezer_friendly,
       recipe.prep_minutes,
       recipe.cook_minutes,
+      recipe.servings,
       recipe.shared_ingredients,
       recipe.serve_with,
       JSON.stringify(recipe.versions),

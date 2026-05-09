@@ -146,13 +146,15 @@ export interface ScalableRecipe {
   freezer_friendly: boolean | null;
   prep_minutes: number | null;
   cook_minutes: number | null;
+  servings?: number | null;
 }
 
 /**
  * Apply a multiplicative scale factor to a recipe's ingredient quantities.
  * Instructions are NOT touched — they often reference times, temperatures,
- * and pan sizes that don't scale linearly. A modification_summary noting
- * "scaled by N" should be set by the caller.
+ * and pan sizes that don't scale linearly. The servings count IS scaled
+ * (rounded to the nearest whole serving) so a halved 4-serve recipe lands
+ * at 2 instead of staying at 4.
  */
 export function scaleRecipe<T extends ScalableRecipe>(
   recipe: T,
@@ -160,6 +162,10 @@ export function scaleRecipe<T extends ScalableRecipe>(
 ): T {
   return {
     ...recipe,
+    servings:
+      recipe.servings != null
+        ? Math.max(1, Math.round(recipe.servings * factor))
+        : recipe.servings ?? null,
     shared_ingredients: recipe.shared_ingredients.map((l) =>
       scaleIngredientLine(l, factor),
     ),

@@ -332,6 +332,8 @@ const en = {
     "Recipes haven't been generated yet — hit Save & apply first to include full recipes and a shopping list in the doc.",
   "plan.compose": "Iterate on menu",
 
+  "detail.serves": "Serves {n}",
+
   // ratings
   "rating.label": "Rate this recipe",
   "rating.starN": "{n} stars",
@@ -668,6 +670,8 @@ const es: Partial<Record<StringKey, string>> = {
     "Aún no se generaron las recetas — pulsa Guardar y aplicar primero para incluir las recetas completas y la lista de compras en el documento.",
   "plan.compose": "Iterar el menú",
 
+  "detail.serves": "{n} porciones",
+
   "rating.label": "Calificar esta receta",
   "rating.starN": "{n} estrellas",
   "rating.avg": "{avg} ({n})",
@@ -997,6 +1001,8 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "compose.notSavedHint":
     "As receitas ainda não foram geradas — clique em Salvar e aplicar primeiro para incluir as receitas completas e a lista de compras no documento.",
   "plan.compose": "Iterar o menu",
+
+  "detail.serves": "{n} porções",
 
   "rating.label": "Avaliar esta receita",
   "rating.starN": "{n} estrelas",

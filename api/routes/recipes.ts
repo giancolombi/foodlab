@@ -212,6 +212,7 @@ router.post("/:slug/modify", requireAuth, async (req, res) => {
     freezer_friendly: boolean | null;
     prep_minutes: number | null;
     cook_minutes: number | null;
+    servings: number | null;
     shared_ingredients: string[];
     serve_with: string[];
     versions: Array<{
@@ -228,8 +229,8 @@ router.post("/:slug/modify", requireAuth, async (req, res) => {
     const localeIdx = params.length;
     const { rows } = await pool.query(
       `SELECT raw_markdown, title, slug, cuisine, freezer_friendly,
-              prep_minutes, cook_minutes, shared_ingredients, serve_with,
-              versions
+              prep_minutes, cook_minutes, servings,
+              shared_ingredients, serve_with, versions
        FROM recipes
        WHERE slug = $1 AND ${vis.clause}
          AND (locale = $${localeIdx} OR locale = 'en')
@@ -276,6 +277,7 @@ router.post("/:slug/modify", requireAuth, async (req, res) => {
           freezer_friendly: original.freezer_friendly,
           prep_minutes: original.prep_minutes,
           cook_minutes: original.cook_minutes,
+          servings: original.servings,
           shared_ingredients: original.shared_ingredients,
           serve_with: original.serve_with,
           versions: original.versions,
@@ -400,10 +402,11 @@ export async function saveUserRecipe(args: {
   const { rows } = await pool.query(
     `INSERT INTO recipes (
        slug, locale, title, category, cuisine, freezer_friendly,
-       prep_minutes, cook_minutes, shared_ingredients, serve_with,
+       prep_minutes, cook_minutes, servings,
+       shared_ingredients, serve_with,
        versions, raw_markdown, source_urls,
        owner_user_id, parent_slug, modification_note, is_public
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,FALSE)
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,FALSE)
      RETURNING id, slug, title`,
     [
       parsedRecipe.slug,
@@ -414,6 +417,7 @@ export async function saveUserRecipe(args: {
       parsedRecipe.freezer_friendly,
       parsedRecipe.prep_minutes,
       parsedRecipe.cook_minutes,
+      parsedRecipe.servings,
       parsedRecipe.shared_ingredients,
       parsedRecipe.serve_with,
       JSON.stringify(parsedRecipe.versions),

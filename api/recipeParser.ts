@@ -23,6 +23,8 @@ export interface ParsedRecipe {
   freezer_friendly: boolean | null;
   prep_minutes: number | null;
   cook_minutes: number | null;
+  /** Number of servings the base recipe yields, when explicit. */
+  servings: number | null;
   shared_ingredients: string[];
   serve_with: string[];
   versions: RecipeVersion[];
@@ -37,6 +39,11 @@ const META_LABEL_ALIASES = {
   freezer: ["Freezer-friendly", "Apta para congelar", "Apto para congelar", "Vai ao freezer", "Apto para freezer"],
   prep: ["Prep", "Preparación", "Preparacion", "Preparo"],
   cook: ["Cook", "Cocción", "Coccion", "Cozimento"],
+  servings: [
+    "Servings", "Serves", "Yield", "Yields", "Makes",
+    "Porciones", "Raciones", "Rinde", "Para",
+    "Porções", "Porcoes", "Rende", "Rendimento",
+  ],
 };
 
 function metaPattern(aliases: string[]): RegExp {
@@ -51,7 +58,19 @@ const META_PATTERNS: Record<keyof typeof META_LABEL_ALIASES, RegExp> = {
   freezer: metaPattern(META_LABEL_ALIASES.freezer),
   prep: metaPattern(META_LABEL_ALIASES.prep),
   cook: metaPattern(META_LABEL_ALIASES.cook),
+  servings: metaPattern(META_LABEL_ALIASES.servings),
 };
+
+function parseServings(raw: string | null): number | null {
+  if (!raw) return null;
+  // Pull the first integer out of strings like "4", "~8 burritos",
+  // "12 muffins", "4 personas", "6 porções". Tilde / "about" prefixes
+  // are common — we just take the leading digits.
+  const m = raw.match(/(\d+)/);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  return Number.isFinite(n) && n > 0 && n < 1000 ? n : null;
+}
 
 const PROTEIN_LABEL = /\*\*(?:Protein|Proteína|Proteina):\*\*\s*([^\n]+)/;
 
@@ -183,6 +202,7 @@ export function parseRecipe(
   const freezerRaw = markdown.match(META_PATTERNS.freezer)?.[1]?.trim() ?? null;
   const prepRaw = markdown.match(META_PATTERNS.prep)?.[1]?.trim() ?? null;
   const cookRaw = markdown.match(META_PATTERNS.cook)?.[1]?.trim() ?? null;
+  const servingsRaw = markdown.match(META_PATTERNS.servings)?.[1]?.trim() ?? null;
 
   const freezer_friendly = freezerRaw
     ? FREEZER_TRUE.test(freezerRaw)
@@ -223,6 +243,7 @@ export function parseRecipe(
     freezer_friendly,
     prep_minutes: parseMinutes(prepRaw),
     cook_minutes: parseMinutes(cookRaw),
+    servings: parseServings(servingsRaw),
     shared_ingredients,
     serve_with,
     versions,

@@ -339,6 +339,7 @@ export interface ModifiedRecipe {
   freezer_friendly: boolean | null;
   prep_minutes: number | null;
   cook_minutes: number | null;
+  servings: number | null;
   shared_ingredients: string[];
   serve_with: string[];
   versions: ModifiedVersion[];
@@ -354,6 +355,7 @@ Respond ONLY with JSON of this exact shape:
   "freezer_friendly": boolean | null,
   "prep_minutes": number | null,
   "cook_minutes": number | null,
+  "servings": number | null,
   "shared_ingredients": string[],
   "serve_with": string[],
   "versions": [
@@ -408,6 +410,7 @@ export async function streamModifyRecipe(
       freezer_friendly: boolean | null;
       prep_minutes: number | null;
       cook_minutes: number | null;
+      servings: number | null;
       shared_ingredients: string[];
       serve_with: string[];
       versions: Array<{
@@ -515,6 +518,7 @@ export async function streamModifyRecipe(
       typeof parsed.prep_minutes === "number" ? parsed.prep_minutes : null,
     cook_minutes:
       typeof parsed.cook_minutes === "number" ? parsed.cook_minutes : null,
+    servings: typeof parsed.servings === "number" ? parsed.servings : null,
     shared_ingredients: Array.isArray(parsed.shared_ingredients)
       ? parsed.shared_ingredients.filter((s: any) => typeof s === "string")
       : [],
@@ -555,6 +559,7 @@ const RENDER_LABELS: Record<
     freezer: string;
     prep: string;
     cook: string;
+    servings: string;
     yes: string;
     no: string;
     sharedIngredients: string;
@@ -568,6 +573,7 @@ const RENDER_LABELS: Record<
     freezer: "Freezer-friendly",
     prep: "Prep",
     cook: "Cook",
+    servings: "Serves",
     yes: "Yes",
     no: "No",
     sharedIngredients: "Shared ingredients",
@@ -580,6 +586,7 @@ const RENDER_LABELS: Record<
     freezer: "Apta para congelar",
     prep: "Preparación",
     cook: "Cocción",
+    servings: "Porciones",
     yes: "Sí",
     no: "No",
     sharedIngredients: "Ingredientes compartidos",
@@ -592,6 +599,7 @@ const RENDER_LABELS: Record<
     freezer: "Vai ao freezer",
     prep: "Preparo",
     cook: "Cozimento",
+    servings: "Porções",
     yes: "Sim",
     no: "Não",
     sharedIngredients: "Ingredientes compartilhados",
@@ -624,6 +632,7 @@ export function renderRecipeMarkdown(
     );
   if (r.prep_minutes != null) meta.push(`**${L.prep}:** ${r.prep_minutes} min`);
   if (r.cook_minutes != null) meta.push(`**${L.cook}:** ${r.cook_minutes} min`);
+  if (r.servings != null) meta.push(`**${L.servings}:** ${r.servings}`);
   if (meta.length) {
     lines.push(meta.join(" | "));
     lines.push("");

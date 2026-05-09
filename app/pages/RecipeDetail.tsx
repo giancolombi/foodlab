@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Clock, Snowflake, Sparkles } from "lucide-react";
+import { ArrowLeft, Clock, Snowflake, Sparkles, Users } from "lucide-react";
 
 import { AddToPlanButton } from "@/components/AddToPlanButton";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +95,12 @@ export default function RecipeDetail() {
           {recipe.freezer_friendly && (
             <span className="inline-flex items-center gap-1">
               <Snowflake className="h-3.5 w-3.5" /> {t("detail.freezerFriendly")}
+            </span>
+          )}
+          {recipe.servings != null && (
+            <span className="inline-flex items-center gap-1">
+              <Users className="h-3.5 w-3.5" />{" "}
+              {t("detail.serves", { n: recipe.servings })}
             </span>
           )}
         </div>

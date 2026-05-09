@@ -15,6 +15,7 @@ interface RenderLabels {
   freezer: string;
   prep: string;
   cook: string;
+  servings: string;
   yes: string;
   no: string;
   sharedIngredients: string;
@@ -29,6 +30,7 @@ const LABELS: Record<Locale, RenderLabels> = {
     freezer: "Freezer-friendly",
     prep: "Prep",
     cook: "Cook",
+    servings: "Serves",
     yes: "Yes",
     no: "No",
     sharedIngredients: "Shared ingredients",
@@ -41,6 +43,7 @@ const LABELS: Record<Locale, RenderLabels> = {
     freezer: "Apta para congelar",
     prep: "Preparación",
     cook: "Cocción",
+    servings: "Porciones",
     yes: "Sí",
     no: "No",
     sharedIngredients: "Ingredientes compartidos",
@@ -53,6 +56,7 @@ const LABELS: Record<Locale, RenderLabels> = {
     freezer: "Vai ao freezer",
     prep: "Preparo",
     cook: "Cozimento",
+    servings: "Porções",
     yes: "Sim",
     no: "Não",
     sharedIngredients: "Ingredientes compartilhados",
@@ -78,6 +82,7 @@ export function renderRecipeMarkdown(
     meta.push(`**${L.freezer}:** ${r.freezer_friendly ? L.yes : L.no}`);
   if (r.prep_minutes != null) meta.push(`**${L.prep}:** ${r.prep_minutes} min`);
   if (r.cook_minutes != null) meta.push(`**${L.cook}:** ${r.cook_minutes} min`);
+  if (r.servings != null) meta.push(`**${L.servings}:** ${r.servings}`);
   if (meta.length) {
     lines.push(meta.join(" | "));
     lines.push("");
