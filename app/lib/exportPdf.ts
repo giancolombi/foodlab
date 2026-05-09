@@ -58,7 +58,7 @@ function writeTitle(p: PdfDoc, text: string) {
   p.doc.setFontSize(20);
   p.doc.setTextColor(20, 20, 20);
   ensureSpace(p, 28);
-  p.doc.text(text, p.margin, p.cursorY);
+  p.doc.text(sanitizeForPdf(text), p.margin, p.cursorY);
   p.cursorY += 26;
 }
 
@@ -67,7 +67,7 @@ function writeSubtitle(p: PdfDoc, text: string) {
   p.doc.setFontSize(10);
   p.doc.setTextColor(120, 120, 120);
   ensureSpace(p, 14);
-  p.doc.text(text, p.margin, p.cursorY);
+  p.doc.text(sanitizeForPdf(text), p.margin, p.cursorY);
   p.cursorY += 18;
 }
 
@@ -77,7 +77,7 @@ function writeSectionHeading(p: PdfDoc, text: string) {
   p.doc.setTextColor(20, 20, 20);
   ensureSpace(p, 24);
   p.cursorY += 10;
-  p.doc.text(text, p.margin, p.cursorY);
+  p.doc.text(sanitizeForPdf(text), p.margin, p.cursorY);
   p.cursorY += 6;
   // Separator
   p.doc.setDrawColor(220, 220, 220);
@@ -97,7 +97,7 @@ function writeSubheading(p: PdfDoc, text: string) {
   p.doc.setTextColor(40, 40, 40);
   ensureSpace(p, 16);
   p.cursorY += 4;
-  p.doc.text(text, p.margin, p.cursorY);
+  p.doc.text(sanitizeForPdf(text), p.margin, p.cursorY);
   p.cursorY += 14;
 }
 
@@ -107,7 +107,7 @@ function writeBody(p: PdfDoc, text: string, opts?: { italic?: boolean; muted?: b
   p.doc.setTextColor(opts?.muted ? 110 : 40, opts?.muted ? 110 : 40, opts?.muted ? 110 : 40);
   const indent = opts?.indent ?? 0;
   const wrapWidth = p.contentWidth - indent;
-  const lines = p.doc.splitTextToSize(text, wrapWidth) as string[];
+  const lines = p.doc.splitTextToSize(sanitizeForPdf(text), wrapWidth) as string[];
   for (const line of lines) {
     ensureSpace(p, 14);
     p.doc.text(line, p.margin + indent, p.cursorY);
@@ -127,7 +127,7 @@ function writeBulletItem(
   const bulletWidth = 16;
   const textIndent = bulletWidth + 4;
   const wrapWidth = p.contentWidth - textIndent;
-  const lines = p.doc.splitTextToSize(text, wrapWidth) as string[];
+  const lines = p.doc.splitTextToSize(sanitizeForPdf(text), wrapWidth) as string[];
 
   for (let i = 0; i < lines.length; i++) {
     ensureSpace(p, 14);
@@ -157,7 +157,7 @@ function writeNumberedItem(p: PdfDoc, n: number, text: string) {
   const numWidth = 18;
   const textIndent = numWidth + 4;
   const wrapWidth = p.contentWidth - textIndent;
-  const lines = p.doc.splitTextToSize(text, wrapWidth) as string[];
+  const lines = p.doc.splitTextToSize(sanitizeForPdf(text), wrapWidth) as string[];
 
   for (let i = 0; i < lines.length; i++) {
     ensureSpace(p, 14);
@@ -186,6 +186,43 @@ function addFooter(p: PdfDoc) {
 
 function isoDate(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+// jsPDF's default helvetica renders WinAnsi-1252 only — unicode fractions
+// (½ ¼ ¾ ⅓ ⅔ ⅛ ⅜ ⅝ ⅞), CJK, fancy quotes, and em/en dashes get garbled.
+// Map the common offenders to ASCII before any text() call. Spanish and
+// Portuguese accents (á é í ó ú à è ç ñ ã õ ü ¿ ¡) ARE in WinAnsi so we
+// leave those untouched.
+const UNICODE_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/½/g, "1/2"],
+  [/¼/g, "1/4"],
+  [/¾/g, "3/4"],
+  [/⅓/g, "1/3"],
+  [/⅔/g, "2/3"],
+  [/⅕/g, "1/5"],
+  [/⅖/g, "2/5"],
+  [/⅗/g, "3/5"],
+  [/⅘/g, "4/5"],
+  [/⅙/g, "1/6"],
+  [/⅚/g, "5/6"],
+  [/⅛/g, "1/8"],
+  [/⅜/g, "3/8"],
+  [/⅝/g, "5/8"],
+  [/⅞/g, "7/8"],
+  [/—/g, " - "], // em dash
+  [/–/g, "-"], // en dash
+  [/"/g, '"'],
+  [/"/g, '"'],
+  [/'/g, "'"],
+  [/'/g, "'"],
+  [/…/g, "..."],
+  [/ /g, " "], // non-breaking space
+];
+
+function sanitizeForPdf(text: string): string {
+  let out = text;
+  for (const [re, repl] of UNICODE_REPLACEMENTS) out = out.replace(re, repl);
+  return out;
 }
 
 // ────────────────────────────────────────────────────────────────────────────

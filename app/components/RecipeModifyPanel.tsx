@@ -56,7 +56,7 @@ interface Props {
  */
 export function RecipeModifyPanel({
   slug,
-  recipe,
+  recipe: recipeProp,
   onSaved,
   compact = false,
 }: Props) {
@@ -65,6 +65,27 @@ export function RecipeModifyPanel({
   const [instruction, setInstruction] = useState("");
   const [preview, setPreview] = useState<ModifiedRecipe | null>(null);
   const [partial, setPartial] = useState<PartialRecipe | null>(null);
+  // If the parent didn't pass a recipe (e.g. the matcher embeds this panel
+  // with just a slug), fetch it ourselves in the background so the
+  // instant chips light up. Falls back gracefully if the fetch fails —
+  // chips just won't appear.
+  const [fetchedRecipe, setFetchedRecipe] = useState<RecipeDetail | null>(null);
+  const recipe = recipeProp ?? fetchedRecipe;
+  useEffect(() => {
+    if (recipeProp) return;
+    let cancelled = false;
+    const localeParam = encodeURIComponent(locale);
+    api<{ recipe: RecipeDetail }>(`/recipes/${slug}?locale=${localeParam}`)
+      .then(({ recipe }) => {
+        if (!cancelled) setFetchedRecipe(recipe);
+      })
+      .catch(() => {
+        // Non-fatal — chips just won't be available, free-form still works.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, locale, recipeProp]);
   const [previewMarkdown, setPreviewMarkdown] = useState("");
   const [thinking, setThinking] = useState("");
   const [streaming, setStreaming] = useState(false);
