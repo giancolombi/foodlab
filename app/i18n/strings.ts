@@ -335,6 +335,14 @@ const en = {
   // ai / model output
   "ai.thinking": "Thinking",
 
+  // quick-edit chips on RecipeModifyPanel
+  "modify.chip.halve": "Halve",
+  "modify.chip.double": "Double",
+  "modify.chip.spicier": "Make it spicier",
+  "modify.chip.milder": "Make it milder",
+  "modify.chip.swapProtein": "Swap protein",
+  "modify.instantLabel": "Instant",
+
   // generic
   "common.backToRecipes": "Back to recipes",
   "common.generic.error": "Something went wrong",
@@ -653,6 +661,13 @@ const es: Partial<Record<StringKey, string>> = {
 
   "ai.thinking": "Pensando",
 
+  "modify.chip.halve": "A la mitad",
+  "modify.chip.double": "El doble",
+  "modify.chip.spicier": "Más picante",
+  "modify.chip.milder": "Menos picante",
+  "modify.chip.swapProtein": "Cambiar proteína",
+  "modify.instantLabel": "Instantáneo",
+
   "common.backToRecipes": "Volver a recetas",
   "common.generic.error": "Algo salió mal",
 };
@@ -967,6 +982,13 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "plan.compose": "Iterar o menu",
 
   "ai.thinking": "Pensando",
+
+  "modify.chip.halve": "Pela metade",
+  "modify.chip.double": "Dobrar",
+  "modify.chip.spicier": "Mais picante",
+  "modify.chip.milder": "Menos picante",
+  "modify.chip.swapProtein": "Trocar proteína",
+  "modify.instantLabel": "Instantâneo",
 
   "common.backToRecipes": "Voltar às receitas",
   "common.generic.error": "Algo deu errado",

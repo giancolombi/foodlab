@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Check, Save, Share2, Sparkles, X } from "lucide-react";
+import {
+  Check,
+  Divide,
+  Save,
+  Share2,
+  Sparkles,
+  Users,
+  X,
+  Zap,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -11,14 +20,28 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { api } from "@/lib/api";
 import {
+  quickEditFromInstruction,
+  type QuickEditAction,
+} from "@/lib/quickEdit";
+import { renderRecipeMarkdown } from "@/lib/recipeMarkdown";
+import { scaleRecipe } from "@/lib/recipeMath";
+import {
   streamModify,
   type ModifiedRecipe,
   type PartialRecipe,
 } from "@/lib/streamModify";
 import { warmTranslator } from "@/lib/translator";
+import type { RecipeDetail } from "@/types";
 
 interface Props {
   slug: string;
+  /**
+   * The currently-loaded recipe, when available. Required for client-side
+   * quick edits (halve, double, scale to N) — without it those fall through
+   * to the LLM. The matcher embeds this panel without a loaded recipe; the
+   * detail page passes one.
+   */
+  recipe?: RecipeDetail;
   /** Called with the new slug after a successful save. */
   onSaved?: (newSlug: string) => void;
   /** Compact variant for embedding inside recommendation cards. */
@@ -31,7 +54,12 @@ interface Props {
  * as a personal copy. Used on both the RecipeDetail page and inline on the
  * IngredientMatcher.
  */
-export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
+export function RecipeModifyPanel({
+  slug,
+  recipe,
+  onSaved,
+  compact = false,
+}: Props) {
   const { user } = useAuth();
   const { locale, t } = useLanguage();
   const [instruction, setInstruction] = useState("");
@@ -55,6 +83,42 @@ export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
     warmTranslator();
   };
 
+  /**
+   * Apply a quick-edit action locally without an LLM round-trip. Returns
+   * true if applied; false if the action couldn't run (e.g. no recipe
+   * loaded) and the caller should fall through to the streaming path.
+   */
+  const applyQuickEdit = (action: QuickEditAction): boolean => {
+    if (!recipe) return false;
+    let scaled = recipe;
+    if (action.type === "scale") {
+      scaled = scaleRecipe(recipe, action.factor);
+    }
+    const modified: ModifiedRecipe = {
+      title: scaled.title,
+      cuisine: scaled.cuisine,
+      freezer_friendly: scaled.freezer_friendly,
+      prep_minutes: scaled.prep_minutes,
+      cook_minutes: scaled.cook_minutes,
+      shared_ingredients: scaled.shared_ingredients,
+      serve_with: scaled.serve_with,
+      versions: scaled.versions.map((v) => ({
+        name: v.name,
+        group_label: v.group_label,
+        protein: v.protein,
+        instructions: v.instructions,
+      })),
+      modification_summary: action.summary,
+    };
+    const md = renderRecipeMarkdown(modified, recipe.title, locale);
+    setPreview(modified);
+    setPartial(null);
+    setPreviewMarkdown(md);
+    setThinking("");
+    toast.success(action.toastLabel);
+    return true;
+  };
+
   const handleModify = async (e: FormEvent) => {
     e.preventDefault();
     const trimmed = instruction.trim();
@@ -66,6 +130,13 @@ export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
       toast.error(t("modify.errorSignin"));
       return;
     }
+
+    // Cheap path: if the instruction matches a known scale operation and
+    // we have the recipe loaded, apply it locally and skip the LLM
+    // entirely. Halve / double / "scale to N" land instantly this way.
+    const quick = quickEditFromInstruction(trimmed, locale);
+    if (quick && applyQuickEdit(quick)) return;
+
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -97,6 +168,19 @@ export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
       }
     } finally {
       setStreaming(false);
+    }
+  };
+
+  /** Apply a quick edit directly from a chip click. Bypasses the textarea. */
+  const handleChipQuickEdit = (action: QuickEditAction) => {
+    if (!user) {
+      toast.error(t("modify.errorSignin"));
+      return;
+    }
+    if (!applyQuickEdit(action)) {
+      // Recipe not loaded — pre-fill the textarea instead so the user can
+      // submit and let the LLM handle it.
+      setInstruction(action.toastLabel);
     }
   };
 
@@ -139,12 +223,71 @@ export function RecipeModifyPanel({ slug, onSaved, compact = false }: Props) {
     }
   };
 
+  // Chips: the first three are deterministic / instant when a recipe is
+  // loaded; the last two pre-fill the textarea so the LLM handles them.
+  const instantChips = recipe
+    ? [
+        {
+          key: "halve",
+          label: t("modify.chip.halve"),
+          icon: Divide,
+          action: { type: "scale", factor: 0.5, summary: t("modify.chip.halve"), toastLabel: t("modify.chip.halve") } as QuickEditAction,
+        },
+        {
+          key: "double",
+          label: t("modify.chip.double"),
+          icon: Users,
+          action: { type: "scale", factor: 2, summary: t("modify.chip.double"), toastLabel: t("modify.chip.double") } as QuickEditAction,
+        },
+      ]
+    : [];
+
+  const fillChips = [
+    { key: "spicier", label: t("modify.chip.spicier") },
+    { key: "milder", label: t("modify.chip.milder") },
+    { key: "swap", label: t("modify.chip.swapProtein") },
+  ];
+
   return (
     <div className="space-y-3">
       <form onSubmit={handleModify} className="space-y-2">
         <Label htmlFor={`instruction-${slug}`} className="sr-only">
           {t("detail.customizeTitle")}
         </Label>
+        {(instantChips.length > 0 || fillChips.length > 0) && (
+          <div className="flex flex-wrap gap-1.5">
+            {instantChips.map((c) => {
+              const Icon = c.icon;
+              return (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => handleChipQuickEdit(c.action)}
+                  disabled={streaming || !user}
+                  className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-1 text-xs text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={t("modify.instantLabel")}
+                >
+                  <Zap className="h-3 w-3" />
+                  {c.label}
+                </button>
+              );
+            })}
+            {fillChips.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => {
+                  setInstruction(c.label);
+                  handleWarm();
+                }}
+                disabled={streaming}
+                className="inline-flex items-center rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent/40 hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        )}
         <Textarea
           id={`instruction-${slug}`}
           rows={compact ? 2 : 2}

@@ -191,6 +191,7 @@ export default function RecipeDetail() {
         <CardContent>
           <RecipeModifyPanel
             slug={recipe.slug}
+            recipe={recipe}
             onSaved={(newSlug) => navigate(`/recipes/${newSlug}`)}
           />
         </CardContent>
