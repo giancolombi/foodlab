@@ -209,6 +209,7 @@ export function RecipeModifyPanel({
           markdown: previewMarkdown,
           parentSlug: slug,
           modificationNote: instruction,
+          locale,
         },
       });
       toast.success(t("modify.savedToast", { title: created.title }));

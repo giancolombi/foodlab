@@ -180,20 +180,50 @@ router.post("/generate", requireAuth, async (req, res) => {
   const picked: Array<{ slug: string; category: string }> = [];
   const usedCuisines = new Set<string>();
 
+  // Cooking method classifier — keyword scan over title + cuisine. Coarse
+  // but enough to avoid filling a week with four stews even if they're
+  // from four different cuisines.
+  function methodOf(r: RecipeRow): string {
+    const text = `${r.title} ${r.cuisine ?? ""}`.toLowerCase();
+    if (/\bsheet[- ]?pan\b/.test(text)) return "sheet-pan";
+    if (/\bbake|roast|baked|tagine\b/.test(text)) return "baked";
+    if (/\bstew|chili|ragu|goulash|curry|soup|simmer|braise|adobo|tagine\b/.test(text)) return "simmered";
+    if (/\bbowl|bibimbap|burrito|wrap\b/.test(text)) return "assembled";
+    if (/\bstir[- ]?fry|fry|saute|sauté|skillet\b/.test(text)) return "stovetop";
+    return "other";
+  }
+
+  const usedMethods = new Set<string>();
+
   function pickFrom(pool: RecipeRow[], n: number) {
-    // First pass: prefer diverse cuisines.
+    const isCategoryFull = () =>
+      picked.filter((p) => p.category === pool[0]?.category).length >= n;
+
+    // First pass: prefer diverse cuisines AND cooking methods so a week
+    // doesn't end up as four stews from four cuisines.
     for (const r of pool) {
-      if (picked.length >= n + picked.length) break;
+      if (isCategoryFull()) return;
+      if (picked.some((p) => p.slug === r.slug)) continue;
+      const c = (r.cuisine ?? "").toLowerCase();
+      if (c && usedCuisines.has(c)) continue;
+      const m = methodOf(r);
+      if (usedMethods.has(m)) continue;
+      picked.push({ slug: r.slug, category: r.category });
+      if (c) usedCuisines.add(c);
+      usedMethods.add(m);
+    }
+    // Second pass: relax method constraint, keep cuisine diversity.
+    for (const r of pool) {
+      if (isCategoryFull()) return;
       if (picked.some((p) => p.slug === r.slug)) continue;
       const c = (r.cuisine ?? "").toLowerCase();
       if (c && usedCuisines.has(c)) continue;
       picked.push({ slug: r.slug, category: r.category });
       if (c) usedCuisines.add(c);
-      if (picked.filter((p) => p.category === r.category).length >= n) return;
     }
-    // Second pass: fill remaining without cuisine constraint.
+    // Third pass: fill remaining without any diversity constraint.
     for (const r of pool) {
-      if (picked.filter((p) => p.category === r.category).length >= n) return;
+      if (isCategoryFull()) return;
       if (picked.some((p) => p.slug === r.slug)) continue;
       picked.push({ slug: r.slug, category: r.category });
     }
@@ -202,15 +232,21 @@ router.post("/generate", requireAuth, async (req, res) => {
   pickFrom(mains, 4);
   pickFrom(breakfasts, 1);
 
-  // Assign to slots: breakfasts to Saturday breakfast, mains to Mon-Thu dinners.
+  // Assign to slots. 4 mains spread across the week (Mon, Tue, Thu, Sat
+  // — leaves Wed/Fri/Sun open for leftovers, takeout, or shared meals);
+  // breakfast on Sat morning so the Sat dinner pairs with prep day.
   const assignments: Record<string, { slug: string; assignedAt: number }> = {};
   const now = Date.now();
   const mainPicks = picked.filter((p) => p.category === "mains");
   const breakfastPicks = picked.filter((p) => p.category === "breakfast");
 
+  const MAIN_DAYS = [0, 1, 3, 5] as const; // Mon, Tue, Thu, Sat
   mainPicks.forEach((p, i) => {
-    if (i < 4) {
-      assignments[`${i}-dinner`] = { slug: p.slug, assignedAt: now };
+    if (i < MAIN_DAYS.length) {
+      assignments[`${MAIN_DAYS[i]}-dinner`] = {
+        slug: p.slug,
+        assignedAt: now,
+      };
     }
   });
   breakfastPicks.forEach((p) => {
