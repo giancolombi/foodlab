@@ -102,10 +102,14 @@ export function AddToPlanButton({
           onClick={(e) => e.stopPropagation()}
           className={cn(
             "absolute z-50 mt-1 p-3 rounded-md border bg-popover shadow-md",
-            // Right-align under the button on desktop. On mobile, anchor to
-            // the right edge of the button and grow leftward up to the
-            // viewport — never wider than 90vw so it can't clip on a phone.
-            "right-0 w-[min(90vw,20rem)] sm:w-80",
+            // Anchor to the LEFT edge of the button on mobile (where the
+            // button typically sits left-aligned in card content / detail
+            // header) and grow rightward; on sm+ flip to right-aligned for
+            // the desktop layouts where the button sits ml-auto. Width is
+            // capped at min(calc(100vw - 2rem), 20rem) so it never clips
+            // off either edge regardless of which way it grows.
+            "left-0 right-auto sm:left-auto sm:right-0",
+            "w-[min(calc(100vw-2rem),20rem)] sm:w-80",
           )}
         >
           <p className="text-xs text-muted-foreground mb-2">
