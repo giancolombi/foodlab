@@ -1,31 +1,124 @@
-// Ollama client — uses /api/chat with streaming so the frontend can show
-// recipe cards as soon as the model finishes writing each one.
-// Docs: https://github.com/ollama/ollama/blob/main/docs/api.md
+// LLM client — talks to any OpenAI-compatible /chat/completions endpoint.
+// Defaults to Google's Gemini API (its OpenAI-compatible surface). Point
+// LLM_BASE_URL at any compatible provider — including a local Ollama via
+// its /v1 endpoint — and the rest of the app is unchanged.
 
-const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3.5:4b";
+const LLM_BASE_URL =
+  process.env.LLM_BASE_URL ||
+  "https://generativelanguage.googleapis.com/v1beta/openai";
+const LLM_API_KEY = process.env.LLM_API_KEY || "";
+const LLM_MODEL = process.env.LLM_MODEL || "gemini-3.1-flash-lite";
 
-// Per-function model overrides. Each job has different latency / quality
-// tradeoffs — the matcher is hot-path and benefits from a smaller / faster
-// model, while the modify + compose paths benefit from the strongest model
-// the deployment can afford (or even a cloud model like deepseek-v4-flash
-// when stricter JSON adherence is worth the per-token cost). Each falls
-// back to OLLAMA_MODEL so a single env keeps working.
+// Per-function model overrides. Each job has different latency / quality /
+// cost tradeoffs — the matcher is hot-path and wants a fast cheap model,
+// while modify + compose can justify a stronger one. Each falls back to
+// LLM_MODEL so a single env keeps working.
 const MODEL_FOR = {
-  match: process.env.OLLAMA_MODEL_MATCH || OLLAMA_MODEL,
-  modify: process.env.OLLAMA_MODEL_MODIFY || OLLAMA_MODEL,
-  compose: process.env.OLLAMA_MODEL_COMPOSE || OLLAMA_MODEL,
-  shopping: process.env.OLLAMA_MODEL_SHOPPING || OLLAMA_MODEL,
-  extract: process.env.OLLAMA_MODEL_EXTRACT || OLLAMA_MODEL,
-  expand: process.env.OLLAMA_MODEL_EXPAND || OLLAMA_MODEL,
+  match: process.env.LLM_MODEL_MATCH || LLM_MODEL,
+  modify: process.env.LLM_MODEL_MODIFY || LLM_MODEL,
+  compose: process.env.LLM_MODEL_COMPOSE || LLM_MODEL,
+  shopping: process.env.LLM_MODEL_SHOPPING || LLM_MODEL,
+  extract: process.env.LLM_MODEL_EXTRACT || LLM_MODEL,
+  expand: process.env.LLM_MODEL_EXPAND || LLM_MODEL,
 } as const;
 
-// Reasoning-capable models (qwen3.5, deepseek-v4, kimi, magistral) emit a
-// separate `message.thinking` field on each streamed event when called with
-// `think: true`. Defaults to ON since the default model (qwen3.5:4b) is
-// thinking-capable; set OLLAMA_THINKING=false to disable, e.g. when
-// swapping to a non-thinking model.
-const OLLAMA_THINKING = process.env.OLLAMA_THINKING !== "false";
+interface ChatMsg {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+interface ChatOpts {
+  model: string;
+  messages: ChatMsg[];
+  temperature?: number;
+  maxTokens?: number;
+  /** Request a JSON-object response (OpenAI `response_format`). */
+  json?: boolean;
+}
+
+function chatBody(opts: ChatOpts, stream: boolean): string {
+  return JSON.stringify({
+    model: opts.model,
+    messages: opts.messages,
+    temperature: opts.temperature ?? 0.2,
+    max_tokens: opts.maxTokens ?? 1500,
+    ...(stream ? { stream: true } : {}),
+    ...(opts.json ? { response_format: { type: "json_object" } } : {}),
+  });
+}
+
+function chatHeaders(): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${LLM_API_KEY}`,
+  };
+}
+
+/** Non-streaming chat completion. Returns the assistant message text. */
+async function chatComplete(opts: ChatOpts): Promise<string> {
+  const res = await fetch(`${LLM_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: chatHeaders(),
+    body: chatBody(opts, false),
+  });
+  if (!res.ok) {
+    throw new Error(`LLM ${res.status}: ${await res.text()}`);
+  }
+  const data = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  return data.choices?.[0]?.message?.content ?? "";
+}
+
+/**
+ * Streaming chat completion. Forwards each content delta to `onContent` and
+ * returns the full accumulated text. Parses OpenAI-style SSE: lines of
+ * `data: <json>` terminated by `data: [DONE]`.
+ */
+async function chatStream(
+  opts: ChatOpts,
+  onContent: (chunk: string) => void,
+): Promise<string> {
+  const res = await fetch(`${LLM_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: chatHeaders(),
+    body: chatBody(opts, true),
+  });
+  if (!res.ok || !res.body) {
+    const detail = res.body ? await res.text() : "no response body";
+    throw new Error(`LLM ${res.status}: ${detail}`);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let full = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("data:")) continue;
+      const payload = trimmed.slice(5).trim();
+      if (!payload || payload === "[DONE]") continue;
+      try {
+        const event = JSON.parse(payload) as {
+          choices?: Array<{ delta?: { content?: string } }>;
+        };
+        const piece = event.choices?.[0]?.delta?.content;
+        if (piece) {
+          full += piece;
+          onContent(piece);
+        }
+      } catch {
+        // ignore malformed SSE line
+      }
+    }
+  }
+  return full;
+}
 
 export type Locale = "en" | "es" | "pt-BR";
 
@@ -222,74 +315,22 @@ export async function streamRecommendations(
     "{LOCALE_DIRECTIVE}",
     LOCALE_DIRECTIVE[locale],
   );
-  const body: Record<string, unknown> = {
-    model: MODEL_FOR.match,
-    stream: true,
-    format: "json",
-    // Keep the model resident so the next call doesn't pay cold-start.
-    keep_alive: "5m",
-    messages: [
-      { role: "system", content: systemPrompt },
-      {
-        role: "user",
-        content: buildUserPrompt({ ...args, recipes: shortlist }),
-      },
-    ],
-    options: {
+  const full = await chatStream(
+    {
+      model: MODEL_FOR.match,
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: buildUserPrompt({ ...args, recipes: shortlist }),
+        },
+      ],
       temperature: 0.2,
-      // Keep context tight — our prompt is small, and a smaller window means
-      // faster prompt processing.
-      num_ctx: 2048,
-      // Cap output so the model doesn't ramble past the JSON closing brace.
-      num_predict: 512,
+      maxTokens: 800,
+      json: true,
     },
-  };
-  if (OLLAMA_THINKING) body.think = true;
-
-  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok || !res.body) {
-    throw new Error(`Ollama ${res.status}: ${await res.text()}`);
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let full = "";
-
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    // Ollama emits newline-delimited JSON, one event per chunk.
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      try {
-        const event = JSON.parse(trimmed) as {
-          message?: { content?: string; thinking?: string };
-          done?: boolean;
-        };
-        const piece = event.message?.content;
-        if (piece) {
-          full += piece;
-          handlers.onContent(piece);
-        }
-        const thought = event.message?.thinking;
-        if (thought && handlers.onThinking) {
-          handlers.onThinking(thought);
-        }
-      } catch {
-        // ignore malformed line — Ollama is generally well-behaved
-      }
-    }
-  }
+    handlers.onContent,
+  );
 
   // Parse the final accumulated content. Models can occasionally wrap the JSON.
   let parsed: { recommendations?: Recommendation[] };
@@ -473,68 +514,19 @@ export async function streamModifyRecipe(
   const userContent = args.originalStructured
     ? `Modification: ${args.instruction}\n\nOriginal recipe (JSON):\n\n${JSON.stringify(args.originalStructured)}`
     : `Modification: ${args.instruction}\n\nOriginal recipe:\n\n${args.originalMarkdown}`;
-  const body: Record<string, unknown> = {
-    model: MODEL_FOR.modify,
-    stream: true,
-    format: "json",
-    keep_alive: "5m",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userContent },
-    ],
-    options: {
+  const full = await chatStream(
+    {
+      model: MODEL_FOR.modify,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ],
       temperature: 0.2,
-      // Tighter ceilings for faster prompt-eval and so the model can't
-      // ramble past the JSON close. Recipes serialize to ~400-700 tokens
-      // as JSON (vs ~600-900 as markdown).
-      num_ctx: 2048,
-      num_predict: 1024,
+      maxTokens: 2500,
+      json: true,
     },
-  };
-  if (OLLAMA_THINKING) body.think = true;
-
-  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok || !res.body) {
-    throw new Error(`Ollama ${res.status}: ${await res.text()}`);
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let full = "";
-
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      try {
-        const event = JSON.parse(trimmed) as {
-          message?: { content?: string; thinking?: string };
-          done?: boolean;
-        };
-        const piece = event.message?.content;
-        if (piece) {
-          full += piece;
-          handlers.onContent(piece);
-        }
-        const thought = event.message?.thinking;
-        if (thought && handlers.onThinking) {
-          handlers.onThinking(thought);
-        }
-      } catch {
-        // ignore malformed line
-      }
-    }
-  }
+    handlers.onContent,
+  );
 
   let parsed: any;
   try {
@@ -766,13 +758,8 @@ export async function consolidateShoppingList(args: {
     LOCALE_DIRECTIVE[locale],
   );
 
-  const body = {
+  const content = await chatComplete({
     model: MODEL_FOR.shopping,
-    stream: false,
-    format: "json",
-    keep_alive: "5m",
-    // Non-interactive — disable reasoning so it doesn't eat the budget.
-    think: false,
     messages: [
       { role: "system", content: systemPrompt },
       {
@@ -780,23 +767,10 @@ export async function consolidateShoppingList(args: {
         content: `Consolidate these recipes:\n${JSON.stringify(args.recipes)}`,
       },
     ],
-    options: {
-      temperature: 0,
-      num_ctx: 4096,
-      num_predict: 2000,
-    },
-  };
-
-  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    temperature: 0,
+    maxTokens: 2500,
+    json: true,
   });
-  if (!res.ok) {
-    throw new Error(`Ollama ${res.status}: ${await res.text()}`);
-  }
-  const data = (await res.json()) as { message?: { content?: string } };
-  const content = data.message?.content ?? "";
 
   let parsed: { sections?: Partial<ConsolidatedSections> };
   try {
@@ -852,24 +826,12 @@ export async function consolidateShoppingList(args: {
 }
 
 /**
- * Ask Ollama to load the model into memory without generating anything. Used
- * as a background "warmup" so the first real translation request doesn't pay
- * cold-start latency. Per Ollama docs, omitting `prompt` with `keep_alive` set
- * just loads the model.
+ * No-op kept for API compatibility with the /translate/warm route. A hosted
+ * LLM has no local model to pre-load, so there's no cold start to warm
+ * against.
  */
 export async function warmOllama(): Promise<void> {
-  try {
-    await fetch(`${OLLAMA_URL}/api/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        keep_alive: "5m",
-      }),
-    });
-  } catch {
-    // non-fatal: translation will just cold-start on its first real call
-  }
+  // intentionally empty
 }
 
 // ---------- Iterative menu composer ----------
@@ -944,36 +906,17 @@ export async function composeMenu(args: {
     content: `[CURRENT_DRAFT]\n${JSON.stringify(args.currentDraft)}`,
   };
 
-  const body = {
+  const content = await chatComplete({
     model: MODEL_FOR.compose,
-    stream: false,
-    format: "json",
-    keep_alive: "5m",
-    // No thinking-trace UI for compose — disable reasoning so it doesn't
-    // eat the num_predict budget meant for the JSON draft.
-    think: false,
     messages: [
       { role: "system", content: systemPrompt },
       draftContext,
       ...args.messages,
     ],
-    options: {
-      temperature: 0.4,
-      num_ctx: 4096,
-      num_predict: 1500,
-    },
-  };
-
-  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    temperature: 0.4,
+    maxTokens: 2000,
+    json: true,
   });
-  if (!res.ok) {
-    throw new Error(`Ollama compose ${res.status}`);
-  }
-  const data = (await res.json()) as { message?: { content?: string } };
-  const content = data?.message?.content ?? "";
 
   let parsed: { reply?: unknown; draft?: { dishes?: unknown } } = {};
   try {
@@ -1081,15 +1024,8 @@ export async function expandDishToRecipe(args: {
     LOCALE_DIRECTIVE[locale],
   );
 
-  const body = {
+  const content = await chatComplete({
     model: MODEL_FOR.expand,
-    stream: false,
-    keep_alive: "5m",
-    // qwen3.5 is a thinking model and reasons by default. This is a
-    // non-interactive job with no thinking-trace UI, so disable it —
-    // otherwise reasoning tokens eat the num_predict budget and the
-    // markdown `content` comes back empty (no title → recipe skipped).
-    think: false,
     messages: [
       { role: "system", content: systemPrompt },
       {
@@ -1097,21 +1033,10 @@ export async function expandDishToRecipe(args: {
         content: `Dish concept:\n${JSON.stringify(args.dish)}`,
       },
     ],
-    options: {
-      temperature: 0.4,
-      num_ctx: 4096,
-      num_predict: 2000,
-    },
-  };
-
-  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    temperature: 0.4,
+    maxTokens: 2500,
   });
-  if (!res.ok) throw new Error(`Ollama expand ${res.status}`);
-  const data = (await res.json()) as { message?: { content?: string } };
-  let md = (data?.message?.content ?? "").trim();
+  let md = content.trim();
   // Strip any accidental fenced blocks the model wraps around the markdown.
   md = md.replace(/^```(?:markdown|md)?\s*\n/i, "").replace(/\n```\s*$/i, "");
   return md;
@@ -1168,13 +1093,8 @@ export async function extractRecipeFromText(args: {
     LOCALE_DIRECTIVE[locale],
   );
 
-  const body = {
+  const content = await chatComplete({
     model: MODEL_FOR.extract,
-    stream: false,
-    keep_alive: "5m",
-    // No thinking-trace UI here — disable reasoning so it doesn't consume
-    // the num_predict budget meant for the recipe markdown.
-    think: false,
     messages: [
       { role: "system", content: systemPrompt },
       {
@@ -1182,47 +1102,27 @@ export async function extractRecipeFromText(args: {
         content: `Pasted recipe:\n${args.text.slice(0, 12000)}`,
       },
     ],
-    options: {
-      temperature: 0.3,
-      num_ctx: 8192,
-      num_predict: 1800,
-    },
-  };
-
-  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    temperature: 0.3,
+    maxTokens: 2500,
   });
-  if (!res.ok) throw new Error(`Ollama extract ${res.status}`);
-  const data = (await res.json()) as { message?: { content?: string } };
-  let md = (data?.message?.content ?? "").trim();
+  let md = content.trim();
   md = md.replace(/^```(?:markdown|md)?\s*\n/i, "").replace(/\n```\s*$/i, "");
   return md;
 }
 
+/**
+ * Health check for /api/health. We can't cheaply ping a hosted LLM without
+ * spending tokens, so this just reports whether an API key is configured —
+ * enough to catch a misconfiguration. Keeps the `checkOllama` name + shape
+ * so the health route and frontend don't need changes.
+ */
 export async function checkOllama(): Promise<{
   ok: boolean;
   model: string;
   error?: string;
 }> {
-  try {
-    const res = await fetch(`${OLLAMA_URL}/api/tags`, {
-      signal: AbortSignal.timeout(2000),
-    });
-    if (!res.ok) {
-      return {
-        ok: false,
-        model: OLLAMA_MODEL,
-        error: `Ollama returned ${res.status}`,
-      };
-    }
-    return { ok: true, model: OLLAMA_MODEL };
-  } catch (err) {
-    return {
-      ok: false,
-      model: OLLAMA_MODEL,
-      error: err instanceof Error ? err.message : String(err),
-    };
+  if (!LLM_API_KEY) {
+    return { ok: false, model: LLM_MODEL, error: "LLM_API_KEY not set" };
   }
+  return { ok: true, model: LLM_MODEL };
 }

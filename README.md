@@ -103,8 +103,8 @@ app/                   React frontend (Vite + React 19)
   types/               Shared TS types
 api/                   Express backend + Postgres
   routes/              Route modules (auth, profiles, recipes, plans, …)
-  llm.ts               Ollama client + shopping-list consolidator
-ai/                    Ollama container + entrypoint
+  llm.ts               LLM client (OpenAI-compatible) + shopping-list consolidator
+ai/                    Optional self-hosted Ollama container (legacy — see LLM below)
 scripts/               DB migrate + seed
 hooks/                 Agent safety guards
 .claude/skills/        Slash commands for Claude Code
@@ -126,21 +126,23 @@ When running Claude Code locally, two cron jobs run in the background:
 - **Meal Planner** (1st and 15th) — generates a weekly menu + shopping list
 
 When the web app is deployed on **Railway**, an optional cron service runs the
-in-app hunter daily against the live Postgres + Ollama services. Add it as a
-new service pointing at `railway.cron.json`; it shares the api Dockerfile and
-runs `pnpm run cron:hunt -- --mode=both` once a day. Required env: `DATABASE_URL`,
-`OLLAMA_URL`, `OLLAMA_MODEL`. Override schedule by editing `cronSchedule` in
-`railway.cron.json`.
+in-app hunter daily against the live Postgres + the LLM. Add it as a new
+service pointing at `railway.cron.json`; it shares the api Dockerfile and runs
+`pnpm run cron:hunt -- --mode=both` once a day. Required env: `DATABASE_URL`,
+`LLM_API_KEY` (plus `LLM_BASE_URL` / `LLM_MODEL` if not using the defaults).
+Override schedule by editing `cronSchedule` in `railway.cron.json`.
 
-**Open-source model.** The default is `qwen3.5:4b` (multilingual JSON,
-thinking-capable, ~3.4 GB on disk — fits a small Railway volume + 7.5 GB-RAM
-dyno). To swap models, set the AI service's `OLLAMA_MODEL` env; the
-`ai/entrypoint.sh` boot script removes any other cached model first, so a swap
-never needs the volume to hold both at once. Set `OLLAMA_THINKING=false` when
-using a non-thinking model. For mixed setups, route per function via
-`OLLAMA_MODEL_MATCH`, `OLLAMA_MODEL_MODIFY`, `OLLAMA_MODEL_COMPOSE`,
-`OLLAMA_MODEL_SHOPPING`, `OLLAMA_MODEL_EXTRACT`, `OLLAMA_MODEL_EXPAND` — each
-falls back to `OLLAMA_MODEL`. Cloud-hosted Ollama models (e.g.
-`deepseek-v4-flash`) are valid values too.
+**LLM.** `api/llm.ts` talks to any **OpenAI-compatible `/chat/completions`
+endpoint**. The default is Google **Gemini** (`gemini-3.1-flash-lite` — the
+latest stable Flash-Lite, free-tier eligible). Configure with:
+- `LLM_API_KEY` — your provider key (never commit it)
+- `LLM_BASE_URL` — defaults to Gemini's OpenAI-compatible endpoint
+- `LLM_MODEL` — defaults to `gemini-3.1-flash-lite`
+
+For mixed setups, route per function via `LLM_MODEL_MATCH`, `LLM_MODEL_MODIFY`,
+`LLM_MODEL_COMPOSE`, `LLM_MODEL_SHOPPING`, `LLM_MODEL_EXTRACT`,
+`LLM_MODEL_EXPAND` — each falls back to `LLM_MODEL`. To self-host instead,
+point `LLM_BASE_URL` at a local Ollama's `/v1` endpoint (`ai/` has a container
+for that). With a hosted LLM the `ai` service isn't needed and can be removed.
 
 </details>

@@ -44,12 +44,12 @@ services:
       dockerfile: api/Dockerfile
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/foodlab
-      # Defaults to the host's Ollama (`ollama serve` on the Mac). Override with
-      # FOODLAB_OLLAMA_URL=http://ollama:11434 for the bundled-ollama profile.
-      # We deliberately use FOODLAB_OLLAMA_URL (not OLLAMA_URL) so this isn't
-      # clobbered by .env, which sets OLLAMA_URL=localhost for non-Docker runs.
-      OLLAMA_URL: ${FOODLAB_OLLAMA_URL:-http://host.docker.internal:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:4b}
+      # LLM defaults to Google Gemini — pass LLM_API_KEY through from your
+      # shell / .env. To use the bundled CPU Ollama instead, set
+      # LLM_BASE_URL=http://ollama:11434/v1 and LLM_MODEL=qwen3.5:4b.
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://generativelanguage.googleapis.com/v1beta/openai}
+      LLM_MODEL: ${LLM_MODEL:-gemini-3.1-flash-lite}
       JWT_SECRET: ${JWT_SECRET:-dev-insecure-secret-change-me}
       API_PORT: 3001
       RECIPES_DIR: /recipes
