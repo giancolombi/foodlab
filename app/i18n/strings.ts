@@ -84,6 +84,11 @@ const en = {
   "recipes.badge.inPlanHint": "Scheduled in {n} slot(s) this week",
   "recipes.minutes": "{n} min",
   "recipes.freezer": "freezer",
+  "recipes.add.cta": "Add recipe",
+  "recipes.add.hint":
+    "Paste a URL or the raw text. Simpler is better — short ingredient lists, few steps. The assistant turns it into FoodLab format and saves it.",
+  "recipes.add.submit": "Save recipe",
+  "recipes.add.saved": "Recipe saved",
 
   // recipe detail
   "detail.back": "Back",
@@ -271,6 +276,12 @@ const en = {
   "cart.download": "Download",
   "cart.downloadHint": "Save as a PDF",
   "cart.downloaded": "Downloaded shopping list",
+  "cart.instacart": "Instacart",
+  "cart.instacartHint":
+    "Copy unticked items and open instacart.com/lists so you can paste",
+  "cart.instacartCopied":
+    "Unticked items copied — paste them into Instacart's list",
+  "cart.instacartEmpty": "Nothing left to buy — everything's ticked off",
 
   // compose (iterative menu chat)
   "compose.title": "Compose a menu",
@@ -463,6 +474,12 @@ const es: Partial<Record<StringKey, string>> = {
   "cart.download": "Descargar",
   "cart.downloadHint": "Guardar como PDF",
   "cart.downloaded": "Lista descargada",
+  "cart.instacart": "Instacart",
+  "cart.instacartHint":
+    "Copia los artículos sin marcar y abre instacart.com/lists para pegarlos",
+  "cart.instacartCopied":
+    "Artículos pendientes copiados — pégalos en tu lista de Instacart",
+  "cart.instacartEmpty": "No queda nada por comprar — todo está marcado",
   "layout.footer": "FoodLab · código abierto",
   "layout.language": "Idioma",
   "layout.units": "Unidades de medida",
@@ -514,6 +531,11 @@ const es: Partial<Record<StringKey, string>> = {
   "recipes.badge.inPlanHint": "Agendada en {n} espacio(s) esta semana",
   "recipes.minutes": "{n} min",
   "recipes.freezer": "freezer",
+  "recipes.add.cta": "Agregar receta",
+  "recipes.add.hint":
+    "Pega una URL o el texto. Mejor si es sencilla — pocos ingredientes, pocos pasos. El asistente la convierte al formato de FoodLab y la guarda.",
+  "recipes.add.submit": "Guardar receta",
+  "recipes.add.saved": "Receta guardada",
 
   "detail.back": "Volver",
   "detail.savedByYou": "Guardada por ti",
@@ -795,6 +817,12 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "cart.download": "Baixar",
   "cart.downloadHint": "Salvar como PDF",
   "cart.downloaded": "Lista baixada",
+  "cart.instacart": "Instacart",
+  "cart.instacartHint":
+    "Copie os itens não marcados e abra instacart.com/lists para colar",
+  "cart.instacartCopied":
+    "Itens pendentes copiados — cole na sua lista do Instacart",
+  "cart.instacartEmpty": "Nada para comprar — tudo está marcado",
   "layout.footer": "FoodLab · código aberto",
   "layout.language": "Idioma",
   "layout.units": "Unidades de medida",
@@ -846,6 +874,11 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "recipes.badge.inPlanHint": "Agendada em {n} espaço(s) esta semana",
   "recipes.minutes": "{n} min",
   "recipes.freezer": "freezer",
+  "recipes.add.cta": "Adicionar receita",
+  "recipes.add.hint":
+    "Cole uma URL ou o texto. Quanto mais simples, melhor — poucos ingredientes, poucos passos. O assistente converte para o formato FoodLab e salva.",
+  "recipes.add.submit": "Salvar receita",
+  "recipes.add.saved": "Receita salva",
 
   "detail.back": "Voltar",
   "detail.savedByYou": "Salva por você",

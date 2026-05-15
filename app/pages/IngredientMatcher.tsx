@@ -326,7 +326,7 @@ interface BadgeListProps {
 // the card height up on phones. Tap "+N more" to expand inline.
 function BadgeList({ label, items, variant }: BadgeListProps) {
   const [expanded, setExpanded] = useState(false);
-  const VISIBLE = 6;
+  const VISIBLE = 5;
   const overflowCount = items.length - VISIBLE;
   const visibleItems = expanded ? items : items.slice(0, VISIBLE);
   return (

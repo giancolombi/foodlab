@@ -3,15 +3,29 @@
 // Docs: https://github.com/ollama/ollama/blob/main/docs/api.md
 
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:3b";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3.6:27b";
 
-// Reasoning-capable models (qwen3, deepseek-r1, gpt-oss, magistral) emit a
+// Per-function model overrides. Each job has different latency / quality
+// tradeoffs — the matcher is hot-path and benefits from a smaller / faster
+// model, while the modify + compose paths benefit from the strongest model
+// the deployment can afford (or even a cloud model like deepseek-v4-flash
+// when stricter JSON adherence is worth the per-token cost). Each falls
+// back to OLLAMA_MODEL so a single env keeps working.
+const MODEL_FOR = {
+  match: process.env.OLLAMA_MODEL_MATCH || OLLAMA_MODEL,
+  modify: process.env.OLLAMA_MODEL_MODIFY || OLLAMA_MODEL,
+  compose: process.env.OLLAMA_MODEL_COMPOSE || OLLAMA_MODEL,
+  shopping: process.env.OLLAMA_MODEL_SHOPPING || OLLAMA_MODEL,
+  extract: process.env.OLLAMA_MODEL_EXTRACT || OLLAMA_MODEL,
+  expand: process.env.OLLAMA_MODEL_EXPAND || OLLAMA_MODEL,
+} as const;
+
+// Reasoning-capable models (qwen3, deepseek-v4, kimi, magistral) emit a
 // separate `message.thinking` field on each streamed event when called with
-// `think: true`. Non-reasoning models ignore the option but newer Ollama
-// builds may surface it as a 400, so we leave it OFF by default and let
-// operators opt in via env when they swap the model. Set to "true" to turn
-// on; the streaming pipeline will forward thinking tokens regardless.
-const OLLAMA_THINKING = process.env.OLLAMA_THINKING === "true";
+// `think: true`. Defaults to ON now that the default model (qwen3.6) is
+// thinking-capable; set OLLAMA_THINKING=false to disable, e.g. when
+// downgrading to a non-thinking model on a smaller Railway plan.
+const OLLAMA_THINKING = process.env.OLLAMA_THINKING !== "false";
 
 export type Locale = "en" | "es" | "pt-BR";
 
@@ -70,8 +84,9 @@ Respond ONLY with JSON of shape:
 
 Rules:
 - slug MUST be one of the slugs in the catalog below — never invent one.
-- score is 0-100: how well the recipe matches what the user has. Higher = more of their ingredients are used. A recipe with no overlap should not be returned at all.
-- Pick the top 3 recipes by overlap. If fewer than 3 recipes use ANY of the user's ingredients, return fewer.
+- score is 0-100: how well the recipe matches what the user has. Higher = more of their ingredients are used.
+- ONLY return a recipe if at least HALF of the recipe's shared base is satisfied by the user's pantry. Better to return 1 strong match than 3 stretch matches. If nothing meets that bar, return an empty list.
+- Prefer recipes with the FEWEST missing ingredients overall. A user who provides 6 ingredients should not see a recipe needing 8 they don't have.
 - When multiple eaters are listed, the recipe must work for ALL of them. Exclude any recipe whose shared base contains an ingredient violating ANY eater's restrictions or allergies. (Per-eater protein swaps are okay — those are handled by versions.)
 - reason is ONE short sentence (≤ 20 words). If multiple eaters are present, mention briefly how it accommodates them.
 - Output JSON only. No prose, no markdown fences.
@@ -208,7 +223,7 @@ export async function streamRecommendations(
     LOCALE_DIRECTIVE[locale],
   );
   const body: Record<string, unknown> = {
-    model: OLLAMA_MODEL,
+    model: MODEL_FOR.match,
     stream: true,
     format: "json",
     // Keep the model resident so the next call doesn't pay cold-start.
@@ -309,19 +324,44 @@ export async function streamRecommendations(
         if (overlaps) matched.push(ing);
         else missing.push(ing);
       }
-      // Cap to keep payloads + UI tidy.
+      const total = matched.length + missing.length;
+      const coverage = total === 0 ? 0 : matched.length / total;
       return {
         slug: r.slug,
         title: recipe.title,
         score: r.score,
         reason: r.reason,
-        matched_ingredients: matched.slice(0, 8),
-        missing_ingredients: missing.slice(0, 12),
+        matched_ingredients: matched,
+        missing_ingredients: missing,
+        coverage,
       };
     })
-    .slice(0, 3);
+    // Drop stretch matches: the user's "I gave 6, missing 8" complaint. Keep
+    // recipes where the user already has at least ~40% of the base AND the
+    // missing list isn't more than 1.5× the matched list. Fall back to the
+    // best-coverage pick if the strict pass returns nothing so the page
+    // never goes empty when the LLM did surface SOMETHING usable.
+    .filter((r) => r.matched_ingredients.length > 0)
+    .sort((a, b) => b.coverage - a.coverage || b.score - a.score);
 
-  handlers.onDone({ recommendations: recs, raw: full });
+  const strict = recs.filter(
+    (r) =>
+      r.coverage >= 0.4 &&
+      r.missing_ingredients.length <= Math.max(3, r.matched_ingredients.length * 1.5),
+  );
+
+  // Cap to keep payloads + UI tidy. The matcher caps to 3 picks; the badge
+  // lists are kept short so a recipe needing 8 things doesn't dominate.
+  const picked = (strict.length ? strict : recs.slice(0, 1)).slice(0, 3).map((r) => ({
+    slug: r.slug,
+    title: r.title,
+    score: r.score,
+    reason: r.reason,
+    matched_ingredients: r.matched_ingredients.slice(0, 8),
+    missing_ingredients: r.missing_ingredients.slice(0, 6),
+  }));
+
+  handlers.onDone({ recommendations: picked, raw: full });
 }
 
 // ---------- Modify ----------
@@ -434,7 +474,7 @@ export async function streamModifyRecipe(
     ? `Modification: ${args.instruction}\n\nOriginal recipe (JSON):\n\n${JSON.stringify(args.originalStructured)}`
     : `Modification: ${args.instruction}\n\nOriginal recipe:\n\n${args.originalMarkdown}`;
   const body: Record<string, unknown> = {
-    model: OLLAMA_MODEL,
+    model: MODEL_FOR.modify,
     stream: true,
     format: "json",
     keep_alive: "24h",
@@ -727,7 +767,7 @@ export async function consolidateShoppingList(args: {
   );
 
   const body = {
-    model: OLLAMA_MODEL,
+    model: MODEL_FOR.shopping,
     stream: false,
     format: "json",
     keep_alive: "24h",
@@ -903,7 +943,7 @@ export async function composeMenu(args: {
   };
 
   const body = {
-    model: OLLAMA_MODEL,
+    model: MODEL_FOR.compose,
     stream: false,
     format: "json",
     keep_alive: "24h",
@@ -1037,7 +1077,7 @@ export async function expandDishToRecipe(args: {
   );
 
   const body = {
-    model: OLLAMA_MODEL,
+    model: MODEL_FOR.expand,
     stream: false,
     keep_alive: "24h",
     messages: [
@@ -1100,7 +1140,8 @@ Rules:
 - Strip all extraneous prose (intro paragraphs, ads, "tips" sections). Keep only ingredients + instructions.
 - Quantities use common US units (tbsp, tsp, cup, cloves, oz, lb, can). Convert metric only if needed.
 - "Shared Base" = every ingredient that's part of the dish independent of protein. The protein itself goes in the version block.
-- Write 5–10 numbered instruction steps, condensed.
+- KEEP IT SIMPLE: condense to 5–8 numbered steps. Combine adjacent prep/cook actions into one sentence rather than splitting into many micro-steps. Drop optional garnishes and flourishes that aren't load-bearing.
+- Prefer common pantry ingredients. If the source uses something specialty (gochujang, berbere, etc.) keep it only if it's central to the cuisine.
 - If the source mentions a single protein only, output one version block named after that protein (or "Original").
 - If the source has multiple variants (veg + meat), output one version block per variant separated by "---".
 - Output the markdown ONLY.
@@ -1118,7 +1159,7 @@ export async function extractRecipeFromText(args: {
   );
 
   const body = {
-    model: OLLAMA_MODEL,
+    model: MODEL_FOR.extract,
     stream: false,
     keep_alive: "24h",
     messages: [

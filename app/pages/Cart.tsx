@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 import {
   CheckCheck,
   Download,
+  ExternalLink,
   Share2,
   ShoppingCart,
   Sparkles,
@@ -48,6 +49,7 @@ import {
 } from "@/lib/shoppingList";
 import {
   shareOrCopy,
+  toInstacartList,
   toPlainText,
 } from "@/lib/exportShoppingList";
 import { exportShoppingListPdf } from "@/lib/exportPdf";
@@ -148,6 +150,30 @@ export default function Cart() {
       if (err?.name === "AbortError") return;
       toast.error(t("cart.shareFailed"));
     }
+  };
+
+  const handleInstacart = async () => {
+    if (display.total === 0) return;
+    // Send only the items the user hasn't ticked off — the user's "list of
+    // missing items for Instacart" ask. If nothing is ticked yet, the whole
+    // list goes.
+    const text = toInstacartList(display, {
+      onlyUnbought: ({ section, name, index }) => !isBought(`${section}:${name}:${index}`),
+    });
+    if (!text.trim()) {
+      toast.message(t("cart.instacartEmpty"));
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(t("cart.instacartCopied"));
+    } catch {
+      toast.error(t("cart.shareFailed"));
+      return;
+    }
+    // Open Instacart's bulk-list page so the user can paste immediately.
+    // Pop-ups blocked? They've still got the clipboard payload.
+    window.open("https://www.instacart.com/lists", "_blank", "noopener,noreferrer");
   };
 
   const handleDownload = async () => {
@@ -288,6 +314,16 @@ export default function Cart() {
             >
               <Share2 className="h-4 w-4" />
               <span>{t("cart.share")}</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleInstacart}
+              disabled={display.total === 0}
+              title={t("cart.instacartHint")}
+            >
+              <ExternalLink className="h-4 w-4" />
+              <span>{t("cart.instacart")}</span>
             </Button>
             <Button
               size="sm"

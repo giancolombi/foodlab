@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { CalendarCheck, Clock, Snowflake, Star } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { CalendarCheck, Clock, Plus, Snowflake, Star } from "lucide-react";
 
+import { AddRecipeForm } from "@/components/AddRecipeForm";
 import { AddToPlanButton } from "@/components/AddToPlanButton";
 import {
   Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -23,6 +25,7 @@ import type { RecipeListItem } from "@/types";
 type OwnerFilter = "all" | "curated" | "mine";
 
 export default function Recipes() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { t, locale } = useLanguage();
   const { isInPlan, slotsForSlug } = usePlan();
@@ -30,14 +33,19 @@ export default function Recipes() {
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState<OwnerFilter>("all");
   const [loading, setLoading] = useState(true);
+  const [addOpen, setAddOpen] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     setLoading(true);
     const localeParam = encodeURIComponent(locale);
     api<{ recipes: RecipeListItem[] }>(`/recipes?locale=${localeParam}`)
       .then(({ recipes }) => setRecipes(recipes))
       .finally(() => setLoading(false));
   }, [locale]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -85,7 +93,23 @@ export default function Recipes() {
             ? t("recipes.countOne")
             : t("recipes.count", { n: recipes.length })
         }
+        actions={
+          <Button size="sm" onClick={() => setAddOpen((v) => !v)}>
+            <Plus className="h-4 w-4" />
+            <span>{t("recipes.add.cta")}</span>
+          </Button>
+        }
       />
+
+      {addOpen && (
+        <AddRecipeForm
+          onCancel={() => setAddOpen(false)}
+          onSaved={(slug) => {
+            setAddOpen(false);
+            navigate(`/recipes/${slug}`);
+          }}
+        />
+      )}
 
       <div className="flex flex-wrap gap-2">
         {filters.map((f) => (

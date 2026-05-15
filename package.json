@@ -16,6 +16,7 @@
     "server:dev": "tsx watch api/index.ts",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
+    "cron:hunt": "tsx scripts/hunt-recipes.ts",
     "start": "pnpm run db:migrate && pnpm run db:seed && pnpm run server",
     "test:e2e": "npx playwright test",
     "test:e2e:ui": "npx playwright test --ui"

@@ -125,4 +125,20 @@ When running Claude Code locally, two cron jobs run in the background:
 - **Recipe Hunter** (every other day) — searches the web for new recipes, commits them
 - **Meal Planner** (1st and 15th) — generates a weekly menu + shopping list
 
+When the web app is deployed on **Railway**, an optional cron service runs the
+in-app hunter daily against the live Postgres + Ollama services. Add it as a
+new service pointing at `railway.cron.json`; it shares the api Dockerfile and
+runs `pnpm run cron:hunt -- --mode=both` once a day. Required env: `DATABASE_URL`,
+`OLLAMA_URL`, `OLLAMA_MODEL`. Override schedule by editing `cronSchedule` in
+`railway.cron.json`.
+
+**Open-source model.** The default is `qwen3.6:27b` (multilingual JSON,
+thinking-capable, ~17 GB at q4). On smaller Railway plans, set the AI service's
+`OLLAMA_MODEL` env to a lighter variant (e.g. `qwen3:8b`, `qwen2.5:3b`) and
+`OLLAMA_THINKING=false`. For mixed setups, route per function via
+`OLLAMA_MODEL_MATCH`, `OLLAMA_MODEL_MODIFY`, `OLLAMA_MODEL_COMPOSE`,
+`OLLAMA_MODEL_SHOPPING`, `OLLAMA_MODEL_EXTRACT`, `OLLAMA_MODEL_EXPAND` — each
+falls back to `OLLAMA_MODEL`. Cloud-hosted Ollama models (e.g.
+`deepseek-v4-flash`) are valid values too.
+
 </details>

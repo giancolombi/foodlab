@@ -88,6 +88,29 @@ export function downloadTextFile(
 }
 
 /**
+ * Render a ConsolidatedList as a clean line-per-item list suitable for
+ * pasting into Instacart's bulk list import (instacart.com/lists). Drops
+ * the section headers — Instacart's parser handles each line on its own.
+ * Pass `onlyUnbought` with a predicate to send just the items still to buy.
+ */
+export function toInstacartList(
+  list: ConsolidatedList,
+  opts?: { onlyUnbought?: (sectionAndIndex: { section: Section; index: number; name: string }) => boolean },
+): string {
+  const lines: string[] = [];
+  for (const section of SECTION_ORDER) {
+    const items = list.sections[section];
+    items.forEach((item, index) => {
+      if (opts?.onlyUnbought && !opts.onlyUnbought({ section, index, name: item.name })) return;
+      const qty = item.quantity ? ` ${item.quantity}` : "";
+      // "2 lb chicken thighs" reads better to Instacart than "chicken thighs (2 lb)".
+      lines.push(`${qty.trim()} ${item.name}`.trim());
+    });
+  }
+  return lines.join("\n");
+}
+
+/**
  * Share text via the Web Share API if available, falling back to the
  * clipboard. Returns the mode used so the UI can toast accordingly.
  */
