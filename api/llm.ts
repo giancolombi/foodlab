@@ -771,6 +771,8 @@ export async function consolidateShoppingList(args: {
     stream: false,
     format: "json",
     keep_alive: "5m",
+    // Non-interactive — disable reasoning so it doesn't eat the budget.
+    think: false,
     messages: [
       { role: "system", content: systemPrompt },
       {
@@ -947,6 +949,9 @@ export async function composeMenu(args: {
     stream: false,
     format: "json",
     keep_alive: "5m",
+    // No thinking-trace UI for compose — disable reasoning so it doesn't
+    // eat the num_predict budget meant for the JSON draft.
+    think: false,
     messages: [
       { role: "system", content: systemPrompt },
       draftContext,
@@ -1080,6 +1085,11 @@ export async function expandDishToRecipe(args: {
     model: MODEL_FOR.expand,
     stream: false,
     keep_alive: "5m",
+    // qwen3.5 is a thinking model and reasons by default. This is a
+    // non-interactive job with no thinking-trace UI, so disable it —
+    // otherwise reasoning tokens eat the num_predict budget and the
+    // markdown `content` comes back empty (no title → recipe skipped).
+    think: false,
     messages: [
       { role: "system", content: systemPrompt },
       {
@@ -1090,7 +1100,7 @@ export async function expandDishToRecipe(args: {
     options: {
       temperature: 0.4,
       num_ctx: 4096,
-      num_predict: 1500,
+      num_predict: 2000,
     },
   };
 
@@ -1162,6 +1172,9 @@ export async function extractRecipeFromText(args: {
     model: MODEL_FOR.extract,
     stream: false,
     keep_alive: "5m",
+    // No thinking-trace UI here — disable reasoning so it doesn't consume
+    // the num_predict budget meant for the recipe markdown.
+    think: false,
     messages: [
       { role: "system", content: systemPrompt },
       {
