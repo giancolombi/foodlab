@@ -8,8 +8,8 @@ export interface StreamCallbacks {
   onChunk: (totalText: string, deltaText: string) => void;
   onPartial: (recommendation: Recommendation) => void;
   /**
-   * Reasoning tokens from thinking-capable models. Only emitted when
-   * server-side OLLAMA_THINKING=true.
+   * Reasoning tokens from thinking-capable models. Not emitted by the
+   * current hosted LLM, but kept so reasoning models can use it later.
    */
   onThinking?: (totalThinking: string, delta: string) => void;
   onComplete: (final: Recommendation[]) => void;

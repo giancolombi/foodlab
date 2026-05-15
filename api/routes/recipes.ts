@@ -4,9 +4,13 @@ import { Router } from "express";
 import { z } from "zod";
 
 import { pool } from "../db.js";
-import { renderRecipeMarkdown, streamModifyRecipe } from "../llm.js";
+import {
+  renderRecipeMarkdown,
+  streamModifyRecipe,
+  translateRecipeMarkdown,
+} from "../llm.js";
 import { requireAuth, verifyToken } from "../middleware/auth.js";
-import { parseRecipe, type Locale } from "../recipeParser.js";
+import { parseRecipe, type Locale, type ParsedRecipe } from "../recipeParser.js";
 
 const router = Router();
 
@@ -399,6 +403,45 @@ export async function saveUserRecipe(args: {
     throw e;
   }
 
+  // Save the primary-locale row first — that's what we return to the caller.
+  const saved = await insertOwnedRecipe(parsedRecipe, {
+    userId,
+    parentSlug,
+    modificationNote,
+  });
+
+  // Fill in every other supported language by translating the markdown, so
+  // the recipe is browsable in all of them. Best-effort: a failed translation
+  // is logged, not thrown — the primary row is already saved.
+  const others = (["en", "es", "pt"] as Locale[]).filter((l) => l !== locale);
+  await Promise.all(
+    others.map(async (db) => {
+      const target = db === "pt" ? "pt-BR" : db;
+      try {
+        const translated = await translateRecipeMarkdown({ markdown, target });
+        const tParsed = parseRecipe(translated, category, newSlug, db);
+        if (
+          tParsed.versions.length === 0 ||
+          tParsed.shared_ingredients.length === 0
+        ) {
+          console.warn(`saveUserRecipe: ${db} translation failed validation — skipped`);
+          return;
+        }
+        await insertOwnedRecipe(tParsed, { userId, parentSlug, modificationNote });
+      } catch (err) {
+        console.error(`saveUserRecipe: ${db} translation failed`, err);
+      }
+    }),
+  );
+
+  return saved;
+}
+
+/** Insert one parsed recipe row owned by `userId`. */
+async function insertOwnedRecipe(
+  parsed: ParsedRecipe,
+  opts: { userId: string; parentSlug?: string; modificationNote?: string },
+): Promise<{ id: string; slug: string; title: string }> {
   const { rows } = await pool.query(
     `INSERT INTO recipes (
        slug, locale, title, category, cuisine, freezer_friendly,
@@ -409,23 +452,23 @@ export async function saveUserRecipe(args: {
      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,FALSE)
      RETURNING id, slug, title`,
     [
-      parsedRecipe.slug,
-      parsedRecipe.locale,
-      parsedRecipe.title,
-      parsedRecipe.category,
-      parsedRecipe.cuisine,
-      parsedRecipe.freezer_friendly,
-      parsedRecipe.prep_minutes,
-      parsedRecipe.cook_minutes,
-      parsedRecipe.servings,
-      parsedRecipe.shared_ingredients,
-      parsedRecipe.serve_with,
-      JSON.stringify(parsedRecipe.versions),
-      parsedRecipe.raw_markdown,
-      parsedRecipe.source_urls,
-      userId,
-      parentSlug ?? null,
-      modificationNote ?? null,
+      parsed.slug,
+      parsed.locale,
+      parsed.title,
+      parsed.category,
+      parsed.cuisine,
+      parsed.freezer_friendly,
+      parsed.prep_minutes,
+      parsed.cook_minutes,
+      parsed.servings,
+      parsed.shared_ingredients,
+      parsed.serve_with,
+      JSON.stringify(parsed.versions),
+      parsed.raw_markdown,
+      parsed.source_urls,
+      opts.userId,
+      opts.parentSlug ?? null,
+      opts.modificationNote ?? null,
     ],
   );
   return rows[0];

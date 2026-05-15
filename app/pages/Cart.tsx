@@ -2,8 +2,7 @@
 // you're shopping for. Each line item has a checkbox; ticking it remembers
 // the item as "bought" in localStorage so the list survives reloads while
 // you shop. A "Smart consolidate" button upgrades the deterministic grouping
-// via the Ollama backend; "Clear ticks" resets checkboxes when you start a
-// new shop.
+// via the LLM; "Clear ticks" resets checkboxes when you start a new shop.
 
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";

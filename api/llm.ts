@@ -295,7 +295,7 @@ export interface StreamHandlers {
 }
 
 /**
- * Stream a recommendation request through Ollama. Each token of `message.content`
+ * Stream a recommendation request through the LLM. Each token of `message.content`
  * is forwarded via `onContent` as it arrives. When the stream finishes we attempt
  * to JSON-parse the accumulated text, validate slugs against the catalog, and
  * pass the cleaned recommendations to `onDone`.
@@ -471,7 +471,7 @@ export interface ModifyHandlers {
 }
 
 /**
- * Stream a recipe modification through Ollama using structured JSON output.
+ * Stream a recipe modification through the LLM using structured JSON output.
  * Frontend can render a structured preview from the parsed object; the server
  * converts it to canonical markdown when saving.
  *
@@ -739,7 +739,7 @@ export type ConsolidatedSections = Record<
 >;
 
 /**
- * Use Ollama to consolidate and categorize ingredients across multiple recipes.
+ * Use the LLM to consolidate and categorize ingredients across multiple recipes.
  * Falls back to returning empty sections if parsing fails — callers should
  * keep their client-side deterministic version as the default so this is
  * purely a quality upgrade.
@@ -826,11 +826,10 @@ export async function consolidateShoppingList(args: {
 }
 
 /**
- * No-op kept for API compatibility with the /translate/warm route. A hosted
- * LLM has no local model to pre-load, so there's no cold start to warm
- * against.
+ * No-op kept for the /translate/warm route. A hosted LLM has no local model
+ * to pre-load, so there's no cold start to warm against.
  */
-export async function warmOllama(): Promise<void> {
+export async function warmLLM(): Promise<void> {
   // intentionally empty
 }
 
@@ -1110,13 +1109,99 @@ export async function extractRecipeFromText(args: {
   return md;
 }
 
+// ---------- Translate a recipe into another supported language ----------
+
+// Canonical FoodLab section / metadata labels per target language, so the
+// translated markdown still parses cleanly via recipeParser (which keys off
+// these localized labels).
+const TRANSLATE_LABELS: Record<Locale, string> = {
+  en: [
+    'Use exactly these FoodLab labels:',
+    '- "**Cuisine:**" stays "**Cuisine:**"',
+    '- "**Freezer-friendly:**" stays "**Freezer-friendly:**"',
+    '- "**Prep:**" stays "**Prep:**"',
+    '- "**Cook:**" stays "**Cook:**"',
+    '- a servings label → "**Serves:**"',
+    '- "**Protein:**" stays "**Protein:**"',
+    '- a "Shared Base" / shared-ingredients heading → "## Shared ingredients"',
+    '- a "Serve With" heading → "## Serve With"',
+    '- the word "Version" in a version heading stays "Version"',
+    '- "*Source:*" stays "*Source:*"',
+  ].join("\n"),
+  es: [
+    'Use exactly these FoodLab labels:',
+    '- "**Cuisine:**" → "**Cocina:**"',
+    '- "**Freezer-friendly:**" → "**Apta para congelar:**"',
+    '- "**Prep:**" → "**Preparación:**"',
+    '- "**Cook:**" → "**Cocción:**"',
+    '- a servings label ("**Serves:**" etc.) → "**Porciones:**"',
+    '- "**Protein:**" → "**Proteína:**"',
+    '- a "Shared Base" / "Shared ingredients" heading → "## Ingredientes compartidos"',
+    '- a "Serve With" heading → "## Para servir"',
+    '- the word "Version" in a version heading → "Versión"',
+    '- "*Source:*" → "*Fuente:*"',
+  ].join("\n"),
+  "pt-BR": [
+    'Use exactly these FoodLab labels:',
+    '- "**Cuisine:**" → "**Cozinha:**"',
+    '- "**Freezer-friendly:**" → "**Vai ao freezer:**"',
+    '- "**Prep:**" → "**Preparo:**"',
+    '- "**Cook:**" → "**Cozimento:**"',
+    '- a servings label ("**Serves:**" etc.) → "**Porções:**"',
+    '- "**Protein:**" → "**Proteína:**"',
+    '- a "Shared Base" / "Shared ingredients" heading → "## Ingredientes compartilhados"',
+    '- a "Serve With" heading → "## Para servir"',
+    '- the word "Version" in a version heading → "Versão"',
+    '- "*Source:*" → "*Fonte:*"',
+  ].join("\n"),
+};
+
+const TRANSLATE_RECIPE_SYSTEM_PROMPT = `You translate a FoodLab recipe (Markdown) into the target language.
+
+Output ONLY the translated Markdown — no commentary, no code fences.
+
+Rules:
+- Preserve the EXACT structure: the "# " title, the metadata line, every "## " section header, every "---" separator, numbered steps, "- " bullets, and any "*Source:*" line. The output must have the same number of sections, bullets, steps, and versions as the input.
+- Translate ONLY words. Every NUMBER stays identical — "2 cups", "350°F", "1.5 lb", "20 min" keep their digits exactly. Translate only the unit and ingredient words around the numbers; never convert between measurement systems.
+- {LABELS}
+- Do NOT add, drop, merge, or reorder any ingredient, step, or version. Keep any URLs unchanged.
+
+LANGUAGE: {LOCALE_DIRECTIVE}`;
+
+/**
+ * Translate a FoodLab recipe markdown document into another supported
+ * language, preserving structure and every numeric quantity. Used to keep
+ * each new recipe available in all supported languages from the start.
+ */
+export async function translateRecipeMarkdown(args: {
+  markdown: string;
+  target: Locale;
+}): Promise<string> {
+  const systemPrompt = TRANSLATE_RECIPE_SYSTEM_PROMPT.replace(
+    "{LABELS}",
+    TRANSLATE_LABELS[args.target],
+  ).replace("{LOCALE_DIRECTIVE}", LOCALE_DIRECTIVE[args.target]);
+
+  const content = await chatComplete({
+    model: MODEL_FOR.extract,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Recipe to translate:\n\n${args.markdown}` },
+    ],
+    temperature: 0.1,
+    maxTokens: 3000,
+  });
+  let md = content.trim();
+  md = md.replace(/^```(?:markdown|md)?\s*\n/i, "").replace(/\n```\s*$/i, "");
+  return md;
+}
+
 /**
  * Health check for /api/health. We can't cheaply ping a hosted LLM without
  * spending tokens, so this just reports whether an API key is configured —
- * enough to catch a misconfiguration. Keeps the `checkOllama` name + shape
- * so the health route and frontend don't need changes.
+ * enough to catch a misconfiguration.
  */
-export async function checkOllama(): Promise<{
+export async function checkLLM(): Promise<{
   ok: boolean;
   model: string;
   error?: string;

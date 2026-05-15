@@ -274,7 +274,7 @@ const shoppingListSchema = z.object({
 
 /**
  * POST /api/plans/shopping-list — smart-consolidate a multi-recipe shopping
- * list via Ollama. The client already has a deterministic fallback; this is a
+ * list via the LLM. The client already has a deterministic fallback; this is a
  * quality upgrade (merges odd duplicates, better categorization, localizes
  * item names). Caller is expected to pre-split per-profile items into
  * separate pseudo-recipe entries with `forProfiles` set.
@@ -418,7 +418,7 @@ const extractSchema = z.object({
 
 /**
  * POST /api/plans/compose/extract — turn pasted recipe text into FoodLab
- * markdown via Ollama. Doesn't persist; the client decides whether to attach
+ * markdown via the LLM. Doesn't persist; the client decides whether to attach
  * the result to a draft dish or save it as a standalone recipe.
  */
 router.post("/compose/extract", requireAuth, async (req, res) => {

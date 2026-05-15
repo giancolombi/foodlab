@@ -1,4 +1,5 @@
-// Recipe hunter — generates one new curated recipe per run via Ollama,
+// Recipe hunter — generates one new curated recipe per run via the LLM, in
+// every supported language (English canonical + es/pt translations), and
 // optionally re-vets existing curated rows for parse breakage. Designed to
 // be invoked as a Railway cron service (see railway.cron.json).
 //
@@ -11,19 +12,16 @@
 //
 // Env:
 //   DATABASE_URL    Postgres connection.
-//   OLLAMA_URL      Where the Ollama service lives (default localhost).
-//   OLLAMA_MODEL    Model tag, default qwen2.5:3b.
+//   LLM_API_KEY     Key for the LLM provider (see api/llm.ts).
 //   HUNT_CATEGORY   "mains" | "breakfast" (default mains)
-//   HUNT_LOCALE     "en" | "es" | "pt-BR" (default en — EN-only for now;
-//                   translations are a follow-up to keep generation cheap)
 
 import { pool } from "../api/db.js";
 import {
   expandDishToRecipe,
+  translateRecipeMarkdown,
   type ComposeDish,
-  type Locale,
 } from "../api/llm.js";
-import { parseRecipe } from "../api/recipeParser.js";
+import { parseRecipe, type ParsedRecipe } from "../api/recipeParser.js";
 
 type Mode = "add" | "vet" | "both";
 
@@ -102,13 +100,6 @@ function pickMode(argv: string[]): Mode {
   return m === "add" || m === "vet" ? m : "both";
 }
 
-function pickLocale(): Locale {
-  const raw = (process.env.HUNT_LOCALE || "en").toLowerCase();
-  if (raw === "es") return "es";
-  if (raw === "pt-br" || raw === "pt") return "pt-BR";
-  return "en";
-}
-
 async function existingCuisines(): Promise<Set<string>> {
   const { rows } = await pool.query<{ cuisine: string | null }>(
     `SELECT DISTINCT LOWER(cuisine) AS cuisine FROM recipes WHERE owner_user_id IS NULL AND cuisine IS NOT NULL`,
@@ -155,67 +146,19 @@ async function vet(): Promise<void> {
   console.log(`[vet] checked ${rows.length} curated recipe rows, ${broken} flagged.`);
 }
 
-async function add(): Promise<void> {
-  const locale = pickLocale();
-  const category =
-    (process.env.HUNT_CATEGORY as "mains" | "breakfast" | undefined) || "mains";
+// Languages every new recipe must be available in. English is canonical;
+// es/pt are produced by translating the English markdown so structure and
+// numeric quantities stay identical across languages.
+const TARGET_LANGUAGES: Array<{ db: "es" | "pt"; app: "es" | "pt-BR" }> = [
+  { db: "es", app: "es" },
+  { db: "pt", app: "pt-BR" },
+];
 
-  const haveCuisines = await existingCuisines();
-  const fresh = WISHLIST.filter((w) => !haveCuisines.has(w.cuisine.toLowerCase()));
-  if (fresh.length === 0) {
-    console.log("[hunt] catalog already covers every wishlist cuisine — nothing to add.");
-    return;
-  }
-  const pick = fresh[Math.floor(Math.random() * fresh.length)];
+function validParse(p: ParsedRecipe): boolean {
+  return p.versions.length > 0 && p.shared_ingredients.length > 0;
+}
 
-  // Build a dish concept the existing expandDishToRecipe LLM step understands.
-  const dish: ComposeDish = {
-    id: `hunt-${Date.now().toString(36)}`,
-    name: `${pick.cuisine} one-pot`,
-    cuisine: pick.cuisine,
-    base: pick.base,
-    vegProtein: pick.vegProtein,
-    meatProtein: pick.meatProtein ?? undefined,
-    isBreakfast: pick.isBreakfast,
-  };
-
-  console.log(`[hunt] generating ${pick.cuisine} recipe via Ollama…`);
-  const markdown = await expandDishToRecipe({ dish, locale });
-
-  // Parse + sanity-check before saving — this is the "vet" step for new
-  // recipes. Models occasionally return malformed structure or empty
-  // sections; we'd rather skip a turn than poison the catalog.
-  const titleMatch = markdown.match(/^#\s+(.+?)\s*$/m);
-  if (!titleMatch) {
-    console.warn("[hunt] LLM returned no title — skipping save.");
-    return;
-  }
-  const title = titleMatch[1].trim();
-
-  const slugBase = slugify(title) || slugify(`${pick.cuisine} dish`);
-  const slugs = await existingSlugs();
-  let slug = slugBase;
-  let n = 2;
-  while (slugs.has(slug)) {
-    slug = `${slugBase}-${n++}`;
-    if (n > 50) {
-      console.warn("[hunt] couldn't find a unique slug — skipping.");
-      return;
-    }
-  }
-
-  // recipeParser stores under "en" | "es" | "pt" — collapse pt-BR.
-  const dbLocale: "en" | "es" | "pt" =
-    locale === "es" ? "es" : locale === "pt-BR" ? "pt" : "en";
-
-  const parsed = parseRecipe(markdown, category, slug, dbLocale);
-  if (parsed.versions.length === 0 || parsed.shared_ingredients.length === 0) {
-    console.warn(
-      `[hunt] generated recipe failed validation — versions=${parsed.versions.length} shared=${parsed.shared_ingredients.length}`,
-    );
-    return;
-  }
-
+async function insertCurated(parsed: ParsedRecipe): Promise<void> {
   await pool.query(
     `INSERT INTO recipes (
        slug, locale, title, category, cuisine, freezer_friendly,
@@ -241,7 +184,90 @@ async function add(): Promise<void> {
       parsed.source_urls,
     ],
   );
-  console.log(`[hunt] saved ${parsed.slug} (${pick.cuisine}, ${dbLocale}).`);
+}
+
+async function add(): Promise<void> {
+  const category =
+    (process.env.HUNT_CATEGORY as "mains" | "breakfast" | undefined) || "mains";
+
+  const haveCuisines = await existingCuisines();
+  const fresh = WISHLIST.filter((w) => !haveCuisines.has(w.cuisine.toLowerCase()));
+  if (fresh.length === 0) {
+    console.log("[hunt] catalog already covers every wishlist cuisine — nothing to add.");
+    return;
+  }
+  const pick = fresh[Math.floor(Math.random() * fresh.length)];
+
+  // Build a dish concept the existing expandDishToRecipe LLM step understands.
+  const dish: ComposeDish = {
+    id: `hunt-${Date.now().toString(36)}`,
+    name: `${pick.cuisine} one-pot`,
+    cuisine: pick.cuisine,
+    base: pick.base,
+    vegProtein: pick.vegProtein,
+    meatProtein: pick.meatProtein ?? undefined,
+    isBreakfast: pick.isBreakfast,
+  };
+
+  // English is canonical — generate and validate it first.
+  console.log(`[hunt] generating ${pick.cuisine} recipe (English) via the LLM…`);
+  const enMarkdown = await expandDishToRecipe({ dish, locale: "en" });
+
+  // Parse + sanity-check before saving — this is the "vet" step for new
+  // recipes. Models occasionally return malformed structure or empty
+  // sections; we'd rather skip a turn than poison the catalog.
+  const titleMatch = enMarkdown.match(/^#\s+(.+?)\s*$/m);
+  if (!titleMatch) {
+    console.warn("[hunt] LLM returned no title — skipping save.");
+    return;
+  }
+  const title = titleMatch[1].trim();
+
+  const slugBase = slugify(title) || slugify(`${pick.cuisine} dish`);
+  const slugs = await existingSlugs();
+  let slug = slugBase;
+  let n = 2;
+  while (slugs.has(slug)) {
+    slug = `${slugBase}-${n++}`;
+    if (n > 50) {
+      console.warn("[hunt] couldn't find a unique slug — skipping.");
+      return;
+    }
+  }
+
+  const enParsed = parseRecipe(enMarkdown, category, slug, "en");
+  if (!validParse(enParsed)) {
+    console.warn(
+      `[hunt] generated recipe failed validation — versions=${enParsed.versions.length} shared=${enParsed.shared_ingredients.length}`,
+    );
+    return;
+  }
+
+  // Translate the canonical English recipe into every other supported
+  // language so the dish is browsable in all of them from day one. A failed
+  // translation is non-fatal — English still gets saved.
+  const toSave: ParsedRecipe[] = [enParsed];
+  for (const { db, app } of TARGET_LANGUAGES) {
+    try {
+      const translated = await translateRecipeMarkdown({
+        markdown: enMarkdown,
+        target: app,
+      });
+      const tParsed = parseRecipe(translated, category, slug, db);
+      if (!validParse(tParsed)) {
+        console.warn(`[hunt] ${db} translation failed validation — skipping that language.`);
+        continue;
+      }
+      toSave.push(tParsed);
+    } catch (err) {
+      console.warn(`[hunt] ${db} translation failed: ${(err as Error).message}`);
+    }
+  }
+
+  for (const r of toSave) await insertCurated(r);
+  console.log(
+    `[hunt] saved ${slug} (${pick.cuisine}) in ${toSave.map((r) => r.locale).join("/")}.`,
+  );
 }
 
 async function main(): Promise<void> {

@@ -34,9 +34,9 @@ export interface ModifyCallbacks {
    */
   onPartial?: (recipe: PartialRecipe) => void;
   /**
-   * Fires per thinking-token from a reasoning-capable model
-   * (qwen3 / deepseek-r1 / gpt-oss). Only emitted when the server is
-   * configured with OLLAMA_THINKING=true; otherwise this stays silent.
+   * Fires per thinking-token from a reasoning-capable model. Not emitted
+   * by the current hosted LLM, but kept so reasoning models can use it
+   * later; otherwise this stays silent.
    */
   onThinking?: (totalThinking: string, delta: string) => void;
   onComplete: (final: { recipe: ModifiedRecipe; markdown: string }) => void;

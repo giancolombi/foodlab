@@ -1,7 +1,7 @@
 import cors from "cors";
 import express from "express";
 
-import { checkOllama } from "./llm.js";
+import { checkLLM } from "./llm.js";
 import authRoutes from "./routes/auth.js";
 import matchRoutes from "./routes/match.js";
 import planRoutes from "./routes/plans.js";
@@ -17,10 +17,10 @@ app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", async (_req, res) => {
-  const ollama = await checkOllama();
+  const llm = await checkLLM();
   res.json({
     status: "ok",
-    ollama,
+    llm,
     time: new Date().toISOString(),
   });
 });

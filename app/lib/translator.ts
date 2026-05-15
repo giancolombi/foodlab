@@ -1,8 +1,7 @@
-// Thin client over the AI service's health + warm endpoints. The legacy
+// Thin client over the API's health + warm endpoints. The legacy
 // runtime translation path (the `translate()` function and its IndexedDB
 // batching) is gone — recipes now arrive pre-localized from the API, so
-// the only remaining job is checking whether the LLM is reachable and
-// pre-loading it ahead of the next call.
+// the only remaining job is checking whether the LLM is reachable.
 
 import { api } from "@/lib/api";
 
@@ -13,19 +12,19 @@ import { api } from "@/lib/api";
 let availabilityPromise: Promise<boolean> | null = null;
 export function translateAvailable(): Promise<boolean> {
   if (!availabilityPromise) {
-    availabilityPromise = api<{ ollama?: { ok?: boolean } }>("/health", {
+    availabilityPromise = api<{ llm?: { ok?: boolean } }>("/health", {
       auth: false,
     })
-      .then((r) => Boolean(r.ollama?.ok))
+      .then((r) => Boolean(r.llm?.ok))
       .catch(() => false);
   }
   return availabilityPromise;
 }
 
 /**
- * Fire-and-forget request to preload the Ollama model. Safe to call
- * multiple times; Ollama idempotently refreshes the model's keep-alive
- * window. Debounced client-side so a focus storm doesn't thrash.
+ * Fire-and-forget warm request, kept for backwards compatibility. The
+ * LLM is now a hosted API with no model to preload, so the endpoint is
+ * a no-op — but the call is debounced client-side regardless.
  */
 let lastWarmAt = 0;
 export function warmTranslator(): void {

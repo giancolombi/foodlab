@@ -95,9 +95,9 @@ export function RecipeModifyPanel({
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  // Pre-warm Ollama as soon as the user shows intent. Fire-and-forget; the
-  // server-side warm endpoint is already debounced. We only do this once per
-  // mount of the panel so opening many recipes doesn't spam the warm call.
+  // Legacy pre-warm hook, kept harmless. The hosted LLM has no model to
+  // preload so the warm endpoint is a no-op; we still gate it once per
+  // mount so opening many recipes doesn't spam the call.
   const handleWarm = () => {
     if (warmedRef.current) return;
     warmedRef.current = true;

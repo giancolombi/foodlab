@@ -11,8 +11,8 @@
 // term isn't in the dictionary we fall through to substring matching on the
 // raw text, which still works for English-on-English cases.
 //
-// For LLM-powered features (recommendations, modify) the Ollama model
-// handles language variance natively — this file only matters where we do
+// For LLM-powered features (recommendations, modify) the LLM handles
+// language variance natively — this file only matters where we do
 // pure string comparison.
 
 export const DIETARY_ALIASES: Record<string, string> = {
