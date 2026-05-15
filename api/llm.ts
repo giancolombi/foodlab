@@ -227,7 +227,7 @@ export async function streamRecommendations(
     stream: true,
     format: "json",
     // Keep the model resident so the next call doesn't pay cold-start.
-    keep_alive: "24h",
+    keep_alive: "5m",
     messages: [
       { role: "system", content: systemPrompt },
       {
@@ -477,7 +477,7 @@ export async function streamModifyRecipe(
     model: MODEL_FOR.modify,
     stream: true,
     format: "json",
-    keep_alive: "24h",
+    keep_alive: "5m",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userContent },
@@ -770,7 +770,7 @@ export async function consolidateShoppingList(args: {
     model: MODEL_FOR.shopping,
     stream: false,
     format: "json",
-    keep_alive: "24h",
+    keep_alive: "5m",
     messages: [
       { role: "system", content: systemPrompt },
       {
@@ -862,7 +862,7 @@ export async function warmOllama(): Promise<void> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: OLLAMA_MODEL,
-        keep_alive: "24h",
+        keep_alive: "5m",
       }),
     });
   } catch {
@@ -946,7 +946,7 @@ export async function composeMenu(args: {
     model: MODEL_FOR.compose,
     stream: false,
     format: "json",
-    keep_alive: "24h",
+    keep_alive: "5m",
     messages: [
       { role: "system", content: systemPrompt },
       draftContext,
@@ -1079,7 +1079,7 @@ export async function expandDishToRecipe(args: {
   const body = {
     model: MODEL_FOR.expand,
     stream: false,
-    keep_alive: "24h",
+    keep_alive: "5m",
     messages: [
       { role: "system", content: systemPrompt },
       {
@@ -1161,7 +1161,7 @@ export async function extractRecipeFromText(args: {
   const body = {
     model: MODEL_FOR.extract,
     stream: false,
-    keep_alive: "24h",
+    keep_alive: "5m",
     messages: [
       { role: "system", content: systemPrompt },
       {
