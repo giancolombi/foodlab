@@ -2,10 +2,10 @@ FROM ollama/ollama:latest
 
 # Model to pre-pull on first start. Override with OLLAMA_MODEL env.
 #
-# Default is qwen3.6:27b — multilingual JSON, thinking-capable, ~17GB at q4.
-# On smaller Railway plans (under ~24GB RAM) override to a lighter qwen3
-# variant (e.g. qwen3:8b or qwen2.5:3b) via the service's OLLAMA_MODEL env.
-ENV OLLAMA_MODEL=qwen3.6:27b
+# Default is qwen3.5:4b — multilingual JSON, thinking-capable, ~3.4GB on disk,
+# fits a small Railway volume + 7.5GB-RAM dyno. The entrypoint removes any
+# other model on boot, so a model swap never needs double the disk.
+ENV OLLAMA_MODEL=qwen3.5:4b
 
 # Entrypoint: start ollama serve, wait for it, pull model, keep running.
 # Build context: repo root (foodlab/).

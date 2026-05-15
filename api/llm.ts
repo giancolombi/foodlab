@@ -3,7 +3,7 @@
 // Docs: https://github.com/ollama/ollama/blob/main/docs/api.md
 
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3.6:27b";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3.5:4b";
 
 // Per-function model overrides. Each job has different latency / quality
 // tradeoffs — the matcher is hot-path and benefits from a smaller / faster
@@ -20,11 +20,11 @@ const MODEL_FOR = {
   expand: process.env.OLLAMA_MODEL_EXPAND || OLLAMA_MODEL,
 } as const;
 
-// Reasoning-capable models (qwen3, deepseek-v4, kimi, magistral) emit a
+// Reasoning-capable models (qwen3.5, deepseek-v4, kimi, magistral) emit a
 // separate `message.thinking` field on each streamed event when called with
-// `think: true`. Defaults to ON now that the default model (qwen3.6) is
+// `think: true`. Defaults to ON since the default model (qwen3.5:4b) is
 // thinking-capable; set OLLAMA_THINKING=false to disable, e.g. when
-// downgrading to a non-thinking model on a smaller Railway plan.
+// swapping to a non-thinking model.
 const OLLAMA_THINKING = process.env.OLLAMA_THINKING !== "false";
 
 export type Locale = "en" | "es" | "pt-BR";

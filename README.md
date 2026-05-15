@@ -132,10 +132,12 @@ runs `pnpm run cron:hunt -- --mode=both` once a day. Required env: `DATABASE_URL
 `OLLAMA_URL`, `OLLAMA_MODEL`. Override schedule by editing `cronSchedule` in
 `railway.cron.json`.
 
-**Open-source model.** The default is `qwen3.6:27b` (multilingual JSON,
-thinking-capable, ~17 GB at q4). On smaller Railway plans, set the AI service's
-`OLLAMA_MODEL` env to a lighter variant (e.g. `qwen3:8b`, `qwen2.5:3b`) and
-`OLLAMA_THINKING=false`. For mixed setups, route per function via
+**Open-source model.** The default is `qwen3.5:4b` (multilingual JSON,
+thinking-capable, ~3.4 GB on disk — fits a small Railway volume + 7.5 GB-RAM
+dyno). To swap models, set the AI service's `OLLAMA_MODEL` env; the
+`ai/entrypoint.sh` boot script removes any other cached model first, so a swap
+never needs the volume to hold both at once. Set `OLLAMA_THINKING=false` when
+using a non-thinking model. For mixed setups, route per function via
 `OLLAMA_MODEL_MATCH`, `OLLAMA_MODEL_MODIFY`, `OLLAMA_MODEL_COMPOSE`,
 `OLLAMA_MODEL_SHOPPING`, `OLLAMA_MODEL_EXTRACT`, `OLLAMA_MODEL_EXPAND` — each
 falls back to `OLLAMA_MODEL`. Cloud-hosted Ollama models (e.g.
