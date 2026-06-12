@@ -3,7 +3,7 @@
 **Cocina:** Coreana | **Apta para congelar:** Parcialmente (congelar proteína + vegetales; cocinar el arroz fresco) | **Preparación:** 20 min | **Cocción:** 25 min
 
 ## Salsa de Bibimbap Compartida
-- 3 cdas de gochujang (pasta de chile coreana — revisa la etiqueta: la mayoría no tienen soja, algunas sí)
+- 3 cdas de gochujang (pasta de chile coreana — ojo: el gochujang es una pasta de soja fermentada, así que la mayoría de las marcas contienen soja; para la versión sin soja compra una marca verificada sin soja o sustituye por una pasta de gochugaru (hojuelas de chile coreano) + miel + vinagre de arroz)
 - 1 cda de aceite de sésamo (el sésamo NO es soja — apto para ambas versiones)
 - 1 cda de vinagre de arroz
 - 1 cda de aminos de coco (o salsa de soja para la versión vegetariana)

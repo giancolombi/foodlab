@@ -3,7 +3,7 @@
 **Cozinha:** Coreana | **Vai ao freezer:** Parcialmente (congele proteína + legumes; cozinhe o arroz na hora) | **Preparo:** 20 min | **Cozimento:** 25 min
 
 ## Molho de Bibimbap Compartilhado
-- 3 colheres de sopa de gochujang (pasta de pimenta coreana — verifique o rótulo: a maioria é sem soja, algumas não)
+- 3 colheres de sopa de gochujang (pasta de pimenta coreana — atenção: gochujang é uma pasta de soja fermentada, então a maioria das marcas contém soja; para a versão sem soja compre uma marca comprovadamente sem soja ou substitua por uma pasta de gochugaru (pimenta coreana em flocos) + mel + vinagre de arroz)
 - 1 colher de sopa de óleo de gergelim (gergelim NÃO é soja — OK para as duas versões)
 - 1 colher de sopa de vinagre de arroz
 - 1 colher de sopa de aminos de coco (ou shoyu para a versão vegetariana)

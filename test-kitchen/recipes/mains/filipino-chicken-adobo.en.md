@@ -26,6 +26,8 @@
 **Protein:** 1 block (14 oz) extra-firm tofu, cubed + 1 can (15 oz) white beans (cannellini), drained
 **Sauce:** 1/4 cup soy sauce + 1 tbsp brown sugar
 
+*Use vegetable broth for this version.*
+
 1. Press tofu for 10 min, then cut into 1-inch cubes.
 2. Heat oil in a large pot or Dutch oven over medium-high heat. Sear tofu until golden on all sides, ~6 min. Remove and set aside.
 3. In the same pot, sauté onion until softened, ~4 min. Add garlic, cook 1 min.

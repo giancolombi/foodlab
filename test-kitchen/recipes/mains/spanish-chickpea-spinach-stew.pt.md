@@ -36,7 +36,7 @@
 
 1. Prense o tofu por 15 min. Corte em cubos de 3/4 de polegada.
 2. Aqueça 1 colher de sopa de azeite numa panela grande ou de ferro em fogo médio. Frite o tofu até dourar todos os lados, ~6 min. Retire e reserve.
-3. Na mesma panela, adicione a colher de azeite restante. Toste as amêndoas e 1 dente de alho até dourar levemente, ~3 min. Transfira para um pilão ou processador pequeno com a salsinha e uma pitada de sal. Soque ou pulse até formar uma pasta rústica. Reserve.
+3. Na mesma panela, adicione a 1 colher de sopa restante de azeite. Toste as amêndoas e 1 dente de alho até dourar levemente, ~3 min. Transfira para um pilão ou processador pequeno com a salsinha e uma pitada de sal. Soque ou pulse até formar uma pasta rústica. Reserve.
 4. Refogue a cebola em cubos na mesma panela até ficar translúcida, ~4 min. Adicione o alho picado, a páprica defumada e o cominho. Mexa por 30 segundos.
 5. Adicione o vinagre de Jerez e o molho de tomate. Cozinhe em fogo baixo por 2 min até engrossar.
 6. Adicione o grão-de-bico, o caldo e o açafrão (ou açafrão-da-terra). Tempere com sal e pimenta. Leve à fervura, depois reduza para fogo baixo. Tampe e cozinhe por 10 min.
@@ -51,7 +51,7 @@
 
 1. Tempere o frango com sal, pimenta e 1/2 colher de chá de páprica defumada.
 2. Aqueça 1 colher de sopa de azeite numa panela grande ou de ferro em fogo médio-alto. Sele o frango até dourar, ~5 min. Retire e reserve.
-3. Na mesma panela, adicione a colher de azeite restante. Toste as amêndoas e 1 dente de alho até dourar levemente, ~3 min. Transfira para um pilão ou processador pequeno com a salsinha e uma pitada de sal. Soque ou pulse até formar uma pasta rústica. Reserve.
+3. Na mesma panela, adicione a 1 colher de sopa restante de azeite. Toste as amêndoas e 1 dente de alho até dourar levemente, ~3 min. Transfira para um pilão ou processador pequeno com a salsinha e uma pitada de sal. Soque ou pulse até formar uma pasta rústica. Reserve.
 4. Refogue a cebola em cubos na mesma panela até ficar translúcida, ~4 min. Adicione o alho picado, a páprica defumada e o cominho. Mexa por 30 segundos.
 5. Adicione o vinagre de Jerez e o molho de tomate. Cozinhe em fogo baixo por 2 min até engrossar.
 6. Adicione o grão-de-bico, o caldo e o açafrão (ou açafrão-da-terra). Tempere com sal e pimenta. Leve à fervura, depois reduza para fogo baixo. Tampe e cozinhe por 10 min.

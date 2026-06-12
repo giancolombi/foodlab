@@ -29,6 +29,8 @@
 ## Versión Vegetariana
 **Proteína:** 1 lata (15 oz) de garbanzos, escurridos + 1 bloque (14 oz) de tofu extra firme, en cubos
 
+*Usa caldo de vegetales para esta versión.*
+
 1. Prensa el tofu 10 min, luego córtalo en cubos de 1 pulgada. Sazona con sal, cilantro y pimentón.
 2. Calienta 1 cda de aceite en una olla grande u olla holandesa a fuego medio-alto. Sella los cubos de tofu hasta que estén dorados por todos lados, ~6 min. Retira y reserva.
 3. Agrega el aceite restante. Saltea las cebollas hasta que estén suaves y translúcidas, ~5 min.

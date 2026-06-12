@@ -30,4 +30,19 @@
 
 ---
 
+## Versión con Carne (Sin Soja / Sin Lácteos)
+**Proteína:** 3/4 taza de lentejas verdes o pardinas secas + 1/2 lb de carne molida de res o pavo
+
+1. Calienta el aceite en una olla grande. Dora la carne molida de res o pavo, desmenuzándola, ~5 min. Retira y reserva.
+2. Saltea la cebolla, zanahorias y apio en la misma olla hasta que estén suaves, ~8 min.
+3. Agrega el ajo y la pasta de tomate, cocina 2 min.
+4. Agrega las lentejas, los tomates triturados, el caldo y las hierbas. Devuelve la carne a la olla.
+5. Lleva a hervor, reduce a fuego lento. Tapa 30 min hasta que las lentejas estén tiernas.
+6. Ajusta el sazón.
+7. Sirve sobre pasta o fideos de calabacín.
+
+**Vegetales para esconder:** Calabacín, champiñones, pimientos y espinaca finamente picados (incorpora la espinaca al final).
+
+---
+
 *Del menú de la Semana 2. Una esponja de vegetales — la salsa lo esconde todo.*

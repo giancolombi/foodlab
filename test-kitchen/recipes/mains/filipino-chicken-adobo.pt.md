@@ -26,6 +26,8 @@
 **Proteína:** 1 bloco (14 oz) de tofu extra firme, em cubos + 1 lata (15 oz) de feijão branco (cannellini), escorrido
 **Molho:** 1/4 xícara de shoyu + 1 colher de sopa de açúcar mascavo
 
+*Use caldo de legumes para esta versão.*
+
 1. Prense o tofu por 10 min, depois corte em cubos de 1 polegada.
 2. Aqueça o óleo numa panela grande ou de ferro em fogo médio-alto. Sele o tofu até dourar todos os lados, ~6 min. Retire e reserve.
 3. Na mesma panela, refogue a cebola até amolecer, ~4 min. Adicione o alho, cozinhe por 1 min.

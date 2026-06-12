@@ -3,7 +3,7 @@
 **Cuisine:** Korean | **Freezer-friendly:** Partially (freeze protein + veggies; cook rice fresh) | **Prep:** 20 min | **Cook:** 25 min
 
 ## Shared Bibimbap Sauce
-- 3 tbsp gochujang (Korean chili paste — check label: most are soy-free, some aren't)
+- 3 tbsp gochujang (Korean chili paste — note: gochujang is a fermented soybean paste, so most brands contain soy; for the no-soy version buy a verified soy-free brand or substitute a paste of gochugaru (Korean chile flakes) + honey + rice vinegar)
 - 1 tbsp sesame oil (sesame is NOT soy — OK for both versions)
 - 1 tbsp rice vinegar
 - 1 tbsp coconut aminos (or soy sauce for veg version)

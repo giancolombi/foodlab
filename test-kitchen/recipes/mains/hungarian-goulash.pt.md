@@ -33,7 +33,7 @@
 
 1. Prense o tofu por 15 min. Corte em cubos de 3/4 de polegada.
 2. Aqueça 1 colher de sopa de azeite numa panela grande ou de ferro em fogo médio-alto. Frite o tofu até dourar todos os lados, ~6 min. Retire e reserve.
-3. Na mesma panela, adicione a colher de azeite restante. Refogue as cebolas até amolecer e dourar, ~6 min. Adicione o alho, mexa por 1 min.
+3. Na mesma panela, adicione a 1 colher de sopa restante de azeite. Refogue as cebolas até amolecer e dourar, ~6 min. Adicione o alho, mexa por 1 min.
 4. Adicione a páprica, alcaravia, orégano, folhas de louro e açúcar mascavo. Mexa por 30 segundos até ficar perfumado.
 5. Incorpore o molho de tomate, o vinagre de vinho tinto e o caldo de legumes. Adicione as batatas, cenouras e pimentão. Tempere com sal e pimenta.
 6. Leve à fervura, depois reduza para fogo baixo. Tampe e cozinhe por 25 min até as batatas estarem macias.

@@ -36,7 +36,7 @@
 
 1. Prensa el tofu 15 min. Córtalo en cubos de 3/4 de pulgada.
 2. Calienta 1 cda de aceite de oliva en una olla grande u olla holandesa a fuego medio. Fríe el tofu en la sartén hasta que esté dorado por todos lados, ~6 min. Retira y reserva.
-3. En la misma olla, agrega la cda de aceite restante. Tuesta las almendras y 1 diente de ajo hasta que estén ligeramente dorados, ~3 min. Pasa a un mortero o procesador pequeño con el perejil y una pizca de sal. Machaca o pulsa hasta una pasta rústica. Reserva.
+3. En la misma olla, agrega la 1 cda restante de aceite de oliva. Tuesta las almendras y 1 diente de ajo hasta que estén ligeramente dorados, ~3 min. Pasa a un mortero o procesador pequeño con el perejil y una pizca de sal. Machaca o pulsa hasta una pasta rústica. Reserva.
 4. Saltea la cebolla en cubos en la misma olla hasta que esté translúcida, ~4 min. Agrega el ajo picado, el pimentón ahumado y el comino. Mezcla 30 segundos.
 5. Agrega el vinagre de jerez y la salsa de tomate. Cocina a fuego lento 2 min hasta que espese.
 6. Agrega los garbanzos, el caldo y el azafrán (o cúrcuma). Sazona con sal y pimienta. Lleva a hervor, luego reduce a fuego lento. Tapa y cocina 10 min.
@@ -51,7 +51,7 @@
 
 1. Sazona el pollo con sal, pimienta y 1/2 cdta de pimentón ahumado.
 2. Calienta 1 cda de aceite de oliva en una olla grande u olla holandesa a fuego medio-alto. Sella el pollo hasta que esté dorado, ~5 min. Retira y reserva.
-3. En la misma olla, agrega la cda de aceite restante. Tuesta las almendras y 1 diente de ajo hasta que estén ligeramente dorados, ~3 min. Pasa a un mortero o procesador pequeño con el perejil y una pizca de sal. Machaca o pulsa hasta una pasta rústica. Reserva.
+3. En la misma olla, agrega la 1 cda restante de aceite de oliva. Tuesta las almendras y 1 diente de ajo hasta que estén ligeramente dorados, ~3 min. Pasa a un mortero o procesador pequeño con el perejil y una pizca de sal. Machaca o pulsa hasta una pasta rústica. Reserva.
 4. Saltea la cebolla en cubos en la misma olla hasta que esté translúcida, ~4 min. Agrega el ajo picado, el pimentón ahumado y el comino. Mezcla 30 segundos.
 5. Agrega el vinagre de jerez y la salsa de tomate. Cocina a fuego lento 2 min hasta que espese.
 6. Agrega los garbanzos, el caldo y el azafrán (o cúrcuma). Sazona con sal y pimienta. Lleva a hervor, luego reduce a fuego lento. Tapa y cocina 10 min.

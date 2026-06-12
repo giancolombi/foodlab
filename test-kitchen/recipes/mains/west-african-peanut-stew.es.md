@@ -30,6 +30,8 @@
 ## Versión Vegetariana
 **Proteína:** 1 lata (15 oz) de garbanzos, escurridos + 1/2 taza de maníes tostados
 
+*Usa caldo de vegetales para esta versión.*
+
 1. Calienta el aceite en una olla grande a fuego medio. Saltea la cebolla hasta que esté suave, ~5 min.
 2. Agrega el ajo y el jengibre, cocina 1 min.
 3. Incorpora la pasta de tomate, comino, pimentón y cayena. Cocina 2 min.

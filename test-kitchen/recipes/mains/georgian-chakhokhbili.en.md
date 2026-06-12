@@ -29,6 +29,8 @@
 ## Vegetarian Version
 **Protein:** 1 can (15 oz) chickpeas, drained + 1 block (14 oz) extra-firm tofu, cubed
 
+*Use vegetable broth for this version.*
+
 1. Press tofu for 10 min, then cut into 1-inch cubes. Season with salt, coriander, and paprika.
 2. Heat 1 tbsp oil in a large pot or Dutch oven over medium-high heat. Sear tofu cubes until golden on all sides, ~6 min. Remove and set aside.
 3. Add remaining oil. Sauté onions until soft and translucent, ~5 min.

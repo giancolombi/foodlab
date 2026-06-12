@@ -30,6 +30,8 @@
 ## Versão Vegetariana
 **Proteína:** 1 lata (15 oz) de grão-de-bico, escorrido + 1/2 xícara de amendoins tostados
 
+*Use caldo de legumes para esta versão.*
+
 1. Aqueça o óleo numa panela grande em fogo médio. Refogue a cebola até amolecer, ~5 min.
 2. Adicione o alho e o gengibre, cozinhe por 1 min.
 3. Incorpore o extrato de tomate, cominho, páprica e caiena. Cozinhe por 2 min.

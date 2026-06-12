@@ -30,4 +30,19 @@
 
 ---
 
+## Meat Version (No Soy / No Dairy)
+**Protein:** 3/4 cup dried green or brown lentils + 1/2 lb ground beef or turkey
+
+1. Heat oil in a large pot. Brown the ground beef or turkey, breaking it up, ~5 min. Remove and set aside.
+2. Sauté onion, carrots, celery in the same pot until soft, ~8 min.
+3. Add garlic and tomato paste, cook 2 min.
+4. Add lentils, crushed tomatoes, broth, and herbs. Return the meat to the pot.
+5. Bring to a boil, reduce to simmer. Cover 30 min until lentils are tender.
+6. Adjust seasoning.
+7. Serve over pasta or zoodles.
+
+**Veggies to hide:** Finely diced zucchini, mushrooms, bell peppers, spinach (wilt in at end).
+
+---
+
 *From Week 2 menu. A veggie sponge — the sauce hides everything.*

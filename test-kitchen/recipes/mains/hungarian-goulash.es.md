@@ -33,7 +33,7 @@
 
 1. Prensa el tofu 15 min. Córtalo en cubos de 3/4 de pulgada.
 2. Calienta 1 cda de aceite de oliva en una olla grande u olla holandesa a fuego medio-alto. Sella el tofu hasta que esté dorado por todos lados, ~6 min. Retira y reserva.
-3. En la misma olla, agrega la cda de aceite restante. Saltea las cebollas hasta que estén suaves y doradas, ~6 min. Agrega el ajo, mezcla 1 min.
+3. En la misma olla, agrega la 1 cda restante de aceite de oliva. Saltea las cebollas hasta que estén suaves y doradas, ~6 min. Agrega el ajo, mezcla 1 min.
 4. Agrega el pimentón, alcaravea, orégano, hojas de laurel y azúcar morena. Mezcla 30 segundos hasta que esté fragante.
 5. Incorpora la salsa de tomate, el vinagre de vino tinto y el caldo de vegetales. Agrega las papas, zanahorias y pimiento. Sazona con sal y pimienta.
 6. Lleva a hervor, luego reduce a fuego lento. Tapa y cocina 25 min hasta que las papas estén tiernas.

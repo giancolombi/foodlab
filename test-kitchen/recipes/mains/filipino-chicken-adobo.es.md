@@ -26,6 +26,8 @@
 **Proteína:** 1 bloque (14 oz) de tofu extra firme, en cubos + 1 lata (15 oz) de frijoles blancos (cannellini), escurridos
 **Salsa:** 1/4 taza de salsa de soja + 1 cda de azúcar morena
 
+*Usa caldo de vegetales para esta versión.*
+
 1. Prensa el tofu 10 min, luego córtalo en cubos de 1 pulgada.
 2. Calienta el aceite en una olla grande u olla holandesa a fuego medio-alto. Sella el tofu hasta que esté dorado por todos lados, ~6 min. Retira y reserva.
 3. En la misma olla, saltea la cebolla hasta que esté suave, ~4 min. Agrega el ajo, cocina 1 min.

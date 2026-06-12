@@ -30,6 +30,8 @@
 ## Vegetarian Version
 **Protein:** 1 can (15 oz) chickpeas, drained + 1/2 cup roasted peanuts
 
+*Use vegetable broth for this version.*
+
 1. Heat oil in a large pot over medium heat. Sauté onion until soft, ~5 min.
 2. Add garlic and ginger, cook 1 min.
 3. Stir in tomato paste, cumin, paprika, cayenne. Cook 2 min.

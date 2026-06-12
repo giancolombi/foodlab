@@ -57,11 +57,23 @@
 
 ---
 
+## 5. Egg Muffins
+
+**Base:** 10 large eggs, 2 cups fresh spinach (chopped), 1 bell pepper (finely diced), 1/2 onion (finely diced), salt + pepper + garlic powder to taste. Makes 12 muffins.
+
+**Veg add:** 1/2 cup shredded cheese (cheddar or pepper jack), sprinkled on top before baking.
+**Meat add:** No cheese — optionally add crumbled cooked bacon or breakfast sausage (check the label: dairy-free and soy-free).
+
+**Method:** Whisk eggs with seasonings, divide veggies (and meat, if using) among a greased 12-cup muffin tin, then pour egg mixture over, filling each cup 3/4 full. Top veg muffins with cheese. Bake at 375°F for 18–20 min until set; cool 5 min before removing.
+
+---
+
 # Consolidated Shopping List
 
 ## Proteins
 - Extra-firm tofu, 14 oz blocks (2) — Dish 1 + Dish 2 (veg)
-- Boneless skinless chicken thighs (5 lbs total) — Dish 1 (1.5 lbs, meat), Dish 3 (1.5 lbs bone-in, meat), Dish 4 (2 lbs, meat)
+- Boneless skinless chicken thighs (3.5 lbs total) — Dish 1 (1.5 lbs, meat), Dish 4 (2 lbs, meat)
+- Bone-in chicken thighs, skin removed (1.5 lbs) — Dish 3 (meat)
 - Beef ribeye or sirloin, thinly sliced (1 lb) — Dish 2 (meat)
 - Large eggs (18) — Dish 2 (4) + Dish 5 (10) + Dish 4 garnish (4)
 
@@ -95,7 +107,7 @@
 - Walnuts, 1 cup — Dish 4
 - Roasted peanuts, 1 cup — Dishes 1 (garnish) + 3 (veg protein + garnish)
 - Peanut butter, natural creamy (1 jar) — Dishes 1 + 3
-- Brown sugar or coconut sugar — Dishes 1 + 2
+- Brown sugar or coconut sugar (1/4 cup) — Dishes 1 + 2
 - Honey — Dish 2
 
 ## Canned / Jarred
@@ -112,7 +124,6 @@
 - Coconut aminos (1 bottle) — Dishes 1, 2, and all meat versions
 - Sesame oil — Dish 2
 - Rice vinegar — Dish 2
-- Dijon mustard — not needed this week
 - Cumin — Dishes 3 + 4
 - Smoked paprika — Dish 3
 - Turmeric — Dish 4

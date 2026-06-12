@@ -29,6 +29,8 @@
 ## Versão Vegetariana
 **Proteína:** 1 lata (15 oz) de grão-de-bico, escorrido + 1 bloco (14 oz) de tofu extra firme, em cubos
 
+*Use caldo de legumes para esta versão.*
+
 1. Prense o tofu por 10 min, depois corte em cubos de 1 polegada. Tempere com sal, coentro e páprica.
 2. Aqueça 1 colher de sopa de azeite numa panela grande ou de ferro em fogo médio-alto. Sele os cubos de tofu até dourar todos os lados, ~6 min. Retire e reserve.
 3. Adicione o azeite restante. Refogue as cebolas até amolecer e ficarem translúcidas, ~5 min.
