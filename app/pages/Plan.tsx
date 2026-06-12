@@ -35,6 +35,7 @@ import {
   SectionHeader,
 } from "@/design-system";
 import { useLanguage } from "@/contexts/LanguageContext";
+import type { StringKey } from "@/i18n/strings";
 import {
   DAY_KEYS,
   DAYS,
@@ -60,21 +61,33 @@ export default function Plan() {
     clearPlan,
     mergeAssignments,
     activeProfileIds,
+    profilesInitialized,
     toggleProfile,
     setActiveProfileIds,
     includeServeWith,
     setIncludeServeWith,
   } = usePlan();
 
-  const [recipes, setRecipes] = useState<Record<string, RecipeDetail>>({});
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
 
+  // Stable serialization of the plan's slugs — swapping one recipe for
+  // another at constant count must still trigger a refetch.
+  const planKey = useMemo(() => [...planSlugs].sort().join(","), [planSlugs]);
+  const requestKey = `${planKey}|${locale}`;
+
   // Fetch every recipe referenced by the plan, plus the user's profiles.
-  // We key recipes by slug so slot lookups are O(1).
+  // We key recipes by slug so slot lookups are O(1). Loading is derived by
+  // comparing the result's key with the current request key.
+  const [fetched, setFetched] = useState<{
+    key: string;
+    recipes: Record<string, RecipeDetail>;
+    profiles: Profile[];
+    failed: number;
+  } | null>(null);
+
   useEffect(() => {
-    setLoading(true);
+    const key = requestKey;
+    let cancelled = false;
     const slugs = [...planSlugs];
     const localeParam = encodeURIComponent(locale);
     Promise.all([
@@ -88,21 +101,31 @@ export default function Plan() {
       api<{ profiles: Profile[] }>("/profiles").catch(() => ({
         profiles: [] as Profile[],
       })),
-    ])
-      .then(([rcps, { profiles: prs }]) => {
-        const next: Record<string, RecipeDetail> = {};
-        rcps.forEach((r) => {
-          if (r) next[r.slug] = r;
-        });
-        setRecipes(next);
-        setProfiles(prs);
-        if (activeProfileIds.length === 0 && prs.length > 0) {
-          setActiveProfileIds(prs.map((p) => p.id));
-        }
-      })
-      .finally(() => setLoading(false));
+    ]).then(([rcps, { profiles: prs }]) => {
+      if (cancelled) return;
+      const next: Record<string, RecipeDetail> = {};
+      let failed = 0;
+      rcps.forEach((r) => {
+        if (r) next[r.slug] = r;
+        else failed++;
+      });
+      setFetched({ key, recipes: next, profiles: prs, failed });
+      // Default-select everyone exactly once; never override a deliberate
+      // deselect-all ([] with profilesInitialized=true).
+      if (!profilesInitialized && prs.length > 0) {
+        setActiveProfileIds(prs.map((p) => p.id));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [planSlugs.size, locale]);
+  }, [requestKey]);
+
+  const loading = fetched?.key !== requestKey;
+  const recipes = useMemo(() => fetched?.recipes ?? {}, [fetched]);
+  const profiles = useMemo(() => fetched?.profiles ?? [], [fetched]);
+  const failedCount = !loading && fetched ? fetched.failed : 0;
 
   const activeProfiles = useMemo(
     () => profiles.filter((p) => activeProfileIds.includes(p.id)),
@@ -272,6 +295,12 @@ export default function Plan() {
       {loading && (
         <LoadingRow label={t("plan.loadingRecipes")} />
       )}
+      {failedCount > 0 && (
+        <p className="text-sm text-destructive inline-flex items-center gap-1.5">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+          {t("plan.loadWarning", { n: failedCount })}
+        </p>
+      )}
 
       {/* Desktop: 7 columns (one per day). Mobile: vertical stack of days. */}
       <section>
@@ -331,7 +360,7 @@ interface DayViewProps {
   assignments: ReturnType<typeof usePlan>["assignments"];
   activeProfiles: Profile[];
   onUnassign: (d: Day, m: Meal) => void;
-  t: (k: string, vars?: Record<string, unknown>) => string;
+  t: (k: StringKey, vars?: Record<string, string | number>) => string;
 }
 
 function DayColumn({
@@ -416,7 +445,7 @@ interface SlotCardProps {
   recipe: RecipeDetail | null;
   activeProfiles: Profile[];
   onUnassign: (d: Day, m: Meal) => void;
-  t: (k: string, vars?: Record<string, unknown>) => string;
+  t: (k: StringKey, vars?: Record<string, string | number>) => string;
   compact?: boolean;
 }
 

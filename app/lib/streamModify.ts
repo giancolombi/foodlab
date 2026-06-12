@@ -33,12 +33,6 @@ export interface ModifyCallbacks {
    * in the preview instead of waiting for `onComplete`.
    */
   onPartial?: (recipe: PartialRecipe) => void;
-  /**
-   * Fires per thinking-token from a reasoning-capable model. Not emitted
-   * by the current hosted LLM, but kept so reasoning models can use it
-   * later; otherwise this stays silent.
-   */
-  onThinking?: (totalThinking: string, delta: string) => void;
   onComplete: (final: { recipe: ModifiedRecipe; markdown: string }) => void;
   onError: (message: string) => void;
 }
@@ -82,7 +76,9 @@ export async function streamModify(
     try {
       const data = await res.json();
       if (data?.error) message = data.error;
-    } catch {}
+    } catch {
+      // Body wasn't JSON — keep the generic status message.
+    }
     cb.onError(message);
     return;
   }
@@ -91,7 +87,6 @@ export async function streamModify(
   const decoder = new TextDecoder();
   let sseBuffer = "";
   let raw = "";
-  let thinking = "";
   let lastEmittedKey = "";
 
   while (true) {
@@ -129,12 +124,6 @@ export async function streamModify(
             }
           }
         }
-      } else if (
-        payload.type === "thinking" &&
-        typeof payload.content === "string"
-      ) {
-        thinking += payload.content;
-        cb.onThinking?.(thinking, payload.content);
       } else if (payload.type === "complete") {
         cb.onComplete({
           recipe: payload.recipe as ModifiedRecipe,

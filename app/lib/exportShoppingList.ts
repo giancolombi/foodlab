@@ -1,10 +1,15 @@
-// Render a ConsolidatedList to plaintext + markdown for sharing / download.
+// Render a ConsolidatedList to plaintext for sharing / download.
 //
 // Kept separate from shoppingList.ts so UI concerns (labels, emoji, layout)
 // don't leak into the pure consolidation logic. Callers supply the localized
 // section labels so the output matches the user's language.
 
-import { SECTION_ORDER, type ConsolidatedList, type Section } from "@/lib/shoppingList";
+import {
+  SECTION_ORDER,
+  type ConsolidatedItem,
+  type ConsolidatedList,
+  type Section,
+} from "@/lib/shoppingList";
 
 export interface ExportOptions {
   /** Localized section headers, e.g. { produce: "Produce", ... } */
@@ -51,42 +56,6 @@ export function toPlainText(list: ConsolidatedList, opts: ExportOptions): string
   return lines.join("\n").trimEnd() + "\n";
 }
 
-export function toMarkdown(list: ConsolidatedList, opts: ExportOptions): string {
-  const lines: string[] = [];
-  if (opts.title) {
-    lines.push(`# ${opts.title}`);
-    lines.push("");
-  }
-  for (const section of SECTION_ORDER) {
-    const items = list.sections[section];
-    if (!items.length) continue;
-    lines.push(`## ${opts.sectionLabel[section]}`);
-    lines.push("");
-    for (const item of items) {
-      lines.push(renderItem(item, opts, "- [ ]"));
-    }
-    lines.push("");
-  }
-  return lines.join("\n").trimEnd() + "\n";
-}
-
-/** Trigger a browser download of `content` as `filename`. */
-export function downloadTextFile(
-  filename: string,
-  content: string,
-  mime = "text/plain;charset=utf-8",
-): void {
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 /**
  * Render a ConsolidatedList as a clean line-per-item list suitable for
  * pasting into Instacart's bulk list import (instacart.com/lists). Drops
@@ -95,17 +64,17 @@ export function downloadTextFile(
  */
 export function toInstacartList(
   list: ConsolidatedList,
-  opts?: { onlyUnbought?: (sectionAndIndex: { section: Section; index: number; name: string }) => boolean },
+  opts?: { onlyUnbought?: (entry: { section: Section; item: ConsolidatedItem }) => boolean },
 ): string {
   const lines: string[] = [];
   for (const section of SECTION_ORDER) {
     const items = list.sections[section];
-    items.forEach((item, index) => {
-      if (opts?.onlyUnbought && !opts.onlyUnbought({ section, index, name: item.name })) return;
+    for (const item of items) {
+      if (opts?.onlyUnbought && !opts.onlyUnbought({ section, item })) continue;
       const qty = item.quantity ? ` ${item.quantity}` : "";
       // "2 lb chicken thighs" reads better to Instacart than "chicken thighs (2 lb)".
       lines.push(`${qty.trim()} ${item.name}`.trim());
-    });
+    }
   }
   return lines.join("\n");
 }

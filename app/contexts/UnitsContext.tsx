@@ -150,18 +150,35 @@ function round(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-/** Convert °F↔°C in a recipe instruction string via regex. */
+/**
+ * Convert °F↔°C in a recipe instruction string via regex.
+ *
+ * An explicit degree marker (°F, ° F, degrees F) always converts. A bare
+ * letter ("350 F") only converts when the magnitude is a plausible cooking
+ * temperature (≥200 for F, ≥100 for C) so "1 C" (a cup) or "2 F" never get
+ * rewritten into nonsense temperatures.
+ */
 export function convertTemperatures(text: string, target: UnitSystem): string {
   if (target === "metric") {
-    // 350°F → 175°C, 350 °F → 175 °C, 350F → 175°C
+    // 350°F → 175°C, 350 °F → 175°C, 350F → 175°C
     return text.replace(
-      /(\d+)\s*°?\s*F\b/g,
-      (_, f) => `${Math.round(((Number(f) - 32) * 5) / 9)}°C`,
+      /(\d+)(\s*(?:°\s*|degrees?\s+)?)F\b/g,
+      (match, f, marker) => {
+        const n = Number(f);
+        const hasMarker = /°|degrees?/i.test(marker);
+        if (!hasMarker && n < 200) return match;
+        return `${Math.round(((n - 32) * 5) / 9)}°C`;
+      },
     );
   }
   // imperial: °C → °F
   return text.replace(
-    /(\d+)\s*°?\s*C\b/g,
-    (_, c) => `${Math.round((Number(c) * 9) / 5 + 32)}°F`,
+    /(\d+)(\s*(?:°\s*|degrees?\s+)?)C\b/g,
+    (match, c, marker) => {
+      const n = Number(c);
+      const hasMarker = /°|degrees?/i.test(marker);
+      if (!hasMarker && n < 100) return match;
+      return `${Math.round((n * 9) / 5 + 32)}°F`;
+    },
   );
 }

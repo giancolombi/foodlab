@@ -4,7 +4,6 @@
 // primitive it propagates everywhere.
 //
 // Structure:
-//   tokens.ts                 — semantic color roles, spacing, container sizes
 //   components/PageHeader     — h1 + subtitle + actions
 //   components/SectionHeader  — h2 for in-page sections
 //   components/EmptyState     — dashed-border callout when a list is empty
@@ -14,8 +13,6 @@
 // Primitives (button, card, badge, input, label, textarea, spinner) are
 // re-exported below so a single `import { Button, Card, PageHeader } from
 // "@/design-system"` covers most pages.
-
-export * from "./tokens";
 
 // Compositions
 export { PageHeader } from "./components/PageHeader";
@@ -31,6 +28,8 @@ export { Button, type ButtonProps } from "@/components/ui/button";
 export {
   Card,
   CardContent,
+  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";

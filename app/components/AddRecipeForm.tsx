@@ -56,10 +56,14 @@ export function AddRecipeForm({ onSaved, onCancel }: Props) {
       <CardContent className="p-4 space-y-3">
         <p className="text-sm text-muted-foreground">{t("recipes.add.hint")}</p>
         <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">
+          <label
+            htmlFor="add-recipe-url"
+            className="text-xs font-medium text-muted-foreground"
+          >
             {t("compose.pasteUrlLabel")}
           </label>
           <input
+            id="add-recipe-url"
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
@@ -69,10 +73,14 @@ export function AddRecipeForm({ onSaved, onCancel }: Props) {
           />
         </div>
         <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">
+          <label
+            htmlFor="add-recipe-text"
+            className="text-xs font-medium text-muted-foreground"
+          >
             {t("compose.pasteTextLabel")}
           </label>
           <textarea
+            id="add-recipe-text"
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder={t("compose.pastePlaceholder")}

@@ -21,6 +21,8 @@ interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: unknown;
   auth?: boolean;
+  /** Abort the underlying fetch (e.g. from an effect cleanup). */
+  signal?: AbortSignal;
 }
 
 export class ApiError extends Error {
@@ -33,7 +35,7 @@ export class ApiError extends Error {
 
 export async function api<T = any>(
   path: string,
-  { method = "GET", body, auth = true }: RequestOptions = {},
+  { method = "GET", body, auth = true, signal }: RequestOptions = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
@@ -46,6 +48,7 @@ export async function api<T = any>(
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    signal,
   });
 
   if (res.status === 204) return undefined as T;

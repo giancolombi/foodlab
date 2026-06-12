@@ -6,8 +6,9 @@
 // We also track which dietary profiles are eating this week so the cart can
 // pick the right recipe version per person.
 //
-// Persists to localStorage; no server round-trips from here (a future task
-// will mirror this into Postgres so plans sync across devices).
+// Persists to localStorage (offline-first) and, when a user is signed in,
+// mirrors to the server: a GET on sign-in merges the server plan per-slot
+// (newer assignedAt wins) and edits are debounce-PUT back.
 
 import {
   createContext,
@@ -20,6 +21,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { useAuth } from "@/contexts/AuthContext";
 import { api, getToken } from "@/lib/api";
 
 export const MEALS = ["breakfast", "lunch", "dinner"] as const;
@@ -59,8 +61,13 @@ interface PlanContextValue {
   /** Merge a batch of assignments into the plan (used by auto-generate). */
   mergeAssignments: (incoming: Partial<Record<SlotKey, SlotAssignment>>) => void;
 
-  /** Profiles that will eat this week. [] during init; default set after load. */
+  /** Profiles that will eat this week. [] can mean "user deselected all" —
+   *  check profilesInitialized to tell that apart from "never chosen". */
   activeProfileIds: string[];
+  /** False until a selection has ever been made (locally or via server sync).
+   *  Pages use this to default-select everyone exactly once, without
+   *  overriding a deliberate deselect-all. */
+  profilesInitialized: boolean;
   setActiveProfileIds: (ids: string[]) => void;
   toggleProfile: (id: string) => void;
 
@@ -141,23 +148,29 @@ function loadIncludeServeWith(): boolean {
   }
 }
 
-function loadProfiles(): string[] {
-  if (typeof window === "undefined") return [];
+// Null = no selection ever stored (uninitialized); [] = user chose none.
+function loadProfiles(): string[] | null {
+  if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(PROFILES_KEY);
-    if (!raw) return [];
+    if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) return null;
     return parsed.filter((s): s is string => typeof s === "string");
   } catch {
-    return [];
+    return null;
   }
 }
 
 export function PlanProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+
   const [assignments, setAssignments] = useState<AssignmentMap>(loadAssignments);
-  const [activeProfileIds, setActiveProfileIdsState] =
-    useState<string[]>(loadProfiles);
+  // Null = uninitialized (no selection ever made); [] = deliberate "none".
+  const [rawProfileIds, setActiveProfileIdsState] = useState<string[] | null>(
+    loadProfiles,
+  );
   const [includeServeWith, setIncludeServeWithState] = useState<boolean>(
     loadIncludeServeWith,
   );
@@ -171,12 +184,13 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   }, [assignments]);
 
   useEffect(() => {
+    if (rawProfileIds === null) return; // never selected — don't persist
     try {
-      localStorage.setItem(PROFILES_KEY, JSON.stringify(activeProfileIds));
+      localStorage.setItem(PROFILES_KEY, JSON.stringify(rawProfileIds));
     } catch {
       // ignore
     }
-  }, [activeProfileIds]);
+  }, [rawProfileIds]);
 
   useEffect(() => {
     try {
@@ -191,13 +205,12 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ---- Server sync ----
-  // On mount, if authenticated, fetch the server plan and merge with local.
-  // Server wins if it has a newer updatedAt; otherwise keep local (offline-first).
-  const didFetch = useRef(false);
+  // Fetch the server plan whenever a user is (or becomes) authenticated.
+  // Slots merge per-slot via functional setState — the newer assignedAt
+  // wins — so edits made while the GET was in flight aren't clobbered.
   useEffect(() => {
-    if (didFetch.current) return;
-    if (!getToken()) return;
-    didFetch.current = true;
+    if (!userId || !getToken()) return;
+    const controller = new AbortController();
     api<{
       plan: {
         assignments: AssignmentMap;
@@ -205,39 +218,52 @@ export function PlanProvider({ children }: { children: ReactNode }) {
         includeServeWith: boolean;
         updatedAt: string | null;
       };
-    }>("/plans")
+    }>("/plans", { signal: controller.signal })
       .then(({ plan }) => {
         if (!plan.updatedAt) return; // no server plan yet
-        const serverSlots = Object.keys(plan.assignments).length;
-        const localSlots = Object.keys(assignments).length;
-        // Simple heuristic: take the richer plan (more slots filled).
-        // A proper last-write-wins would require storing updatedAt locally too.
-        if (serverSlots >= localSlots) {
-          setAssignments(plan.assignments);
-          if (plan.activeProfileIds.length) {
-            setActiveProfileIdsState(plan.activeProfileIds);
+        setAssignments((current) => {
+          const merged: AssignmentMap = { ...plan.assignments };
+          for (const [k, a] of Object.entries(current)) {
+            if (!a) continue;
+            const key = k as SlotKey;
+            const server = merged[key];
+            if (!server || a.assignedAt > server.assignedAt) merged[key] = a;
           }
-          setIncludeServeWithState(plan.includeServeWith);
+          return merged;
+        });
+        if (plan.activeProfileIds.length) {
+          setActiveProfileIdsState(plan.activeProfileIds);
         }
+        setIncludeServeWithState(plan.includeServeWith);
       })
       .catch(() => {
-        // Offline or not authenticated — keep localStorage plan
+        // Offline or aborted — keep the localStorage plan
       });
-    // Only on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return () => controller.abort();
+  }, [userId]);
 
-  // Debounce-save to server when plan changes.
+  // Debounce-save to server when plan changes. The first run for each user
+  // (mount or fresh sign-in) is skipped — nothing changed yet, and an
+  // immediate PUT would race the initial GET (or push the previous user's
+  // local leftovers into a freshly signed-in account).
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const saveArmedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (!getToken()) return;
+    if (!userId || !getToken()) {
+      saveArmedFor.current = null;
+      return;
+    }
+    if (saveArmedFor.current !== userId) {
+      saveArmedFor.current = userId;
+      return;
+    }
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       api("/plans", {
         method: "PUT",
         body: {
           assignments,
-          activeProfileIds,
+          activeProfileIds: rawProfileIds ?? [],
           includeServeWith,
         },
       }).catch(() => {
@@ -245,7 +271,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       });
     }, 1500);
     return () => clearTimeout(saveTimer.current);
-  }, [assignments, activeProfileIds, includeServeWith]);
+  }, [assignments, rawProfileIds, includeServeWith, userId]);
 
   const planSlugs = useMemo(() => {
     const s = new Set<string>();
@@ -319,10 +345,19 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleProfile = useCallback((id: string) => {
-    setActiveProfileIdsState((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
-    );
+    setActiveProfileIdsState((prev) => {
+      const current = prev ?? [];
+      return current.includes(id)
+        ? current.filter((p) => p !== id)
+        : [...current, id];
+    });
   }, []);
+
+  const activeProfileIds = useMemo(
+    () => rawProfileIds ?? [],
+    [rawProfileIds],
+  );
+  const profilesInitialized = rawProfileIds !== null;
 
   const value = useMemo<PlanContextValue>(
     () => ({
@@ -338,6 +373,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       clearPlan,
       mergeAssignments,
       activeProfileIds,
+      profilesInitialized,
       setActiveProfileIds,
       toggleProfile,
       includeServeWith,
@@ -356,6 +392,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       clearPlan,
       mergeAssignments,
       activeProfileIds,
+      profilesInitialized,
       setActiveProfileIds,
       toggleProfile,
       includeServeWith,

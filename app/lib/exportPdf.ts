@@ -211,12 +211,10 @@ const UNICODE_REPLACEMENTS: Array<[RegExp, string]> = [
   [/⅞/g, "7/8"],
   [/—/g, " - "], // em dash
   [/–/g, "-"], // en dash
-  [/"/g, '"'],
-  [/"/g, '"'],
-  [/'/g, "'"],
-  [/'/g, "'"],
+  [/[“”]/g, '"'], // smart double quotes
+  [/[‘’]/g, "'"], // smart single quotes
   [/…/g, "..."],
-  [/ /g, " "], // non-breaking space
+  [/\u00A0/g, " "], // non-breaking space
 ];
 
 function sanitizeForPdf(text: string): string {

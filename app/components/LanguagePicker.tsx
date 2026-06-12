@@ -12,15 +12,15 @@ interface Props {
 }
 
 export function LanguagePicker({ className }: Props) {
-  const { locale, setLocale } = useLanguage();
+  const { locale, setLocale, t } = useLanguage();
   return (
     <label className={cn("flex items-center gap-2 text-xs text-muted-foreground", className)}>
-      <span className="sr-only">Language</span>
+      <span className="sr-only">{t("layout.language")}</span>
       <select
         value={locale}
         onChange={(e) => setLocale(e.target.value as Locale)}
         className="rounded-md border bg-background px-2 py-1 text-base sm:text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label="Language"
+        aria-label={t("layout.language")}
       >
         {LOCALES.map((l) => (
           <option key={l.value} value={l.value}>

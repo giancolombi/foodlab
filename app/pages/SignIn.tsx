@@ -1,18 +1,18 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import {
+  Button,
   Card,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+  Input,
+  Label,
+} from "@/design-system";
 import { LanguagePicker } from "@/components/LanguagePicker";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -21,16 +21,21 @@ export default function SignIn() {
   const { signIn } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // ProtectedRoute stashes the page the user was trying to reach — go back
+  // there after sign-in instead of always landing on the home page.
+  const from = (location.state as { from?: string } | null)?.from ?? "/";
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
       await signIn(email, password);
-      navigate("/");
+      navigate(from, { replace: true });
     } catch (err: any) {
       toast.error(err.message ?? t("signin.failed"));
     } finally {

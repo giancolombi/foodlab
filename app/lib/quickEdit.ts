@@ -43,23 +43,31 @@ interface Phrasings {
   };
 }
 
-// Patterns are unanchored and case-insensitive — users may type "halve it"
-// or "please halve the recipe". We test against the trimmed instruction.
+// Patterns are deliberately conservative: quick-edit must only intercept
+// *unambiguous* scaling commands, so anything else falls through to the LLM.
+//   - halve requires an explicit object ("halve the recipe", "halve it") —
+//     a bare "half" inside "replace the cream with half and half" must NOT
+//     trigger a 0.5x scale.
+//   - scaleTo only matches instructions that are *about* scaling: either an
+//     explicit "scale … to N servings", or the entire trimmed instruction is
+//     a "make it for N people"-style sentence. "make it spicier for 2 people"
+//     falls through to the LLM.
 const PHRASINGS: Record<Locale, Phrasings> = {
   en: {
     halve: [
-      /\bhalve\b/i,
-      /\bhalf(\s+(?:the\s+)?(?:recipe|amounts?|portions?))?\b/i,
-      /\b(cut|reduce)\s+(?:in\s+|by\s+)?half\b/i,
+      /\bhalve\s+(?:the\s+|all\s+(?:the\s+)?)?(?:recipe|amounts?|portions?|quantities|ingredients?|it|everything)\b/i,
+      /\bhalf\s+(?:the\s+|all\s+(?:the\s+)?)?(?:recipe|amounts?|portions?|quantities)\b/i,
+      /\b(?:cut|reduce)\s+(?:the\s+recipe\s+|it\s+|everything\s+)?(?:in|by)\s+half\b/i,
       /\bx\s*0\.5\b/i,
+      /^halve$/i,
     ],
     double: [/\bdouble\b/i, /\b2\s*x\b/i, /\bx\s*2\b/i, /\btwice\s+(?:the\s+)?(?:recipe|amount)/i],
     triple: [/\btriple\b/i, /\b3\s*x\b/i, /\bx\s*3\b/i],
     quadruple: [/\bquadruple\b/i, /\b4\s*x\b/i, /\bx\s*4\b/i],
     scaleTo: [
-      /\bscale\s+(?:it\s+)?(?:up\s+|down\s+)?(?:to\s+)?(\d+)\s+(?:servings?|portions?|people)/i,
-      /\b(?:make|cook|feed)\s+(?:it\s+)?(?:for\s+)?(\d+)\s+(?:servings?|portions?|people)\b/i,
-      /\bfor\s+(\d+)\s+(?:servings?|portions?|people)\b/i,
+      /\bscale\s+(?:it\s+|this\s+|the\s+recipe\s+)?(?:up\s+|down\s+)?(?:to\s+|for\s+)?(\d+)\s+(?:servings?|portions?|people)\b/i,
+      /^\s*(?:please\s+)?(?:make|cook|feed|adjust)\s+(?:it\s+|this\s+|the\s+recipe\s+)?for\s+(\d+)\s+(?:servings?|portions?|people)\s*[.!]*\s*$/i,
+      /^\s*for\s+(\d+)\s+(?:servings?|portions?|people)\s*[.!]*\s*$/i,
     ],
     summary: {
       halve: "Halved all ingredient quantities.",
@@ -79,17 +87,16 @@ const PHRASINGS: Record<Locale, Phrasings> = {
   },
   es: {
     halve: [
-      /\bmitad\b/i,
-      /\b(reducir|reduce|reducí|cortar|corta)\s+(?:a\s+la\s+|por\s+la\s+|en\s+)?mitad/i,
-      /\bla\s+mitad\b/i,
+      /\b(?:reducir|reduce|reducí|cortar|corta)\s+(?:la\s+receta\s+|las\s+cantidades\s+|las\s+porciones\s+|todo\s+)?(?:a\s+la\s+|por\s+la\s+|en\s+)?mitad\b/i,
+      /\b(?:la\s+)?mitad\s+de\s+(?:la\s+receta|las\s+cantidades|las\s+porciones|todo)\b/i,
+      /^(?:a\s+la\s+)?mitad$/i,
     ],
     double: [/\bdobl(?:ar|a|á|e)\b/i, /\bel\s+doble\b/i, /\b2\s*x\b/i],
     triple: [/\btriplicar?\b/i, /\bel\s+triple\b/i, /\b3\s*x\b/i],
     quadruple: [/\bcuadruplic(?:ar|a)\b/i, /\b4\s*x\b/i],
     scaleTo: [
-      /\b(?:escalar|ajustar|ajusta)\s+(?:para\s+)?(\d+)\s+(?:porciones?|personas?|raciones?)/i,
-      /\b(?:para|por)\s+(\d+)\s+(?:porciones?|personas?|raciones?)\b/i,
-      /\bhacer\s+(?:para\s+)?(\d+)\s+(?:porciones?|personas?|raciones?)\b/i,
+      /\b(?:escalar?|escala|ajustar?|ajusta)\s+(?:la\s+receta\s+)?(?:para\s+|a\s+)?(\d+)\s+(?:porciones?|personas?|raciones?)\b/i,
+      /^\s*(?:hacer(?:la)?\s+|cocinar\s+)?(?:para|por)\s+(\d+)\s+(?:porciones?|personas?|raciones?)\s*[.!]*\s*$/i,
     ],
     summary: {
       halve: "Reducí las cantidades a la mitad.",
@@ -109,17 +116,16 @@ const PHRASINGS: Record<Locale, Phrasings> = {
   },
   "pt-BR": {
     halve: [
-      /\bmetade\b/i,
-      /\b(reduzir|reduza|cortar|corte)\s+(?:pela\s+|na\s+|à\s+|a\s+)?metade/i,
-      /\bna\s+metade\b/i,
+      /\b(?:reduzir|reduza|cortar|corte)\s+(?:a\s+receita\s+|as\s+quantidades\s+|as\s+porç(?:ões|oes)\s+|tudo\s+)?(?:pela\s+|na\s+|à\s+|a\s+)?metade\b/i,
+      /\bmetade\s+d[ae]s?\s+(?:receita|quantidades|porç(?:ões|oes)|tudo)\b/i,
+      /^(?:pela\s+|à\s+|a\s+)?metade$/i,
     ],
     double: [/\bdobr(?:ar|e|a)\b/i, /\bo\s+dobro\b/i, /\b2\s*x\b/i],
     triple: [/\btriplicar?\b/i, /\bo\s+triplo\b/i, /\b3\s*x\b/i],
     quadruple: [/\bquadruplicar?\b/i, /\b4\s*x\b/i],
     scaleTo: [
-      /\b(?:ajustar?|escalar?)\s+(?:para\s+)?(\d+)\s+(?:porç(?:ões|ao)|pessoas?)/i,
-      /\b(?:para|por)\s+(\d+)\s+(?:porç(?:ões|ao)|pessoas?)\b/i,
-      /\bfazer\s+(?:para\s+)?(\d+)\s+(?:porç(?:ões|ao)|pessoas?)\b/i,
+      /\b(?:ajustar?|ajuste|escalar?|escale)\s+(?:a\s+receita\s+)?(?:para\s+)?(\d+)\s+(?:porç(?:ões|ão|ao|oes)|pessoas?)\b/i,
+      /^\s*(?:fazer\s+|cozinhar\s+)?(?:para|por)\s+(\d+)\s+(?:porç(?:ões|ão|ao|oes)|pessoas?)\s*[.!]*\s*$/i,
     ],
     summary: {
       halve: "Reduzi as quantidades pela metade.",
@@ -209,4 +215,31 @@ export function quickEditFromInstruction(
 
 function matches(text: string, patterns: RegExp[]): boolean {
   return patterns.some((re) => re.test(text));
+}
+
+/**
+ * Build the canonical scale action for a known factor. Used by the instant
+ * chips so chip-applied edits carry the same generated summary sentence and
+ * toast label as typed instructions ("Halved all ingredient quantities."
+ * instead of the bare chip label).
+ */
+export function quickEditForFactor(
+  factor: 0.5 | 2 | 3 | 4,
+  locale: Locale,
+): QuickEditScale {
+  const p = PHRASINGS[locale] ?? PHRASINGS.en;
+  const kind =
+    factor === 0.5
+      ? ("halve" as const)
+      : factor === 2
+        ? ("double" as const)
+        : factor === 3
+          ? ("triple" as const)
+          : ("quadruple" as const);
+  return {
+    type: "scale",
+    factor,
+    summary: p.summary[kind],
+    toastLabel: p.toast[kind],
+  };
 }

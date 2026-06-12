@@ -12,14 +12,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { ThinkingTrace } from "@/components/ThinkingTrace";
+import { Button, Label, Textarea } from "@/design-system";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { api } from "@/lib/api";
 import {
+  quickEditForFactor,
   quickEditFromInstruction,
   type QuickEditAction,
 } from "@/lib/quickEdit";
@@ -87,7 +85,10 @@ export function RecipeModifyPanel({
     };
   }, [slug, locale, recipeProp]);
   const [previewMarkdown, setPreviewMarkdown] = useState("");
-  const [thinking, setThinking] = useState("");
+  // Human-readable note describing the current preview's change — the quick
+  // edit's generated summary, or the user's typed instruction. Sent to the
+  // server as modificationNote on save.
+  const [modificationNote, setModificationNote] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [saving, setSaving] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -136,7 +137,7 @@ export function RecipeModifyPanel({
     setPreview(modified);
     setPartial(null);
     setPreviewMarkdown(md);
-    setThinking("");
+    setModificationNote(action.summary);
     toast.success(action.toastLabel);
     return true;
   };
@@ -166,8 +167,8 @@ export function RecipeModifyPanel({
     setStreaming(true);
     setPreview(null);
     setPartial(null);
-    setThinking("");
     setPreviewMarkdown("");
+    setModificationNote(trimmed);
 
     try {
       await streamModify(
@@ -175,7 +176,6 @@ export function RecipeModifyPanel({
         {
           onChunk: () => {},
           onPartial: (p) => setPartial(p),
-          onThinking: (total) => setThinking(total),
           onComplete: ({ recipe, markdown }) => {
             setPreview(recipe);
             setPartial(null);
@@ -214,8 +214,8 @@ export function RecipeModifyPanel({
   const handleDiscard = () => {
     setPreview(null);
     setPartial(null);
-    setThinking("");
     setPreviewMarkdown("");
+    setModificationNote("");
     setInstruction("");
   };
 
@@ -230,7 +230,9 @@ export function RecipeModifyPanel({
         body: {
           markdown: previewMarkdown,
           parentSlug: slug,
-          modificationNote: instruction,
+          // Chip edits never touch the textarea, so prefer the note captured
+          // when the preview was generated over the raw instruction field.
+          modificationNote: modificationNote || instruction,
           locale,
         },
       });
@@ -238,6 +240,7 @@ export function RecipeModifyPanel({
       onSaved?.(created.slug);
       setPreview(null);
       setPreviewMarkdown("");
+      setModificationNote("");
       setInstruction("");
     } catch (err: any) {
       toast.error(err.message ?? t("modify.errorSave"));
@@ -246,21 +249,23 @@ export function RecipeModifyPanel({
     }
   };
 
-  // Chips: the first three are deterministic / instant when a recipe is
-  // loaded; the last two pre-fill the textarea so the LLM handles them.
+  // Chips: the first two are deterministic / instant when a recipe is
+  // loaded; the rest pre-fill the textarea so the LLM handles them. The
+  // actions come from quickEdit so chip edits carry the same generated
+  // summary sentence as typed instructions.
   const instantChips = recipe
     ? [
         {
           key: "halve",
           label: t("modify.chip.halve"),
           icon: Divide,
-          action: { type: "scale", factor: 0.5, summary: t("modify.chip.halve"), toastLabel: t("modify.chip.halve") } as QuickEditAction,
+          action: quickEditForFactor(0.5, locale),
         },
         {
           key: "double",
           label: t("modify.chip.double"),
           icon: Users,
-          action: { type: "scale", factor: 2, summary: t("modify.chip.double"), toastLabel: t("modify.chip.double") } as QuickEditAction,
+          action: quickEditForFactor(2, locale),
         },
       ]
     : [];
@@ -354,8 +359,6 @@ export function RecipeModifyPanel({
           </p>
         )}
       </form>
-
-      {thinking && <ThinkingTrace text={thinking} streaming={streaming} />}
 
       {(preview || partial) && (
         <div className="space-y-3">

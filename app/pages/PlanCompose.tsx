@@ -79,13 +79,20 @@ interface SavedRecipeRef {
   isBreakfast: boolean;
 }
 
-function loadJSON<T>(key: string, fallback: T): T {
+function loadJSON<T>(
+  key: string,
+  fallback: T,
+  isValid: (parsed: unknown) => boolean,
+): T {
   if (typeof window === "undefined") return fallback;
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw);
-    return parsed ?? fallback;
+    // Shape-check before trusting localStorage — corrupt or hand-edited
+    // values must fall back to defaults instead of crashing the page.
+    if (parsed == null || !isValid(parsed)) return fallback;
+    return parsed as T;
   } catch {
     return fallback;
   }
@@ -98,13 +105,20 @@ export default function PlanCompose() {
   const navigate = useNavigate();
 
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
-    loadJSON<ChatMessage[]>(MESSAGES_KEY, []),
+    loadJSON<ChatMessage[]>(MESSAGES_KEY, [], Array.isArray),
   );
   const [draft, setDraft] = useState<Draft>(() =>
-    loadJSON<Draft>(DRAFT_KEY, EMPTY_DRAFT),
+    loadJSON<Draft>(
+      DRAFT_KEY,
+      EMPTY_DRAFT,
+      (d) =>
+        typeof d === "object" &&
+        !Array.isArray(d) &&
+        Array.isArray((d as Partial<Draft>).dishes),
+    ),
   );
   const [savedRefs, setSavedRefs] = useState<SavedRecipeRef[]>(() =>
-    loadJSON<SavedRecipeRef[]>(SAVED_KEY, []),
+    loadJSON<SavedRecipeRef[]>(SAVED_KEY, [], Array.isArray),
   );
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -631,7 +645,11 @@ export default function PlanCompose() {
               className="flex-1 rounded-md border bg-background px-3 py-2 text-base sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               disabled={loading}
             />
-            <Button type="submit" disabled={loading || !input.trim()}>
+            <Button
+              type="submit"
+              disabled={loading || !input.trim()}
+              aria-label={t("compose.send")}
+            >
               <Send className="h-4 w-4" />
             </Button>
           </form>

@@ -25,6 +25,21 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// Per-user data stashed in localStorage by PlanContext, CartContext, and
+// PlanCompose. Cleared on sign-out so the next account on this device
+// doesn't inherit the previous user's plan, ticks, or compose drafts (or
+// worse, have the plan-sync debounce PUT them into their own account).
+const USER_DATA_KEYS = [
+  "foodlab_plan_v2",
+  "foodlab_plan", // legacy v1 plan key
+  "foodlab_plan_profiles",
+  "foodlab_plan_serve_with",
+  "foodlab_cart_bought",
+  "foodlab_compose_messages",
+  "foodlab_compose_draft",
+  "foodlab_compose_saved",
+];
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,6 +101,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(() => {
     setToken(null);
     setUser(null);
+    try {
+      for (const key of USER_DATA_KEYS) localStorage.removeItem(key);
+    } catch {
+      // private mode — nothing persisted anyway
+    }
   }, []);
 
   const value = useMemo(

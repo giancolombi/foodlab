@@ -7,11 +7,6 @@ import type { Locale } from "@/i18n/strings";
 export interface StreamCallbacks {
   onChunk: (totalText: string, deltaText: string) => void;
   onPartial: (recommendation: Recommendation) => void;
-  /**
-   * Reasoning tokens from thinking-capable models. Not emitted by the
-   * current hosted LLM, but kept so reasoning models can use it later.
-   */
-  onThinking?: (totalThinking: string, delta: string) => void;
   onComplete: (final: Recommendation[]) => void;
   onError: (message: string) => void;
 }
@@ -54,7 +49,9 @@ export async function streamMatch(
     try {
       const data = await res.json();
       if (data?.error) message = data.error;
-    } catch {}
+    } catch {
+      // Body wasn't JSON — keep the generic status message.
+    }
     cb.onError(message);
     return;
   }
@@ -63,7 +60,6 @@ export async function streamMatch(
   const decoder = new TextDecoder();
   let sseBuffer = "";
   let llmText = "";
-  let thinking = "";
   const seenSlugs = new Set<string>();
 
   while (true) {
@@ -98,12 +94,6 @@ export async function streamMatch(
             cb.onPartial(rec);
           }
         }
-      } else if (
-        payload.type === "thinking" &&
-        typeof payload.content === "string"
-      ) {
-        thinking += payload.content;
-        cb.onThinking?.(thinking, payload.content);
       } else if (payload.type === "complete") {
         cb.onComplete(payload.recommendations ?? []);
       } else if (payload.type === "error") {

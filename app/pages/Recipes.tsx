@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CalendarCheck, Clock, Plus, Snowflake, Star } from "lucide-react";
 
@@ -24,28 +24,51 @@ import type { RecipeListItem } from "@/types";
 
 type OwnerFilter = "all" | "curated" | "mine";
 
+interface LoadResult {
+  /** `${locale}:${reloadToken}` of the request — stale results are ignored. */
+  key: string;
+  recipes: RecipeListItem[];
+  error: boolean;
+}
+
 export default function Recipes() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t, locale } = useLanguage();
   const { isInPlan, slotsForSlug } = usePlan();
-  const [recipes, setRecipes] = useState<RecipeListItem[]>([]);
   const [search, setSearch] = useState("");
   const [ownerFilter, setOwnerFilter] = useState<OwnerFilter>("all");
-  const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    const localeParam = encodeURIComponent(locale);
-    api<{ recipes: RecipeListItem[] }>(`/recipes?locale=${localeParam}`)
-      .then(({ recipes }) => setRecipes(recipes))
-      .finally(() => setLoading(false));
-  }, [locale]);
+  // Loading is derived by comparing the result's key with the current
+  // request key (no synchronous setState in the effect body). Bumping
+  // reloadToken retries after a failure.
+  const [result, setResult] = useState<LoadResult | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
+  const requestKey = `${locale}:${reloadToken}`;
 
   useEffect(() => {
-    load();
-  }, [load]);
+    const key = `${locale}:${reloadToken}`;
+    let cancelled = false;
+    const localeParam = encodeURIComponent(locale);
+    api<{ recipes: RecipeListItem[] }>(`/recipes?locale=${localeParam}`)
+      .then(({ recipes }) => {
+        if (!cancelled) setResult({ key, recipes, error: false });
+      })
+      .catch(() => {
+        if (!cancelled) setResult({ key, recipes: [], error: true });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [locale, reloadToken]);
+
+  const loading = result?.key !== requestKey;
+  const loadFailed = !loading && result?.error === true;
+  const recipes = useMemo(
+    () => (result && result.key === requestKey ? result.recipes : []),
+    [result, requestKey],
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -134,6 +157,17 @@ export default function Recipes() {
 
       {loading ? (
         <p className="text-muted-foreground text-sm">{t("recipes.loading")}</p>
+      ) : loadFailed ? (
+        <div className="space-y-2">
+          <p className="text-destructive text-sm">{t("recipes.loadFailed")}</p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setReloadToken((n) => n + 1)}
+          >
+            {t("common.retry")}
+          </Button>
+        </div>
       ) : filtered.length === 0 ? (
         <p className="text-muted-foreground text-sm">
           {ownerFilter === "mine"

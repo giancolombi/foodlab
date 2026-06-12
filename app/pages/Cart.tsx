@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  AlertTriangle,
   CheckCheck,
   Download,
   ExternalLink,
@@ -38,8 +39,8 @@ import { useUnits } from "@/contexts/UnitsContext";
 import { api } from "@/lib/api";
 import {
   consolidate,
+  groupProfilesByVersion,
   localizeQuantity,
-  pickVersion,
   SECTION_ORDER,
   type ConsolidatedItem,
   type ConsolidatedList,
@@ -61,6 +62,7 @@ export default function Cart() {
     planSlugs,
     filledCount,
     activeProfileIds,
+    profilesInitialized,
     toggleProfile,
     setActiveProfileIds,
     includeServeWith,
@@ -68,14 +70,25 @@ export default function Cart() {
   const { isBought, toggleBought, clearBought, boughtCount } = useCart();
   const { units } = useUnits();
 
-  const [recipes, setRecipes] = useState<RecipeDetail[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
   const [smartLoading, setSmartLoading] = useState(false);
-  const [smart, setSmart] = useState<ConsolidatedList | null>(null);
+
+  // Stable serialization of the plan's slugs — swapping one recipe for
+  // another at constant count must still trigger a refetch.
+  const planKey = useMemo(() => [...planSlugs].sort().join(","), [planSlugs]);
+  const requestKey = `${planKey}|${locale}`;
+
+  // Loading is derived by comparing the result's key with the current
+  // request key. Stale recipes stay rendered while a refetch is in flight.
+  const [fetched, setFetched] = useState<{
+    key: string;
+    recipes: RecipeDetail[];
+    profiles: Profile[];
+    failed: number;
+  } | null>(null);
 
   useEffect(() => {
-    setLoading(true);
+    const key = requestKey;
+    let cancelled = false;
     const slugs = [...planSlugs];
     const localeParam = encodeURIComponent(locale);
     Promise.all([
@@ -89,27 +102,52 @@ export default function Cart() {
       api<{ profiles: Profile[] }>("/profiles").catch(() => ({
         profiles: [] as Profile[],
       })),
-    ])
-      .then(([rcps, { profiles: prs }]) => {
-        setRecipes(rcps.filter((r): r is RecipeDetail => r !== null));
-        setProfiles(prs);
-        if (activeProfileIds.length === 0 && prs.length > 0) {
-          setActiveProfileIds(prs.map((p) => p.id));
-        }
-      })
-      .finally(() => setLoading(false));
+    ]).then(([rcps, { profiles: prs }]) => {
+      if (cancelled) return;
+      const ok = rcps.filter((r): r is RecipeDetail => r !== null);
+      setFetched({
+        key,
+        recipes: ok,
+        profiles: prs,
+        failed: rcps.length - ok.length,
+      });
+      // Default-select everyone exactly once; never override a deliberate
+      // deselect-all ([] with profilesInitialized=true).
+      if (!profilesInitialized && prs.length > 0) {
+        setActiveProfileIds(prs.map((p) => p.id));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [planSlugs.size, locale]);
+  }, [requestKey]);
 
-  // Smart result is invalidated by plan / profile / serve-with changes.
-  useEffect(() => {
-    setSmart(null);
-  }, [planSlugs, activeProfileIds, includeServeWith]);
+  const loading = fetched?.key !== requestKey;
+  const recipes = useMemo(() => fetched?.recipes ?? [], [fetched]);
+  const profiles = useMemo(() => fetched?.profiles ?? [], [fetched]);
+  const failedCount = !loading && fetched ? fetched.failed : 0;
 
   const activeProfiles = useMemo(
     () => profiles.filter((p) => activeProfileIds.includes(p.id)),
     [profiles, activeProfileIds],
   );
+
+  // Smart result is tagged with the inputs it was computed from; any change
+  // to the plan, profiles, sides toggle, units, or locale invalidates it by
+  // key mismatch (no synchronous reset effect needed).
+  const smartKey = useMemo(
+    () =>
+      `${requestKey}|${[...activeProfileIds].sort().join(",")}|${
+        includeServeWith ? 1 : 0
+      }|${units}`,
+    [requestKey, activeProfileIds, includeServeWith, units],
+  );
+  const [smartResult, setSmartResult] = useState<{
+    key: string;
+    list: ConsolidatedList;
+  } | null>(null);
+  const smart = smartResult?.key === smartKey ? smartResult.list : null;
 
   const local: ConsolidatedList = useMemo(() => {
     const plan: RecipeForPlan[] = recipes.map((r) => ({
@@ -157,7 +195,7 @@ export default function Cart() {
     // missing items for Instacart" ask. If nothing is ticked yet, the whole
     // list goes.
     const text = toInstacartList(display, {
-      onlyUnbought: ({ section, name, index }) => !isBought(`${section}:${name}:${index}`),
+      onlyUnbought: ({ section, item }) => !isBought(boughtKey(section, item)),
     });
     if (!text.trim()) {
       toast.message(t("cart.instacartEmpty"));
@@ -214,19 +252,7 @@ export default function Cart() {
 
         // Per-version proteins: group profiles → version index, then emit
         // one entry per distinct version needed.
-        const versionToNames = new Map<number, string[]>();
-        if (activeProfiles.length === 0) {
-          r.versions.forEach((_, i) => versionToNames.set(i, []));
-        } else {
-          for (const p of activeProfiles) {
-            const { version, matched } = pickVersion(p, r.versions);
-            if (!version || !matched) continue;
-            const idx = r.versions.indexOf(version);
-            const list = versionToNames.get(idx) ?? [];
-            list.push(p.name);
-            versionToNames.set(idx, list);
-          }
-        }
+        const versionToNames = groupProfilesByVersion(r.versions, activeProfiles);
         for (const [idx, names] of versionToNames.entries()) {
           const v = r.versions[idx];
           if (!v?.protein) continue;
@@ -241,20 +267,22 @@ export default function Cart() {
     };
     try {
       const { sections } = await api<{
-        sections: Record<Section, ConsolidatedItem[]>;
+        sections: Partial<Record<Section, ConsolidatedItem[]>>;
       }>("/plans/shopping-list", { method: "POST", body: payload });
-      const total = Object.values(sections).reduce(
+      // Guard every section against a partial server payload — a missing key
+      // must not crash the render — and default the array fields per item.
+      const normalized: Record<Section, ConsolidatedItem[]> = {
+        produce: (sections?.produce ?? []).map(withDefaults),
+        proteins: (sections?.proteins ?? []).map(withDefaults),
+        dairy: (sections?.dairy ?? []).map(withDefaults),
+        pantry: (sections?.pantry ?? []).map(withDefaults),
+        other: (sections?.other ?? []).map(withDefaults),
+      };
+      const total = Object.values(normalized).reduce(
         (n, arr) => n + arr.length,
         0,
       );
-      const normalized: Record<Section, ConsolidatedItem[]> = {
-        produce: sections.produce.map(withNotes),
-        proteins: sections.proteins.map(withNotes),
-        dairy: sections.dairy.map(withNotes),
-        pantry: sections.pantry.map(withNotes),
-        other: sections.other.map(withNotes),
-      };
-      setSmart({ sections: normalized, total });
+      setSmartResult({ key: smartKey, list: { sections: normalized, total } });
       toast.success(t("cart.smartDone"));
     } catch (err: any) {
       toast.error(err?.message ?? t("cart.smartFailed"));
@@ -370,6 +398,12 @@ export default function Cart() {
 
       {loading && <LoadingRow label={t("cart.loadingRecipes")} />}
       {smartLoading && <LoadingRow label={t("cart.smartLoading")} />}
+      {failedCount > 0 && (
+        <p className="text-sm text-destructive inline-flex items-center gap-1.5">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+          {t("cart.loadWarning", { n: failedCount })}
+        </p>
+      )}
 
       <SectionHeader
         title={t("cart.shoppingList")}
@@ -385,7 +419,7 @@ export default function Cart() {
 
       <div className="space-y-3">
         {SECTION_ORDER.map((section) => {
-          const items = display.sections[section];
+          const items = display.sections[section] ?? [];
           if (!items.length) return null;
           return (
             <Card key={section} data-testid="cart-section">
@@ -397,10 +431,10 @@ export default function Cart() {
               <CardContent className="pt-0">
                 <ul className="divide-y divide-border/40 sm:divide-y-0 sm:space-y-1.5">
                   {items.map((item, i) => {
-                    const key = `${section}:${item.name}:${i}`;
+                    const key = boughtKey(section, item);
                     const bought = isBought(key);
                     return (
-                      <li key={key}>
+                      <li key={`${key}#${i}`}>
                         <label
                           className={cn(
                             "flex items-start gap-3 sm:gap-2 rounded px-2 py-2.5 sm:py-1.5 -mx-2 cursor-pointer transition-colors",
@@ -478,8 +512,27 @@ export default function Cart() {
   );
 }
 
-function withNotes(
-  item: ConsolidatedItem | Omit<ConsolidatedItem, "notes">,
-): ConsolidatedItem {
-  return { notes: [], ...(item as ConsolidatedItem) };
+/**
+ * Tick keys follow CartContext's `${section}:${name}` contract; per-profile
+ * duplicates of the same name disambiguate with the profile names — never
+ * the array index — so ticks don't migrate when the list composition or
+ * order changes.
+ */
+function boughtKey(section: Section, item: ConsolidatedItem): string {
+  return item.forProfiles.length > 0
+    ? `${section}:${item.name}:${item.forProfiles.join("+")}`
+    : `${section}:${item.name}`;
+}
+
+/** Default every array field the smart endpoint may omit. */
+function withDefaults(item: Partial<ConsolidatedItem>): ConsolidatedItem {
+  return {
+    name: "",
+    quantity: "",
+    section: "other",
+    ...item,
+    notes: item.notes ?? [],
+    sources: item.sources ?? [],
+    forProfiles: item.forProfiles ?? [],
+  } as ConsolidatedItem;
 }

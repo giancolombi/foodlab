@@ -3,9 +3,14 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Clock, Snowflake, Sparkles, Users } from "lucide-react";
 
 import { AddToPlanButton } from "@/components/AddToPlanButton";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/design-system";
 import { RecipeModifyPanel } from "@/components/RecipeModifyPanel";
 import { StarRating } from "@/components/StarRating";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,24 +19,45 @@ import { useUnits, convertTemperatures } from "@/contexts/UnitsContext";
 import { api } from "@/lib/api";
 import type { RecipeDetail as RecipeDetailT } from "@/types";
 
+interface FetchResult {
+  /** `${slug}:${locale}` the result belongs to — stale results are ignored. */
+  key: string;
+  recipe: RecipeDetailT | null;
+  error: string | null;
+}
+
 export default function RecipeDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t, locale } = useLanguage();
   const { units } = useUnits();
-  const [recipe, setRecipe] = useState<RecipeDetailT | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Loading/stale state is derived from the result key instead of resetting
+  // state synchronously in the effect: a result tagged with an old key is
+  // simply not rendered, and aborting the fetch on cleanup stops a slow
+  // response from clobbering a quicker slug/locale change.
+  const [result, setResult] = useState<FetchResult | null>(null);
+  const fetchKey = `${slug}:${locale}`;
 
   useEffect(() => {
     if (!slug) return;
-    setRecipe(null);
-    setError(null);
+    const key = `${slug}:${locale}`;
+    const controller = new AbortController();
     const localeParam = encodeURIComponent(locale);
-    api<{ recipe: RecipeDetailT }>(`/recipes/${slug}?locale=${localeParam}`)
-      .then(({ recipe }) => setRecipe(recipe))
-      .catch((e) => setError(e.message));
+    api<{ recipe: RecipeDetailT }>(`/recipes/${slug}?locale=${localeParam}`, {
+      signal: controller.signal,
+    })
+      .then(({ recipe }) => setResult({ key, recipe, error: null }))
+      .catch((e) => {
+        if (e?.name === "AbortError") return;
+        setResult({ key, recipe: null, error: e?.message ?? String(e) });
+      });
+    return () => controller.abort();
   }, [slug, locale]);
+
+  const current = result?.key === fetchKey ? result : null;
+  const recipe = current?.recipe ?? null;
+  const error = current?.error ?? null;
 
   if (error) {
     return (
@@ -113,11 +139,12 @@ export default function RecipeDetail() {
             // Update both the caller's rating and the average locally so
             // the badge reflects the change without a full refetch. Rough
             // approximation of the new avg — close enough for UX.
-            setRecipe((prev) => {
-              if (!prev) return prev;
-              const oldCount = prev.rating_count ?? 0;
-              const oldAvg = prev.avg_rating ?? stars;
-              const oldMine = prev.my_rating?.stars ?? null;
+            setResult((prev) => {
+              if (!prev?.recipe) return prev;
+              const r = prev.recipe;
+              const oldCount = r.rating_count ?? 0;
+              const oldAvg = r.avg_rating ?? stars;
+              const oldMine = r.my_rating?.stars ?? null;
               const isNew = oldMine === null;
               const newCount = isNew ? oldCount + 1 : oldCount;
               const sumWithoutMine = oldAvg * oldCount - (oldMine ?? 0);
@@ -125,9 +152,12 @@ export default function RecipeDetail() {
                 newCount === 0 ? stars : (sumWithoutMine + stars) / newCount;
               return {
                 ...prev,
-                my_rating: { stars, notes: null },
-                avg_rating: Math.round(newAvg * 10) / 10,
-                rating_count: newCount,
+                recipe: {
+                  ...r,
+                  my_rating: { stars, notes: null },
+                  avg_rating: Math.round(newAvg * 10) / 10,
+                  rating_count: newCount,
+                },
               };
             });
           }}

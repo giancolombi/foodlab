@@ -4,10 +4,12 @@
 // that the user has marked as "bought" so state survives reloads while they
 // shop aisle by aisle.
 //
-// Line-item keys are built by the Cart page as `${section}:${name}` so that
-// changing a recipe's ingredient strings doesn't leak ticks onto different
-// items. If a bought key disappears from the current list (user removes a
-// recipe from the plan), the tick is harmless — we just don't render it.
+// Line-item keys are built by the Cart page as `${section}:${name}` (plus a
+// `:${profileNames}` suffix for per-profile protein lines) so that changing
+// a recipe's ingredient strings or the list ORDER doesn't leak ticks onto
+// different items. If a bought key disappears from the current list (user
+// removes a recipe from the plan), the tick is harmless — we just don't
+// render it.
 
 import {
   createContext,

@@ -16,7 +16,6 @@ import {
   Textarea,
 } from "@/design-system";
 import { RecipeModifyPanel } from "@/components/RecipeModifyPanel";
-import { ThinkingTrace } from "@/components/ThinkingTrace";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -38,7 +37,6 @@ export default function IngredientMatcher() {
   const [selectedProfileIds, setSelectedProfileIds] = useState<string[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [streamedChars, setStreamedChars] = useState(0);
-  const [thinking, setThinking] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [modifyOpenSlug, setModifyOpenSlug] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -72,7 +70,6 @@ export default function IngredientMatcher() {
 
     setStreaming(true);
     setStreamedChars(0);
-    setThinking("");
     setRecommendations([]);
 
     try {
@@ -92,7 +89,6 @@ export default function IngredientMatcher() {
               prev.some((r) => r.slug === rec.slug) ? prev : [...prev, rec],
             );
           },
-          onThinking: (total) => setThinking(total),
           onComplete: (final) => {
             setRecommendations(final);
             if (!final.length) {
@@ -204,9 +200,6 @@ export default function IngredientMatcher() {
 
       {(streaming || recommendations.length > 0) && (
         <div className="space-y-3">
-          {thinking && (
-            <ThinkingTrace text={thinking} streaming={streaming} />
-          )}
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-medium">{t("match.topMatches")}</h2>
             {streaming && (
@@ -333,8 +326,8 @@ function BadgeList({ label, items, variant }: BadgeListProps) {
     <div>
       <div className="text-xs text-muted-foreground mb-1">{label}</div>
       <div className="flex flex-wrap gap-1">
-        {visibleItems.map((ing) => (
-          <Badge key={ing} variant={variant}>
+        {visibleItems.map((ing, i) => (
+          <Badge key={`${i}-${ing}`} variant={variant}>
             {ing}
           </Badge>
         ))}

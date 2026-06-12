@@ -10,15 +10,6 @@ export const LOCALES: { value: Locale; label: string; native: string }[] = [
   { value: "pt-BR", label: "Portuguese", native: "Português" },
 ];
 
-// Mirror of api/llm.ts LOCALE_DIRECTIVE — covers both the model's output
-// AND its internal reasoning trace, so a Spanish user never sees English
-// "thinking" tokens while the answer is in Spanish.
-export const LOCALE_LLM_DIRECTIVE: Record<Locale, string> = {
-  en: "Write BOTH your internal reasoning (any thinking / scratchpad) AND your final answer in English.",
-  es: "Write BOTH your internal reasoning (any thinking / scratchpad) AND your final answer in Latin American Spanish — neutral for Cuban, Peruvian, Colombian, Dominican, Venezuelan, Mexican readers. Use: frijoles, aguacate, taza, cucharada, cucharadita, cebolla, ajo, res. Avoid Spain-specific terms (judías, patata, zumo). Do not switch to English at any point.",
-  "pt-BR": "Write BOTH your internal reasoning (any thinking / scratchpad) AND your final answer in Brazilian Portuguese. Use: xícara, colher de sopa, colher de chá, feijão, abacate, mandioca, geladeira, cebola, alho, carne. Avoid European Portuguese (chávena, frigorífico, ananás). Do not switch to English at any point.",
-};
-
 const en = {
   // nav + layout
   "nav.match": "What can I make?",
@@ -40,7 +31,7 @@ const en = {
   // matcher
   "match.title": "What can I make?",
   "match.subtitle":
-    "List what's in your fridge. FoodLab's local LLM ranks recipes from the catalog.",
+    "List what's in your fridge. FoodLab's AI ranks recipes from the catalog.",
   "match.ingredientsLabel": "Your ingredients",
   "match.ingredientsPlaceholder":
     "chicken thighs, sweet potato, coconut milk, onion, garlic…",
@@ -89,6 +80,7 @@ const en = {
     "Paste a URL or the raw text. Simpler is better — short ingredient lists, few steps. The assistant turns it into FoodLab format and saves it.",
   "recipes.add.submit": "Save recipe",
   "recipes.add.saved": "Recipe saved",
+  "recipes.loadFailed": "Couldn't load recipes — check your connection.",
 
   // recipe detail
   "detail.back": "Back",
@@ -154,6 +146,8 @@ const en = {
   "profiles.cancel": "Cancel",
   "profiles.empty":
     "No profiles yet. Add one to personalize recipe recommendations.",
+  "profiles.loading": "Loading profiles…",
+  "profiles.loadFailed": "Couldn't load profiles — check your connection.",
   "profiles.allergiesLabel": "Allergies:",
   "profiles.preferencesLabel": "Preferences:",
   "profiles.confirmDelete": "Delete this profile?",
@@ -221,6 +215,8 @@ const en = {
   "plan.includeServeWithOffHint":
     "Serving suggestions are excluded from the cart. Toggle on to include them.",
   "plan.loadingRecipes": "Loading scheduled recipes…",
+  "plan.loadWarning":
+    "Couldn't load {n} recipe(s) — some slots may look empty. Reload to retry.",
   "plan.slotEmpty": "Tap to assign",
   "plan.goToCart": "Shopping list",
   "plan.nextStep": "Next",
@@ -250,6 +246,8 @@ const en = {
   "cart.shoppingFor": "Shopping for",
   "cart.shoppingList": "Shopping list",
   "cart.loadingRecipes": "Loading recipes…",
+  "cart.loadWarning":
+    "Couldn't load {n} recipe(s) — the shopping list may be incomplete. Reload to retry.",
   "cart.markBought": "Mark {name} as bought",
   "cart.clearBought": "Clear ticks",
   "cart.clearBoughtHint": "Reset all checkboxes for a new shop",
@@ -293,6 +291,7 @@ const en = {
   "compose.starter1": "Plan 4 mains + 1 breakfast, mix of cuisines, freezer-friendly",
   "compose.starter2": "I want veg + meat versions on the same base, no soy or dairy on the meat side",
   "compose.placeholder": "Ask for a menu, or refine the draft on the right…",
+  "compose.send": "Send message",
   "compose.thinking": "Drafting…",
   "compose.draftEmpty": "No draft yet",
   "compose.draftEmptyHint": "Send a message and the proposed menu lands here.",
@@ -354,9 +353,6 @@ const en = {
   "rating.saveFailed": "Couldn't save rating",
   "rating.signinRequired": "Sign in to rate",
 
-  // ai / model output
-  "ai.thinking": "Thinking",
-
   // quick-edit chips on RecipeModifyPanel
   "modify.chip.halve": "Halve",
   "modify.chip.double": "Double",
@@ -368,6 +364,7 @@ const en = {
   // generic
   "common.backToRecipes": "Back to recipes",
   "common.generic.error": "Something went wrong",
+  "common.retry": "Retry",
 } as const;
 
 export type StringKey = keyof typeof en;
@@ -419,6 +416,8 @@ const es: Partial<Record<StringKey, string>> = {
   "plan.includeServeWithOffHint":
     "Las sugerencias para servir están excluidas del carrito. Activa para incluirlas.",
   "plan.loadingRecipes": "Cargando recetas agendadas…",
+  "plan.loadWarning":
+    "No se pudieron cargar {n} receta(s) — algunos espacios pueden verse vacíos. Recarga para reintentar.",
   "plan.slotEmpty": "Toca para agendar",
   "plan.goToCart": "Lista de compras",
   "plan.nextStep": "Siguiente",
@@ -447,6 +446,8 @@ const es: Partial<Record<StringKey, string>> = {
   "cart.shoppingFor": "Comprando para",
   "cart.shoppingList": "Lista de compras",
   "cart.loadingRecipes": "Cargando recetas…",
+  "cart.loadWarning":
+    "No se pudieron cargar {n} receta(s) — la lista puede estar incompleta. Recarga para reintentar.",
   "cart.markBought": "Marcar {name} como comprado",
   "cart.clearBought": "Limpiar marcas",
   "cart.clearBoughtHint": "Reiniciar todas las casillas para una nueva compra",
@@ -487,7 +488,7 @@ const es: Partial<Record<StringKey, string>> = {
 
   "match.title": "¿Qué puedo hacer?",
   "match.subtitle":
-    "Lista lo que tienes en el refrigerador. El LLM local de FoodLab ordena recetas del catálogo.",
+    "Lista lo que tienes en el refrigerador. La IA de FoodLab ordena recetas del catálogo.",
   "match.ingredientsLabel": "Tus ingredientes",
   "match.ingredientsPlaceholder":
     "muslos de pollo, batata, leche de coco, cebolla, ajo…",
@@ -536,6 +537,7 @@ const es: Partial<Record<StringKey, string>> = {
     "Pega una URL o el texto. Mejor si es sencilla — pocos ingredientes, pocos pasos. El asistente la convierte al formato de FoodLab y la guarda.",
   "recipes.add.submit": "Guardar receta",
   "recipes.add.saved": "Receta guardada",
+  "recipes.loadFailed": "No se pudieron cargar las recetas — revisa tu conexión.",
 
   "detail.back": "Volver",
   "detail.savedByYou": "Guardada por ti",
@@ -599,6 +601,8 @@ const es: Partial<Record<StringKey, string>> = {
   "profiles.cancel": "Cancelar",
   "profiles.empty":
     "Aún no hay perfiles. Agrega uno para personalizar las recomendaciones.",
+  "profiles.loading": "Cargando perfiles…",
+  "profiles.loadFailed": "No se pudieron cargar los perfiles — revisa tu conexión.",
   "profiles.allergiesLabel": "Alergias:",
   "profiles.preferencesLabel": "Preferencias:",
   "profiles.confirmDelete": "¿Eliminar este perfil?",
@@ -642,6 +646,7 @@ const es: Partial<Record<StringKey, string>> = {
   "compose.starter2":
     "Quiero versiones vegetariana y con carne sobre la misma base, sin soja ni lácteos en la carne",
   "compose.placeholder": "Pide un menú o refina el borrador de la derecha…",
+  "compose.send": "Enviar mensaje",
   "compose.thinking": "Pensando…",
   "compose.draftEmpty": "Aún no hay borrador",
   "compose.draftEmptyHint": "Envía un mensaje y el menú propuesto aparece aquí.",
@@ -702,8 +707,6 @@ const es: Partial<Record<StringKey, string>> = {
   "rating.saveFailed": "No se pudo guardar la calificación",
   "rating.signinRequired": "Inicia sesión para calificar",
 
-  "ai.thinking": "Pensando",
-
   "modify.chip.halve": "A la mitad",
   "modify.chip.double": "El doble",
   "modify.chip.spicier": "Más picante",
@@ -713,6 +716,7 @@ const es: Partial<Record<StringKey, string>> = {
 
   "common.backToRecipes": "Volver a recetas",
   "common.generic.error": "Algo salió mal",
+  "common.retry": "Reintentar",
 };
 
 const ptBR: Partial<Record<StringKey, string>> = {
@@ -762,6 +766,8 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "plan.includeServeWithOffHint":
     "Sugestões de acompanhamento estão excluídas do carrinho. Ative para incluí-las.",
   "plan.loadingRecipes": "Carregando receitas agendadas…",
+  "plan.loadWarning":
+    "Não foi possível carregar {n} receita(s) — alguns espaços podem parecer vazios. Recarregue para tentar de novo.",
   "plan.slotEmpty": "Toque para agendar",
   "plan.goToCart": "Lista de compras",
   "plan.nextStep": "Próximo",
@@ -790,6 +796,8 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "cart.shoppingFor": "Comprando para",
   "cart.shoppingList": "Lista de compras",
   "cart.loadingRecipes": "Carregando receitas…",
+  "cart.loadWarning":
+    "Não foi possível carregar {n} receita(s) — a lista pode estar incompleta. Recarregue para tentar de novo.",
   "cart.markBought": "Marcar {name} como comprado",
   "cart.clearBought": "Limpar marcações",
   "cart.clearBoughtHint": "Resetar todas as caixinhas para uma nova compra",
@@ -830,7 +838,7 @@ const ptBR: Partial<Record<StringKey, string>> = {
 
   "match.title": "O que posso fazer?",
   "match.subtitle":
-    "Liste o que tem na geladeira. O LLM local do FoodLab ordena receitas do catálogo.",
+    "Liste o que tem na geladeira. A IA do FoodLab ordena receitas do catálogo.",
   "match.ingredientsLabel": "Seus ingredientes",
   "match.ingredientsPlaceholder":
     "coxas de frango, batata-doce, leite de coco, cebola, alho…",
@@ -879,6 +887,7 @@ const ptBR: Partial<Record<StringKey, string>> = {
     "Cole uma URL ou o texto. Quanto mais simples, melhor — poucos ingredientes, poucos passos. O assistente converte para o formato FoodLab e salva.",
   "recipes.add.submit": "Salvar receita",
   "recipes.add.saved": "Receita salva",
+  "recipes.loadFailed": "Não foi possível carregar as receitas — verifique sua conexão.",
 
   "detail.back": "Voltar",
   "detail.savedByYou": "Salva por você",
@@ -942,6 +951,8 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "profiles.cancel": "Cancelar",
   "profiles.empty":
     "Nenhum perfil ainda. Adicione um para personalizar as recomendações.",
+  "profiles.loading": "Carregando perfis…",
+  "profiles.loadFailed": "Não foi possível carregar os perfis — verifique sua conexão.",
   "profiles.allergiesLabel": "Alergias:",
   "profiles.preferencesLabel": "Preferências:",
   "profiles.confirmDelete": "Excluir este perfil?",
@@ -985,6 +996,7 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "compose.starter2":
     "Quero versões vegetariana e com carne sobre a mesma base, sem soja nem laticínios na versão com carne",
   "compose.placeholder": "Peça um menu ou refine o rascunho à direita…",
+  "compose.send": "Enviar mensagem",
   "compose.thinking": "Pensando…",
   "compose.draftEmpty": "Ainda não há rascunho",
   "compose.draftEmptyHint": "Envie uma mensagem e o menu proposto aparece aqui.",
@@ -1045,8 +1057,6 @@ const ptBR: Partial<Record<StringKey, string>> = {
   "rating.saveFailed": "Não foi possível salvar a avaliação",
   "rating.signinRequired": "Entre para avaliar",
 
-  "ai.thinking": "Pensando",
-
   "modify.chip.halve": "Pela metade",
   "modify.chip.double": "Dobrar",
   "modify.chip.spicier": "Mais picante",
@@ -1056,6 +1066,7 @@ const ptBR: Partial<Record<StringKey, string>> = {
 
   "common.backToRecipes": "Voltar às receitas",
   "common.generic.error": "Algo deu errado",
+  "common.retry": "Tentar novamente",
 };
 
 const DICTS: Record<Locale, Partial<Record<StringKey, string>>> = {

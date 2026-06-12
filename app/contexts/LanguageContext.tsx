@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -20,8 +21,12 @@ const STORAGE_KEY = "foodlab_locale";
 
 function detectInitialLocale(): Locale {
   if (typeof window === "undefined") return "en";
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === "en" || stored === "es" || stored === "pt-BR") return stored;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === "en" || stored === "es" || stored === "pt-BR") return stored;
+  } catch {
+    // private mode — fall through to navigator detection
+  }
   const nav = navigator.language.toLowerCase();
   if (nav.startsWith("pt")) return "pt-BR";
   if (nav.startsWith("es")) return "es";
@@ -31,10 +36,19 @@ function detectInitialLocale(): Locale {
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(detectInitialLocale);
 
+  // Keep <html lang> in sync with the active locale — including the initial
+  // detected/stored locale, which setLocale alone never covered.
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
-    localStorage.setItem(STORAGE_KEY, next);
-    document.documentElement.lang = next === "pt-BR" ? "pt-BR" : next;
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // quota / private mode — session-only
+    }
   }, []);
 
   const t = useCallback<LanguageContextValue["t"]>(

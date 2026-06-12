@@ -19,6 +19,7 @@
 
 import { convertUnit, type UnitSystem } from "@/contexts/UnitsContext";
 import { restrictionCoverageScore } from "@/lib/dietaryTerms";
+import { parseQuantity } from "@/lib/recipeMath";
 import type { Profile, RecipeVersion } from "@/types";
 
 export type Section =
@@ -136,24 +137,6 @@ const PREP_MODIFIERS = [
 
 // ---- parsing ----
 
-const QTY_RE = /^(\d+(?:\.\d+)?(?:\s+\d+\/\d+)?|\d+\/\d+)/;
-
-function parseQty(s: string): number | null {
-  const m = s.match(QTY_RE);
-  if (!m) return null;
-  const raw = m[1];
-  if (raw.includes("/")) {
-    const parts = raw.split(" ");
-    if (parts.length === 2) {
-      const [num, denom] = parts[1].split("/").map(Number);
-      return Number(parts[0]) + num / denom;
-    }
-    const [num, denom] = raw.split("/").map(Number);
-    return num / denom;
-  }
-  return Number(raw);
-}
-
 interface Parsed {
   qty: number | null;
   unit: string | null;
@@ -161,14 +144,34 @@ interface Parsed {
   raw: string;
 }
 
+/**
+ * Strip leading prep modifiers from a comma-segment, repeatedly so chains
+ * like "fresh chopped cilantro" reduce to "cilantro". Returns "" when the
+ * segment is nothing *but* modifiers (the trailing "garlic, minced" case)
+ * so the caller can drop it without losing the ingredient noun.
+ */
+function stripModifierPrefix(segment: string): string {
+  let current = segment.trim();
+  for (;;) {
+    const lower = current.toLowerCase();
+    // Longest match first so "peeled and cubed" wins over "peeled".
+    let longest = "";
+    for (const m of PREP_MODIFIERS) {
+      if ((lower === m || lower.startsWith(m + " ")) && m.length > longest.length) {
+        longest = m;
+      }
+    }
+    if (!longest) return current;
+    if (lower === longest) return "";
+    current = current.slice(longest.length).trim();
+  }
+}
+
 function stripPrepModifiers(name: string): string {
   let out = name;
   out = out.replace(/\([^)]*\)/g, " ");
   const parts = out.split(",").map((p) => p.trim()).filter(Boolean);
-  const kept = parts.filter((p) => {
-    const lower = p.toLowerCase();
-    return !PREP_MODIFIERS.some((m) => lower === m || lower.startsWith(m + " "));
-  });
+  const kept = parts.map(stripModifierPrefix).filter(Boolean);
   out = kept.join(", ");
   const tokens = out.split(/\s+/);
   while (tokens.length > 1 && SIZES.has(tokens[0].toLowerCase())) tokens.shift();
@@ -180,9 +183,13 @@ function parseLine(raw: string): Parsed {
   if (!trimmed) return { qty: null, unit: null, item: "", raw };
 
   let rest = trimmed;
-  const qty = parseQty(rest);
-  if (qty !== null) {
-    rest = rest.replace(QTY_RE, "").trim();
+  let qty: number | null = null;
+  // recipeMath's parser handles integers, decimals, fractions, mixed numbers,
+  // and the unicode fractions its formatQuantity emits ("1½ cups rice").
+  const q = parseQuantity(trimmed);
+  if (q) {
+    qty = q.value;
+    rest = trimmed.slice(q.end).trim();
   }
 
   let unit: string | null = null;
@@ -433,6 +440,33 @@ export function pickVersion(
   };
 }
 
+/**
+ * Group profiles by which recipe version they'd eat: versionIndex → profile
+ * names. With no profiles, every version is included (empty name list =
+ * cooked for all dietary groups). Profiles whose restrictions match no
+ * version are skipped entirely — better to miss a protein the user has to
+ * re-add than to silently include a restricted one.
+ */
+export function groupProfilesByVersion(
+  versions: RecipeVersion[],
+  profiles: Profile[],
+): Map<number, string[]> {
+  const groups = new Map<number, string[]>();
+  if (profiles.length === 0) {
+    versions.forEach((_, i) => groups.set(i, []));
+    return groups;
+  }
+  for (const p of profiles) {
+    const { version, matched } = pickVersion(p, versions);
+    if (!version || !matched) continue;
+    const idx = versions.indexOf(version);
+    const list = groups.get(idx) ?? [];
+    list.push(p.name);
+    groups.set(idx, list);
+  }
+  return groups;
+}
+
 // ---- public API ----
 
 export interface RecipeForPlan {
@@ -526,24 +560,7 @@ export function consolidate(
     }
 
     // Proteins: group profiles by which version they'd eat.
-    // versionIndex → [profile names]
-    const groups = new Map<number, string[]>();
-    if (profiles.length === 0) {
-      // No profile filter — include every version's protein.
-      r.versions.forEach((_, i) => groups.set(i, []));
-    } else {
-      for (const p of profiles) {
-        const { version, matched } = pickVersion(p, r.versions);
-        // If we couldn't actually match this profile's restrictions to any
-        // version, skip the protein line entirely — better to miss a protein
-        // the user has to re-add than to silently include a restricted one.
-        if (!version || !matched) continue;
-        const idx = r.versions.indexOf(version);
-        const list = groups.get(idx) ?? [];
-        list.push(p.name);
-        groups.set(idx, list);
-      }
-    }
+    const groups = groupProfilesByVersion(r.versions, profiles);
 
     for (const [vIdx, names] of groups.entries()) {
       const v = r.versions[vIdx];

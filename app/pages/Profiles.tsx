@@ -57,17 +57,31 @@ function fromProfile(p: Profile): ProfileFormState {
 
 export default function Profiles() {
   const { t } = useLanguage();
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  // Null until the first fetch resolves so "No profiles yet" doesn't flash
+  // while loading; loadFailed distinguishes a fetch failure from truly empty.
+  const [profiles, setProfiles] = useState<Profile[] | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [editing, setEditing] = useState<ProfileFormState | null>(null);
 
-  const refresh = async () => {
-    const { profiles } = await api<{ profiles: Profile[] }>("/profiles");
-    setProfiles(profiles);
-  };
-
   useEffect(() => {
-    refresh().catch(() => {});
-  }, []);
+    let cancelled = false;
+    api<{ profiles: Profile[] }>("/profiles")
+      .then(({ profiles }) => {
+        if (cancelled) return;
+        setProfiles(profiles);
+        setLoadFailed(false);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadToken]);
+
+  const refresh = () => setReloadToken((n) => n + 1);
+  const loading = profiles === null && !loadFailed;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -95,7 +109,7 @@ export default function Profiles() {
         toast.success(t("profiles.created"));
       }
       setEditing(null);
-      await refresh();
+      refresh();
     } catch (err: any) {
       toast.error(err.message ?? t("profiles.saveFailed"));
     }
@@ -105,7 +119,7 @@ export default function Profiles() {
     if (!confirm(t("profiles.confirmDelete"))) return;
     try {
       await api(`/profiles/${id}`, { method: "DELETE" });
-      await refresh();
+      refresh();
     } catch (err: any) {
       toast.error(err.message ?? t("profiles.deleteFailed"));
     }
@@ -138,6 +152,7 @@ export default function Profiles() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setEditing(null)}
+                aria-label={t("profiles.cancel")}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -220,7 +235,22 @@ export default function Profiles() {
       )}
 
       <div className="space-y-3">
-        {profiles.map((p) => (
+        {loading && (
+          <p className="text-sm text-muted-foreground">
+            {t("profiles.loading")}
+          </p>
+        )}
+        {loadFailed && profiles === null && (
+          <div className="space-y-2">
+            <p className="text-sm text-destructive">
+              {t("profiles.loadFailed")}
+            </p>
+            <Button size="sm" variant="outline" onClick={refresh}>
+              {t("common.retry")}
+            </Button>
+          </div>
+        )}
+        {(profiles ?? []).map((p) => (
           <Card key={p.id}>
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between">
@@ -281,7 +311,7 @@ export default function Profiles() {
             </CardContent>
           </Card>
         ))}
-        {!editing && profiles.length === 0 && (
+        {!editing && profiles !== null && profiles.length === 0 && (
           <EmptyState
             icon={User}
             title={t("profiles.empty")}
