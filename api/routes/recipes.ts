@@ -10,6 +10,7 @@ import {
   translateRecipeMarkdown,
 } from "../llm.js";
 import { requireAuth, verifyToken } from "../middleware/auth.js";
+import { llmLimiter } from "../middleware/rateLimit.js";
 import { parseRecipe, type Locale, type ParsedRecipe } from "../recipeParser.js";
 
 const router = Router();
@@ -85,7 +86,10 @@ router.get("/", optionalAuth, async (req, res) => {
     where.push(`category = $${params.length}`);
   }
   if (search) {
-    params.push(`%${search.toLowerCase()}%`);
+    // Escape LIKE metacharacters so a literal "%"/"_" in the query doesn't
+    // act as a wildcard (parameterization already prevents injection).
+    const escaped = search.toLowerCase().replace(/[\\%_]/g, "\\$&");
+    params.push(`%${escaped}%`);
     where.push(
       `(LOWER(title) LIKE $${params.length} OR LOWER(cuisine) LIKE $${params.length})`,
     );
@@ -194,7 +198,7 @@ const modifySchema = z.object({
   locale: z.enum(["en", "es", "pt-BR"]).optional(),
 });
 
-router.post("/:slug/modify", requireAuth, async (req, res) => {
+router.post("/:slug/modify", requireAuth, llmLimiter, async (req, res) => {
   const parsed = modifySchema.safeParse(req.body);
   if (!parsed.success) {
     res
@@ -294,10 +298,6 @@ router.post("/:slug/modify", requireAuth, async (req, res) => {
           if (aborted) return;
           send({ type: "chunk", content: chunk });
         },
-        onThinking: (chunk) => {
-          if (aborted) return;
-          send({ type: "thinking", content: chunk });
-        },
         onDone: ({ recipe }) => {
           if (aborted) return;
           const markdown = renderRecipeMarkdown(
@@ -314,7 +314,7 @@ router.post("/:slug/modify", requireAuth, async (req, res) => {
     if (!aborted) {
       send({
         type: "error",
-        message: "The local LLM is unavailable. Try again in a minute.",
+        message: "The AI service is unavailable right now — try again in a minute.",
       });
     }
   } finally {
@@ -388,9 +388,12 @@ export async function saveUserRecipe(args: {
     }
   }
 
-  const baseSlug = parentSlug ?? `custom-recipe`;
+  // Truncate the base BEFORE appending the random suffix — slicing the
+  // combined string could chop the suffix off a max-length parentSlug and
+  // collide with the parent's unique (slug, locale) index.
+  const baseSlug = (parentSlug ?? `custom-recipe`).slice(0, 113);
   const suffix = crypto.randomBytes(3).toString("hex");
-  const newSlug = `${baseSlug}-${suffix}`.slice(0, 120);
+  const newSlug = `${baseSlug}-${suffix}`;
 
   let parsedRecipe;
   try {

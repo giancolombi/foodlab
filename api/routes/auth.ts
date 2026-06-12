@@ -3,7 +3,7 @@ import { Router } from "express";
 import { z } from "zod";
 
 import { pool } from "../db.js";
-import { signToken, verifyToken } from "../middleware/auth.js";
+import { requireAuth, signToken } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -55,6 +55,12 @@ router.post("/signup", async (req, res) => {
       },
     });
   } catch (err) {
+    // Concurrent signup for the same email can slip past the pre-check and
+    // hit the UNIQUE constraint — report it as the conflict it is.
+    if ((err as { code?: string })?.code === "23505") {
+      res.status(409).json({ error: "Email already registered" });
+      return;
+    }
     console.error("signup error", err);
     res.status(500).json({ error: "Sign up failed" });
   }
@@ -103,17 +109,11 @@ router.post("/signin", async (req, res) => {
   }
 });
 
-router.get("/me", async (req, res) => {
-  const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
+router.get("/me", requireAuth, async (req, res) => {
   try {
-    const payload = verifyToken(header.slice("Bearer ".length));
     const { rows } = await pool.query(
       `SELECT id, email, display_name FROM users WHERE id = $1`,
-      [payload.sub],
+      [req.user!.sub],
     );
     if (!rows[0]) {
       res.status(401).json({ error: "User not found" });
@@ -126,8 +126,9 @@ router.get("/me", async (req, res) => {
         displayName: rows[0].display_name,
       },
     });
-  } catch {
-    res.status(401).json({ error: "Invalid token" });
+  } catch (err) {
+    console.error("me error", err);
+    res.status(500).json({ error: "Could not load user" });
   }
 });
 

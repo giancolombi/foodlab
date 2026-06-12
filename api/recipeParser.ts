@@ -72,7 +72,7 @@ function parseServings(raw: string | null): number | null {
   return Number.isFinite(n) && n > 0 && n < 1000 ? n : null;
 }
 
-const PROTEIN_LABEL = /\*\*(?:Protein|Proteína|Proteina):\*\*\s*([^\n]+)/;
+const PROTEIN_LABEL = /\*\*(?:Protein|Proteína|Proteina):\*\*\s*([^\n]+)/i;
 
 // Heading text that signals a "serving suggestions / garnish / toppings"
 // section. Wide net — recipes phrase this many ways.
@@ -107,63 +107,57 @@ function parseMinutes(raw: string | null): number | null {
   return total ? Math.round(total) : null;
 }
 
-function collectBullets(chunk: string, headings: string[]): string[] {
+/**
+ * Collect bullets from the header chunk, keeping a section's bullets when
+ * `matchSection(heading matched one of `headings`)` returns true. Sections
+ * use varied names — "Ingredients", "Spice Rub", "Coconut Rice & Beans" —
+ * so callers match by inclusion (serve-with sections) or exclusion
+ * (everything else = shared ingredients) over the same wide net.
+ */
+function collectBulletsWhere(
+  chunk: string,
+  headings: string[],
+  matchSection: (headingMatches: boolean) => boolean,
+): string[] {
   const items: string[] = [];
-  const lines = chunk.split("\n");
-  let inTargetSection = false;
-  for (const line of lines) {
+  let keep = matchSection(false);
+  for (const line of chunk.split("\n")) {
     const heading = line.match(/^##\s+(.+?)\s*$/);
     if (heading) {
-      inTargetSection = headings.some((h) =>
-        heading[1].toLowerCase().includes(h.toLowerCase()),
+      keep = matchSection(
+        headings.some((h) => heading[1].toLowerCase().includes(h.toLowerCase())),
       );
       continue;
     }
-    if (!inTargetSection) continue;
+    if (!keep) continue;
     const bullet = line.match(/^-\s+(.*\S)\s*$/);
     if (bullet) items.push(bullet[1]);
   }
   return items;
 }
 
-/**
- * Grab every bullet from the header chunk, excluding sections that match
- * `excludeHeadings` (typically toppings/serving/garnish, which are already
- * captured as serve_with). Recipes use varied section names — "Ingredients",
- * "Spice Rub", "Coconut Rice & Beans", etc. — so we cast a wide net rather
- * than hard-coding every variant.
- */
+function collectBullets(chunk: string, headings: string[]): string[] {
+  return collectBulletsWhere(chunk, headings, (matches) => matches);
+}
+
 function collectAllBulletsExcept(
   chunk: string,
   excludeHeadings: string[],
 ): string[] {
-  const items: string[] = [];
-  const lines = chunk.split("\n");
-  let skip = false;
-  for (const line of lines) {
-    const heading = line.match(/^##\s+(.+?)\s*$/);
-    if (heading) {
-      skip = excludeHeadings.some((h) =>
-        heading[1].toLowerCase().includes(h.toLowerCase()),
-      );
-      continue;
-    }
-    if (skip) continue;
-    const bullet = line.match(/^-\s+(.*\S)\s*$/);
-    if (bullet) items.push(bullet[1]);
-  }
-  return items;
+  return collectBulletsWhere(chunk, excludeHeadings, (matches) => !matches);
 }
 
 function extractSourceUrls(markdown: string): string[] {
+  // Only look at "Source:" / "Fuente:" / "Fonte:" lines — scanning the whole
+  // document would record an inline link in an instruction step as a source.
   const urls: string[] = [];
   const linkRe = /\[[^\]]+\]\((https?:\/\/[^)]+)\)/g;
-  for (const m of markdown.matchAll(linkRe)) urls.push(m[1]);
-  // Fallback bare URLs near a "Source:" / "Fuente:" / "Fonte:" line
-  const sourceLine = markdown.match(/\*?(?:Source|Fuente|Fonte):[^\n]*/i);
-  if (sourceLine) {
-    const bare = sourceLine[0].match(/https?:\/\/\S+/g);
-    if (bare) urls.push(...bare.map((u) => u.replace(/[.)]+$/, "")));
+  const sourceLines = markdown.match(/^.*\*?(?:Source|Fuente|Fonte):.*$/gim) ?? [];
+  for (const line of sourceLines) {
+    for (const m of line.matchAll(linkRe)) urls.push(m[1]);
+    // Bare URLs outside markdown links.
+    const bare = line.replace(linkRe, "").match(/https?:\/\/\S+/g);
+    if (bare) urls.push(...bare.map((u) => u.replace(/[.)*]+$/, "")));
   }
   return [...new Set(urls)];
 }

@@ -1,6 +1,12 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
+// Tokens signed with a guessable secret are forgeable — refuse to boot in
+// production without a real one. The dev fallback keeps `pnpm server` working
+// locally without a .env.
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("JWT_SECRET must be set in production");
+}
 const JWT_SECRET = process.env.JWT_SECRET || "dev-insecure-secret";
 
 export interface AuthPayload {

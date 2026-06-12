@@ -33,9 +33,13 @@ router.post("/", requireAuth, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    // Same visibility rule as the recipes routes — you can only rate dishes
+    // you can see (curated or your own), not other users' private recipes.
     const recipe = await client.query<{ id: string }>(
-      `SELECT id FROM recipes WHERE slug = $1 ORDER BY locale = 'en' DESC LIMIT 1`,
-      [slug],
+      `SELECT id FROM recipes
+       WHERE slug = $1 AND (owner_user_id IS NULL OR owner_user_id = $2::uuid)
+       ORDER BY locale = 'en' DESC LIMIT 1`,
+      [slug, userId],
     );
     if (!recipe.rows[0]) {
       await client.query("ROLLBACK");
@@ -77,8 +81,10 @@ router.delete("/:slug", requireAuth, async (req, res) => {
   const userId = req.user!.sub;
   try {
     const recipe = await pool.query<{ id: string }>(
-      `SELECT id FROM recipes WHERE slug = $1 ORDER BY locale = 'en' DESC LIMIT 1`,
-      [req.params.slug],
+      `SELECT id FROM recipes
+       WHERE slug = $1 AND (owner_user_id IS NULL OR owner_user_id = $2::uuid)
+       ORDER BY locale = 'en' DESC LIMIT 1`,
+      [req.params.slug, userId],
     );
     if (!recipe.rows[0]) {
       res.status(404).json({ error: "Recipe not found" });

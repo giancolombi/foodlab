@@ -1,7 +1,10 @@
-import dns from "node:dns/promises";
+import dns from "node:dns";
 import net from "node:net";
 
 import { Router } from "express";
+// undici's own fetch (not the Node global) so the typed `dispatcher` option
+// matches the installed undici Agent.
+import { Agent, fetch as undiciFetch } from "undici";
 import { z } from "zod";
 
 import { pool } from "../db.js";
@@ -12,6 +15,7 @@ import {
   extractRecipeFromText,
 } from "../llm.js";
 import { requireAuth } from "../middleware/auth.js";
+import { llmLimiter } from "../middleware/rateLimit.js";
 import { saveUserRecipe } from "./recipes.js";
 
 const router = Router();
@@ -28,7 +32,7 @@ const planSchema = z.object({
       assignedAt: z.number(),
     }),
   ),
-  activeProfileIds: z.array(z.string().uuid()).default([]),
+  activeProfileIds: z.array(z.string().uuid()).max(50).default([]),
   includeServeWith: z.boolean().default(false),
 });
 
@@ -92,8 +96,8 @@ router.put("/", requireAuth, async (req, res) => {
 // ---- Auto-generate plan ----
 
 const generateSchema = z.object({
-  profileIds: z.array(z.string().uuid()).default([]),
-  excludeSlugs: z.array(z.string().max(200)).default([]),
+  profileIds: z.array(z.string().uuid()).max(50).default([]),
+  excludeSlugs: z.array(z.string().max(200)).max(200).default([]),
   locale: z.enum(["en", "es", "pt-BR", "pt"]).optional(),
 });
 
@@ -157,7 +161,8 @@ router.post("/generate", requireAuth, async (req, res) => {
   // group_label must contain a restriction keyword.
   const eligible = recipes.filter((r) => {
     if (excludeSet.has(r.slug)) return false;
-    if (avgRating.get(r.slug) !== undefined && avgRating.get(r.slug)! < 2) return false;
+    // "Avoid 1–2 star recipes" — a 2.4 average is still a 2-star dish.
+    if (avgRating.get(r.slug) !== undefined && avgRating.get(r.slug)! < 2.5) return false;
     if (!profileRestrictions.length) return true;
     return profileRestrictions.every((restrictions) => {
       if (!restrictions.length) return true;
@@ -195,13 +200,13 @@ router.post("/generate", requireAuth, async (req, res) => {
 
   const usedMethods = new Set<string>();
 
-  function pickFrom(pool: RecipeRow[], n: number) {
+  function pickFrom(candidates: RecipeRow[], n: number) {
     const isCategoryFull = () =>
-      picked.filter((p) => p.category === pool[0]?.category).length >= n;
+      picked.filter((p) => p.category === candidates[0]?.category).length >= n;
 
     // First pass: prefer diverse cuisines AND cooking methods so a week
     // doesn't end up as four stews from four cuisines.
-    for (const r of pool) {
+    for (const r of candidates) {
       if (isCategoryFull()) return;
       if (picked.some((p) => p.slug === r.slug)) continue;
       const c = (r.cuisine ?? "").toLowerCase();
@@ -213,7 +218,7 @@ router.post("/generate", requireAuth, async (req, res) => {
       usedMethods.add(m);
     }
     // Second pass: relax method constraint, keep cuisine diversity.
-    for (const r of pool) {
+    for (const r of candidates) {
       if (isCategoryFull()) return;
       if (picked.some((p) => p.slug === r.slug)) continue;
       const c = (r.cuisine ?? "").toLowerCase();
@@ -222,7 +227,7 @@ router.post("/generate", requireAuth, async (req, res) => {
       if (c) usedCuisines.add(c);
     }
     // Third pass: fill remaining without any diversity constraint.
-    for (const r of pool) {
+    for (const r of candidates) {
       if (isCategoryFull()) return;
       if (picked.some((p) => p.slug === r.slug)) continue;
       picked.push({ slug: r.slug, category: r.category });
@@ -279,7 +284,7 @@ const shoppingListSchema = z.object({
  * item names). Caller is expected to pre-split per-profile items into
  * separate pseudo-recipe entries with `forProfiles` set.
  */
-router.post("/shopping-list", requireAuth, async (req, res) => {
+router.post("/shopping-list", requireAuth, llmLimiter, async (req, res) => {
   const parsed = shoppingListSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid payload" });
@@ -289,10 +294,9 @@ router.post("/shopping-list", requireAuth, async (req, res) => {
     const sections = await consolidateShoppingList(parsed.data);
     res.json({ sections });
   } catch (err) {
+    // Log the provider detail; don't echo it to clients.
     console.error("[plans/shopping-list]", err);
-    res.status(502).json({
-      error: err instanceof Error ? err.message : "Consolidation failed",
-    });
+    res.status(502).json({ error: "Consolidation failed — try again" });
   }
 });
 
@@ -330,7 +334,7 @@ const composeSchema = z.object({
  * full conversation + current draft; we return a chatty reply and an updated
  * draft. Stateless on the server (history lives in the client).
  */
-router.post("/compose", requireAuth, async (req, res) => {
+router.post("/compose", requireAuth, llmLimiter, async (req, res) => {
   const parsed = composeSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid payload" });
@@ -341,9 +345,7 @@ router.post("/compose", requireAuth, async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error("[plans/compose]", err);
-    res.status(502).json({
-      error: err instanceof Error ? err.message : "Compose failed",
-    });
+    res.status(502).json({ error: "Compose failed — try again" });
   }
 });
 
@@ -361,7 +363,7 @@ const applySchema = z.object({
  * same order as the input dishes) so the client can drop them into the plan
  * grid. The grid update itself stays client-side via PlanContext.
  */
-router.post("/compose/apply", requireAuth, async (req, res) => {
+router.post("/compose/apply", requireAuth, llmLimiter, async (req, res) => {
   const parsed = applySchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid payload" });
@@ -370,43 +372,64 @@ router.post("/compose/apply", requireAuth, async (req, res) => {
   const { draft, locale } = parsed.data;
   const userId = req.user!.sub;
 
-  const saved: Array<{
-    dishId: string;
-    slug: string;
-    title: string;
-    category: "mains" | "breakfast";
-    isBreakfast: boolean;
-  }> = [];
-  const errors: Array<{ dishId: string; name: string; error: string }> = [];
+  // Each dish costs an expand call plus two translation calls inside
+  // saveUserRecipe. Run dishes with bounded concurrency so a 10-dish draft
+  // doesn't serialize ~30 LLM round-trips into one HTTP request.
+  const APPLY_CONCURRENCY = 3;
+  const results: Array<
+    | {
+        ok: true;
+        dishId: string;
+        slug: string;
+        title: string;
+        category: "mains" | "breakfast";
+        isBreakfast: boolean;
+      }
+    | { ok: false; dishId: string; name: string }
+  > = new Array(draft.dishes.length);
 
-  for (const dish of draft.dishes) {
-    try {
-      const markdown = await expandDishToRecipe({ dish, locale });
-      const category: "mains" | "breakfast" = dish.isBreakfast
-        ? "breakfast"
-        : "mains";
-      const recipe = await saveUserRecipe({
-        userId,
-        markdown,
-        modificationNote: `Generated from compose draft (${dish.id})`,
-        category,
-        locale,
-      });
-      saved.push({
-        dishId: dish.id,
-        slug: recipe.slug,
-        title: recipe.title,
-        category,
-        isBreakfast: dish.isBreakfast,
-      });
-    } catch (err: any) {
-      errors.push({
-        dishId: dish.id,
-        name: dish.name,
-        error: err?.message ?? "Unknown error",
-      });
+  let next = 0;
+  async function worker() {
+    while (next < draft.dishes.length) {
+      const i = next++;
+      const dish = draft.dishes[i];
+      try {
+        const markdown = await expandDishToRecipe({ dish, locale });
+        const category: "mains" | "breakfast" = dish.isBreakfast
+          ? "breakfast"
+          : "mains";
+        const recipe = await saveUserRecipe({
+          userId,
+          markdown,
+          modificationNote: `Generated from compose draft (${dish.id})`,
+          category,
+          locale,
+        });
+        results[i] = {
+          ok: true,
+          dishId: dish.id,
+          slug: recipe.slug,
+          title: recipe.title,
+          category,
+          isBreakfast: dish.isBreakfast,
+        };
+      } catch (err) {
+        console.error(`[plans/compose/apply] dish ${dish.id}`, err);
+        results[i] = { ok: false, dishId: dish.id, name: dish.name };
+      }
     }
   }
+  await Promise.all(
+    Array.from(
+      { length: Math.min(APPLY_CONCURRENCY, draft.dishes.length) },
+      worker,
+    ),
+  );
+
+  const saved = results.flatMap((r) => (r.ok ? [{ dishId: r.dishId, slug: r.slug, title: r.title, category: r.category, isBreakfast: r.isBreakfast }] : []));
+  const errors = results.flatMap((r) =>
+    r.ok ? [] : [{ dishId: r.dishId, name: r.name, error: "Could not generate this dish" }],
+  );
 
   res.json({ saved, errors });
 });
@@ -421,7 +444,7 @@ const extractSchema = z.object({
  * markdown via the LLM. Doesn't persist; the client decides whether to attach
  * the result to a draft dish or save it as a standalone recipe.
  */
-router.post("/compose/extract", requireAuth, async (req, res) => {
+router.post("/compose/extract", requireAuth, llmLimiter, async (req, res) => {
   const parsed = extractSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid payload" });
@@ -432,9 +455,7 @@ router.post("/compose/extract", requireAuth, async (req, res) => {
     res.json({ markdown });
   } catch (err) {
     console.error("[plans/compose/extract]", err);
-    res.status(502).json({
-      error: err instanceof Error ? err.message : "Extract failed",
-    });
+    res.status(502).json({ error: "Extract failed — try again" });
   }
 });
 
@@ -475,7 +496,7 @@ function isPrivateIp(addr: string): boolean {
   return true; // unknown family — refuse
 }
 
-async function safeUrl(input: string): Promise<URL> {
+function safeUrl(input: string): URL {
   const u = new URL(input);
   if (u.protocol !== "http:" && u.protocol !== "https:") {
     throw new Error("Only http(s) URLs are allowed");
@@ -483,15 +504,50 @@ async function safeUrl(input: string): Promise<URL> {
   const host = u.hostname;
   if (!host) throw new Error("URL has no host");
   if (host === "localhost") throw new Error("Refusing to fetch localhost");
-  // Resolve every A/AAAA record and refuse if any of them is private.
-  const addrs = await dns.lookup(host, { all: true });
-  for (const a of addrs) {
-    if (isPrivateIp(a.address)) {
-      throw new Error("Refusing to fetch private IP");
-    }
+  if (net.isIP(host) && isPrivateIp(host)) {
+    throw new Error("Refusing to fetch private IP");
   }
   return u;
 }
+
+/**
+ * Dispatcher whose DNS lookup validates every resolved address and pins the
+ * connection to the vetted IP. Doing the check inside the connection's own
+ * lookup (rather than a separate pre-flight resolve) closes the DNS-rebinding
+ * TOCTOU, and because redirects re-connect through this same dispatcher,
+ * redirect targets are validated too.
+ */
+const publicOnlyDispatcher = new Agent({
+  connect: {
+    lookup(hostname, options, callback) {
+      dns.lookup(hostname, { ...options, all: true }, (err, addresses) => {
+        if (err) return callback(err, "", 0);
+        const addrs = Array.isArray(addresses)
+          ? addresses
+          : [{ address: addresses as unknown as string, family: 4 }];
+        for (const a of addrs) {
+          if (isPrivateIp(a.address)) {
+            return callback(
+              new Error("Refusing to connect to private IP"),
+              "",
+              0,
+            );
+          }
+        }
+        // The caller decides the callback shape: with `all` it expects the
+        // array, otherwise a single (address, family) pair.
+        if ((options as { all?: boolean }).all) {
+          (callback as unknown as (e: null, a: typeof addrs) => void)(
+            null,
+            addrs,
+          );
+        } else {
+          callback(null, addrs[0].address, addrs[0].family);
+        }
+      });
+    },
+  },
+});
 
 function htmlToText(html: string): string {
   // Strip script/style blocks then collapse all tags to whitespace. Cheap
@@ -516,7 +572,7 @@ function htmlToText(html: string): string {
  * plain text, then run extractRecipeFromText. Guards against SSRF by
  * resolving the hostname and refusing private IPs.
  */
-router.post("/compose/extract-url", requireAuth, async (req, res) => {
+router.post("/compose/extract-url", requireAuth, llmLimiter, async (req, res) => {
   const parsed = extractUrlSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid payload" });
@@ -526,7 +582,7 @@ router.post("/compose/extract-url", requireAuth, async (req, res) => {
 
   let target: URL;
   try {
-    target = await safeUrl(url);
+    target = safeUrl(url);
   } catch (err: any) {
     res.status(400).json({ error: err?.message ?? "URL not allowed" });
     return;
@@ -536,7 +592,7 @@ router.post("/compose/extract-url", requireAuth, async (req, res) => {
   const timer = setTimeout(() => ac.abort(), URL_FETCH_TIMEOUT_MS);
   let html: string;
   try {
-    const response = await fetch(target.toString(), {
+    const response = await undiciFetch(target.toString(), {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
@@ -545,6 +601,7 @@ router.post("/compose/extract-url", requireAuth, async (req, res) => {
       },
       signal: ac.signal,
       redirect: "follow",
+      dispatcher: publicOnlyDispatcher,
     });
     if (!response.ok) {
       res.status(502).json({ error: `Fetch returned ${response.status}` });
@@ -579,9 +636,7 @@ router.post("/compose/extract-url", requireAuth, async (req, res) => {
       return;
     }
     console.error("[plans/compose/extract-url] fetch", err);
-    res.status(502).json({
-      error: err instanceof Error ? err.message : "Fetch failed",
-    });
+    res.status(502).json({ error: "Could not fetch that URL" });
     return;
   } finally {
     clearTimeout(timer);
@@ -598,9 +653,7 @@ router.post("/compose/extract-url", requireAuth, async (req, res) => {
     res.json({ markdown });
   } catch (err) {
     console.error("[plans/compose/extract-url] extract", err);
-    res.status(502).json({
-      error: err instanceof Error ? err.message : "Extract failed",
-    });
+    res.status(502).json({ error: "Extract failed — try again" });
   }
 });
 

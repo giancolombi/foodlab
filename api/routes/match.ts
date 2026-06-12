@@ -2,8 +2,9 @@ import { Router } from "express";
 import { z } from "zod";
 
 import { pool } from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
 import { streamRecommendations } from "../llm.js";
+import { requireAuth } from "../middleware/auth.js";
+import { llmLimiter } from "../middleware/rateLimit.js";
 
 const router = Router();
 
@@ -21,7 +22,7 @@ const matchSchema = z.object({
  *   - { type: "complete", recommendations: [...] } — final validated payload
  *   - { type: "error",    message: string }
  */
-router.post("/", requireAuth, async (req, res) => {
+router.post("/", requireAuth, llmLimiter, async (req, res) => {
   const parsed = matchSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Provide 1–40 ingredient strings" });
@@ -100,10 +101,6 @@ router.post("/", requireAuth, async (req, res) => {
           if (aborted) return;
           send({ type: "chunk", content: chunk });
         },
-        onThinking: (chunk) => {
-          if (aborted) return;
-          send({ type: "thinking", content: chunk });
-        },
         onDone: ({ recommendations }) => {
           if (aborted) return;
           send({ type: "complete", recommendations });
@@ -115,8 +112,7 @@ router.post("/", requireAuth, async (req, res) => {
     if (!aborted) {
       send({
         type: "error",
-        message:
-          "The local LLM is unavailable. It may still be loading the model — try again in a minute.",
+        message: "The AI service is unavailable right now — try again in a minute.",
       });
     }
   } finally {

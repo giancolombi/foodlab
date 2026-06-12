@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 
 import { checkLLM } from "./llm.js";
+import { authLimiter } from "./middleware/rateLimit.js";
 import authRoutes from "./routes/auth.js";
 import matchRoutes from "./routes/match.js";
 import planRoutes from "./routes/plans.js";
@@ -13,7 +14,16 @@ import translateRoutes from "./routes/translate.js";
 const app = express();
 const PORT = Number(process.env.API_PORT || 3001);
 
-app.use(cors());
+// nginx (and Railway's edge) sit in front of the API — trust them so req.ip
+// reflects the real client for rate limiting. Override hop count if needed.
+app.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS ?? 1));
+
+// Auth is Bearer-token (no cookies), so wildcard CORS is low-risk — but allow
+// locking to specific origins in production via a comma-separated env var.
+const corsOrigins = process.env.CORS_ORIGINS?.split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+app.use(cors(corsOrigins?.length ? { origin: corsOrigins } : {}));
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", async (_req, res) => {
@@ -25,7 +35,7 @@ app.get("/api/health", async (_req, res) => {
   });
 });
 
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/profiles", profileRoutes);
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/match", matchRoutes);
