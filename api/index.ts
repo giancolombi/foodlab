@@ -2,7 +2,6 @@ import cors from "cors";
 import express from "express";
 
 import { checkLLM } from "./llm.js";
-import { authLimiter } from "./middleware/rateLimit.js";
 import authRoutes from "./routes/auth.js";
 import matchRoutes from "./routes/match.js";
 import planRoutes from "./routes/plans.js";
@@ -35,7 +34,7 @@ app.get("/api/health", async (_req, res) => {
   });
 });
 
-app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/api/profiles", profileRoutes);
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/match", matchRoutes);

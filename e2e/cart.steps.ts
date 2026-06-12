@@ -1,5 +1,5 @@
 import { Given, When, Then, loadFeature, runScenarios, expect } from "./support/bdd";
-import { createTestUser, injectAuth, getCurrentTestUser } from "./support/helpers";
+import { createTestUser, injectAuth, seedPlanViaApi } from "./support/helpers";
 
 Given("I am signed in", async ({ page }) => {
   const user = await createTestUser();
@@ -11,19 +11,8 @@ Given(/^I navigate to "(.+)"$/, async ({ page }, path) => {
   await page.waitForLoadState("networkidle");
 });
 
-Given("the plan has at least one recipe", async ({ page }) => {
-  // Seed plan by fetching a recipe slug from the API and assigning it directly.
-  const recipesRes = await fetch("http://localhost:3001/api/recipes", {
-    headers: { Authorization: `Bearer ${getCurrentTestUser().token}` },
-  });
-  if (!recipesRes.ok) throw new Error(`Recipes fetch failed: ${recipesRes.status}`);
-  const { recipes } = await recipesRes.json();
-  if (!recipes.length) throw new Error("No recipes in database to seed plan");
-  const slug = recipes[0].slug;
-  const assignments = { "0-dinner": { slug, assignedAt: Date.now() } };
-  await page.evaluate((a: any) => {
-    localStorage.setItem("foodlab_plan_v2", JSON.stringify(a));
-  }, assignments);
+Given("the plan has at least one recipe", async () => {
+  await seedPlanViaApi();
 });
 
 When(/^I navigate to "(.+)"$/, async ({ page }, path) => {

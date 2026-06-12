@@ -44,10 +44,19 @@ When(/^I click the "(.+)" button$/, async ({ page }, name) => {
 
 When("I click the sign-out button", async ({ page }) => {
   // Below sm the sign-out lives inside the header overflow ("More options")
-  // menu, so we open that first if the button isn't already visible.
-  const signOut = page.getByRole("button", { name: /sign out|log out/i });
+  // menu — as a menuitem, not a button — so open the menu first when the
+  // header button isn't there. The header user section renders only after
+  // /auth/me resolves, so wait for either control rather than checking
+  // visibility at a single instant.
+  const signOut = page
+    .getByRole("button", { name: /sign out|log out/i })
+    .or(page.getByRole("menuitem", { name: /sign out|log out/i }));
+  const moreOptions = page.getByRole("button", { name: /more options/i });
+  await expect(async () => {
+    expect((await signOut.isVisible()) || (await moreOptions.isVisible())).toBe(true);
+  }).toPass({ timeout: 10000 });
   if (!(await signOut.isVisible())) {
-    await page.getByRole("button", { name: /more options/i }).click();
+    await moreOptions.click();
   }
   await signOut.click();
 });

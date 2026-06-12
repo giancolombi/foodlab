@@ -44,6 +44,9 @@ jobs:
       # erroring instantly, which is what the matcher e2e asserts on.
       LLM_BASE_URL: http://10.255.255.1/v1
       LLM_API_KEY: ci-dummy
+      # The suite signs up a fresh user per scenario — raise the auth limiter.
+      AUTH_RATE_LIMIT: "10000"
+      LLM_RATE_LIMIT: "10000"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

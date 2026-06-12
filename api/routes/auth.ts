@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { pool } from "../db.js";
 import { requireAuth, signToken } from "../middleware/auth.js";
+import { authLimiter } from "../middleware/rateLimit.js";
 
 const router = Router();
 
@@ -13,7 +14,9 @@ const credentialsSchema = z.object({
   displayName: z.string().min(1).max(100).optional(),
 });
 
-router.post("/signup", async (req, res) => {
+// Credential endpoints only — /me must stay unthrottled since the app
+// calls it on every boot (a shared household IP would hit the cap fast).
+router.post("/signup", authLimiter, async (req, res) => {
   const parsed = credentialsSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid email or password (min 8 chars)" });
@@ -66,7 +69,7 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-router.post("/signin", async (req, res) => {
+router.post("/signin", authLimiter, async (req, res) => {
   const parsed = credentialsSchema
     .pick({ email: true, password: true })
     .safeParse(req.body);

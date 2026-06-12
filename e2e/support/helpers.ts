@@ -79,6 +79,33 @@ export async function injectAuth(page: Page, token: string) {
   });
 }
 
+/**
+ * Seed the signed-in user's plan with one recipe via the server API. The
+ * client pulls the server plan on boot, so this is deterministic — unlike
+ * writing localStorage from outside the app, which races the page lifecycle.
+ */
+export async function seedPlanViaApi() {
+  const token = getCurrentTestUser().token;
+  const recipesRes = await fetch(`${API_BASE}/recipes`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!recipesRes.ok) throw new Error(`Recipes fetch failed: ${recipesRes.status}`);
+  const { recipes } = await recipesRes.json();
+  if (!recipes.length) throw new Error("No recipes in database to seed plan");
+  const assignments = {
+    "0-dinner": { slug: recipes[0].slug, assignedAt: Date.now() },
+  };
+  const putRes = await fetch(`${API_BASE}/plans`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ assignments, activeProfileIds: [], includeServeWith: false }),
+  });
+  if (!putRes.ok) throw new Error(`Plan seed failed: ${putRes.status}`);
+}
+
 /** Create a profile via the API. */
 export async function createProfile(
   token: string,
