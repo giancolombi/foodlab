@@ -1,4 +1,5 @@
-FROM ollama/ollama:latest
+# Pinned so rebuilds are reproducible — bump deliberately.
+FROM ollama/ollama:0.30.8
 
 # Model to pre-pull on first start. Override with OLLAMA_MODEL env.
 #

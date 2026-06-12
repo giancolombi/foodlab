@@ -1,4 +1,4 @@
-.PHONY: up down logs migrate seed dev
+.PHONY: up down logs migrate seed dev lint typecheck test
 
 up:
 	docker compose up --build
@@ -17,3 +17,13 @@ seed:
 
 dev:
 	pnpm dev
+
+lint:
+	pnpm lint
+
+typecheck:
+	pnpm typecheck
+
+# Needs Postgres up (`docker compose up -d db`); Playwright boots api + app.
+test:
+	pnpm test:e2e

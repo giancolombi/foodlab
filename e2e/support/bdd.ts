@@ -74,16 +74,21 @@ export function loadFeature(featureFile: string) {
 export function runScenarios() {
   const toRun = [...scenarios];
   scenarios = [];
+  // Snapshot-and-clear the step registry too: with a single worker, .steps.ts
+  // modules share this module's state, so without clearing, a duplicate
+  // pattern from an earlier file would shadow the current file's definition.
+  const defs = [...steps];
+  steps.length = 0;
 
   for (const scenario of toRun) {
     test(scenario.name, async ({ page, context }) => {
       const world: World = { page, context };
       for (const step of scenario.steps) {
-        const def = steps.find((s) => s.pattern.test(step.text));
+        const def = defs.find((s) => s.pattern.test(step.text));
         if (!def) {
           throw new Error(
             `No step definition matches: "${step.text}"\n` +
-            `Registered patterns:\n${steps.map((s) => `  ${s.pattern}`).join("\n")}`,
+            `Registered patterns:\n${defs.map((s) => `  ${s.pattern}`).join("\n")}`,
           );
         }
         const match = step.text.match(def.pattern)!;

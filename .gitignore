@@ -6,3 +6,6 @@ dist
 .DS_Store
 .vite
 test-results/
+playwright-report/
+*.zip
+.claude/scheduled_tasks.lock

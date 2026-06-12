@@ -126,9 +126,9 @@ When running Claude Code locally, two cron jobs run in the background:
 - **Meal Planner** (1st and 15th) — generates a weekly menu + shopping list
 
 When the web app is deployed on **Railway**, an optional cron service runs the
-in-app hunter daily against the live Postgres + the LLM. Add it as a new
-service pointing at `railway.cron.json`; it shares the api Dockerfile and runs
-`pnpm run cron:hunt -- --mode=both` once a day. Required env: `DATABASE_URL`,
+in-app hunter every other day against the live Postgres + the LLM. Add it as a
+new service pointing at `railway.cron.json`; it shares the api Dockerfile and
+runs `pnpm run cron:hunt -- --mode=both`. Required env: `DATABASE_URL`,
 `LLM_API_KEY` (plus `LLM_BASE_URL` / `LLM_MODEL` if not using the defaults).
 Override schedule by editing `cronSchedule` in `railway.cron.json`.
 

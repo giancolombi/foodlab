@@ -2,7 +2,7 @@
 
 import type { Page } from "@playwright/test";
 
-const API_BASE = "http://localhost:3001/api";
+const API_BASE = `${process.env.API_URL ?? "http://localhost:3001"}/api`;
 
 export interface TestUser {
   email: string;

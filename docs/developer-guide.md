@@ -25,7 +25,7 @@ github.com/giancolombi/foodlab/
 Fetch files directly — no auth needed for public repos.
 
 ```
-https://raw.githubusercontent.com/giancolombi/foodlab/main/test-kitchen/recipes/mains/moroccan-tagine.md
+https://raw.githubusercontent.com/giancolombi/foodlab/main/test-kitchen/recipes/mains/moroccan-tagine.en.md
 https://raw.githubusercontent.com/giancolombi/foodlab/main/profiles/example-vegetarian.md
 https://raw.githubusercontent.com/giancolombi/foodlab/main/test-kitchen/reviews/ratings.md
 ```
@@ -43,7 +43,7 @@ Returns JSON array of file objects with `name`, `path`, `download_url`.
 Get file content:
 
 ```bash
-curl https://api.github.com/repos/giancolombi/foodlab/contents/test-kitchen/recipes/mains/moroccan-tagine.md \
+curl https://api.github.com/repos/giancolombi/foodlab/contents/test-kitchen/recipes/mains/moroccan-tagine.en.md \
   -H "Accept: application/vnd.github.raw"
 ```
 
@@ -370,7 +370,7 @@ curl -X PUT https://api.github.com/repos/giancolombi/foodlab/contents/test-kitch
 Same pattern — create a new file via the GitHub Contents API:
 
 ```bash
-curl -X PUT https://api.github.com/repos/giancolombi/foodlab/contents/test-kitchen/recipes/mains/new-recipe.md \
+curl -X PUT https://api.github.com/repos/giancolombi/foodlab/contents/test-kitchen/recipes/mains/new-recipe.en.md \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
   -d "{
     \"message\": \"Add new recipe\",
