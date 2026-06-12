@@ -29,21 +29,20 @@ When(/^I fill in "(.+)" with "(.+)"$/, async ({ page }, field, value) => {
 });
 
 When(/^I click the edit button for "(.+)"$/, async ({ page }, name) => {
-  // Find the card whose title matches, then click the pencil icon button.
+  // Find the card whose title matches, then click its labeled edit button.
   const card = page.locator("[class*='card' i], [data-slot='card']").filter({ hasText: name }).first();
-  await card.locator("button").nth(0).click();
+  await card.getByRole("button", { name: /edit profile/i }).click();
 });
 
 When(/^I click the delete button for "(.+)"$/, async ({ page }, name) => {
   page.once("dialog", (d) => d.accept());
   const card = page.locator("[class*='card' i], [data-slot='card']").filter({ hasText: name }).first();
-  // Delete is the second icon button in the card header.
-  await card.locator("button").nth(1).click();
+  await card.getByRole("button", { name: /delete this profile/i }).click();
 });
 
-When("I confirm the dialog", async ({ page }) => {
-  // Dialog was already accepted by the handler registered below.
-  await page.waitForTimeout(300);
+When("I confirm the dialog", async () => {
+  // Dialog is accepted by the handler registered in the delete step;
+  // the assertion that follows does the waiting.
 });
 
 Then(/^I should see a profile card for "(.+)"$/, async ({ page }, name) => {

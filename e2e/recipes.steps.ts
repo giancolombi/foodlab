@@ -21,8 +21,6 @@ Given(/^I navigate to "(.+)"$/, async ({ page }, path) => {
 
 When(/^I type "(.+)" into the search box$/, async ({ page }, text) => {
   await page.getByPlaceholder(/search by name/i).fill(text);
-  // Allow filtering to settle.
-  await page.waitForTimeout(500);
 });
 
 When("I click the first recipe card", async ({ page }) => {
@@ -43,12 +41,16 @@ Then(/^I should see at least (\d+) recipe card$/, async ({ page }, n) => {
 });
 
 Then(/^every visible recipe card should contain "(.+)"$/, async ({ page }, text) => {
+  // Poll until the client-side filter has settled and every card matches.
   const cards = page.locator("a[href^='/recipes/']");
-  const count = await cards.count();
-  if (count === 0) return; // no results is valid for an obscure query
-  for (let i = 0; i < count; i++) {
-    await expect(cards.nth(i)).toContainText(new RegExp(text, "i"));
-  }
+  const re = new RegExp(text, "i");
+  await expect(async () => {
+    const count = await cards.count();
+    if (count === 0) return; // no results is valid for an obscure query
+    for (let i = 0; i < count; i++) {
+      expect(await cards.nth(i).innerText()).toMatch(re);
+    }
+  }).toPass({ timeout: 5000 });
 });
 
 Then("I should see the recipe title", async ({ page }) => {

@@ -39,6 +39,7 @@
     "react-router-dom": "^7.13.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
+    "tsx": "^4.21.0",
     "undici": "^8.4.1",
     "zod": "^4.0.0"
   },
@@ -63,7 +64,6 @@
     "postcss": "^8.5.8",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.2.1",
-    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"

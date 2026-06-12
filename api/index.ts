@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 
+import { pool } from "./db.js";
 import { checkLLM } from "./llm.js";
 import authRoutes from "./routes/auth.js";
 import matchRoutes from "./routes/match.js";
@@ -27,8 +28,16 @@ app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", async (_req, res) => {
   const llm = await checkLLM();
-  res.json({
-    status: "ok",
+  let db: { ok: boolean; error?: string };
+  try {
+    await pool.query("SELECT 1");
+    db = { ok: true };
+  } catch (err) {
+    db = { ok: false, error: err instanceof Error ? err.message : "unknown" };
+  }
+  res.status(db.ok ? 200 : 503).json({
+    status: db.ok ? "ok" : "degraded",
+    db,
     llm,
     time: new Date().toISOString(),
   });

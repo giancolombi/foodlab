@@ -147,6 +147,11 @@ export function convertUnit(
 }
 
 function round(n: number): number {
+  // Cooking-sane precision — "240 ml", not "236.59 ml". Coarser grids at
+  // larger magnitudes; quarter-steps near 1 to match recipe fractions.
+  if (n >= 100) return Math.round(n / 10) * 10;
+  if (n >= 10) return Math.round(n);
+  if (n >= 1) return Math.round(n * 4) / 4;
   return Math.round(n * 100) / 100;
 }
 

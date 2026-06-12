@@ -10,7 +10,9 @@ FROM base AS deps
 # Compiler toolchain only where native modules are built — not in the runtime image.
 RUN apk add --no-cache python3 make g++
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+# Production deps only — the API runs via tsx (a runtime dependency), so the
+# image doesn't need vite/playwright/eslint/typescript.
+RUN pnpm install --frozen-lockfile --prod
 
 FROM base AS runtime
 COPY --from=deps --chown=node:node /app/node_modules ./node_modules

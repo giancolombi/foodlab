@@ -11,7 +11,9 @@ export default defineConfig({
     // Vite dev serves on 8080 (vite.config.ts), same port as the Docker app.
     baseURL: process.env.BASE_URL || "http://localhost:8080",
     trace: "on-first-retry",
-    screenshot: "only-on-failure",
+    // Capture a final-state screenshot for every test (pass or fail) so a
+    // run doubles as a visual record of each flow.
+    screenshot: "on",
   },
   // Boot the stack when it isn't already running (Postgres must be up —
   // `docker compose up -d db`). With BASE_URL set we assume an external

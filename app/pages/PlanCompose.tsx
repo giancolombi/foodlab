@@ -242,18 +242,24 @@ export default function PlanCompose() {
       }
       setSavedRefs(res.saved);
 
-      // Distribute: mains across Mon..Thu dinners, breakfasts to Saturday.
+      // Distribute without dropping anything: mains fill the meal-prep
+      // dinner days first (Mon/Tue/Thu/Sat) then the remaining days;
+      // breakfasts start on Saturday and walk forward day by day.
       const incoming: Partial<Record<SlotKey, SlotAssignment>> = {};
       const now = Date.now();
+      const MAIN_DAYS: Day[] = [0, 1, 3, 5, 2, 4, 6];
+      const BREAKFAST_DAYS: Day[] = [5, 6, 0, 1, 2, 3, 4];
       let mainIdx = 0;
+      let breakfastIdx = 0;
       for (const r of res.saved) {
-        if (r.isBreakfast) {
-          incoming[slotKey(5 as Day, "breakfast")] = {
+        if (r.isBreakfast && breakfastIdx < BREAKFAST_DAYS.length) {
+          incoming[slotKey(BREAKFAST_DAYS[breakfastIdx], "breakfast")] = {
             slug: r.slug,
             assignedAt: now,
           };
-        } else if (mainIdx < 4) {
-          incoming[slotKey(mainIdx as Day, "dinner")] = {
+          breakfastIdx++;
+        } else if (!r.isBreakfast && mainIdx < MAIN_DAYS.length) {
+          incoming[slotKey(MAIN_DAYS[mainIdx], "dinner")] = {
             slug: r.slug,
             assignedAt: now,
           };

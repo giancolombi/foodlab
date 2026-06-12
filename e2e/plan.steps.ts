@@ -42,11 +42,12 @@ Then(/^I should see an? "(.+)" button$/, async ({ page }, name) => {
 });
 
 Then(/^I should see at least (\d+) assigned meal slot$/, async ({ page }, _n) => {
-  // An assigned slot has a link to a recipe.
-  await page.waitForTimeout(2000);
+  // An assigned slot has a link to a recipe — wait for the first to be in
+  // the DOM (attached, not visible: the desktop grid and mobile stack each
+  // render a copy and one of them is display:none per viewport).
   const links = page.locator("a[href^='/recipes/']");
-  const count = await links.count();
-  expect(count).toBeGreaterThanOrEqual(1);
+  await links.first().waitFor({ state: "attached", timeout: 10000 });
+  expect(await links.count()).toBeGreaterThanOrEqual(1);
 });
 
 Then(/^I should see a "(.+)" link$/, async ({ page }, text) => {
